@@ -1,70 +1,78 @@
-# Build the Builder: FREYA × YC Hackathon
+# Build the Builder — a compiler for collections phone agents
 
-**Görev:** Bankanın tahsilat brief'ini okuyup Freya üzerinde telefon ajanı **üreten** bir program (builder).
-**Puan:** Üretilen ajanın simüle müşteri vakalarında doğru çözdüğü vakaların oranı.
-**Süre:** Cumartesi 10 Ekim 13:00 → Pazar 11 Ekim 23:00 (İstanbul).
-
-## Mimari: kendini test eden builder
-
-```
-brief ──► [1] Policy çıkarımı ──► [2] Senaryo üretimi (gizli hakemi taklit eden test seti)
-              (atomik kurallar,        │
-               outcome kodları,        ▼
-               sayısal limitler) ► [3] Ajan derleme (system prompt + açılış + kapanış)
-                                       │
-                         ┌─────────────┴─────────────┐
-                         ▼                           │
-                   [4] Simülasyon + hakem ──fail──► [5] Optimizasyon (kök neden, overfit yok)
-                         │ (train %70)                    │
-                         ▼                                └──► tekrar [4]
-                   holdout %30 ile doğrulama ──► Freya'ya deploy
-```
-
-- **Builder modeli:** `claude-opus-5-5` (adaptive thinking, extraction/derleme için `xhigh` effort)
-- **Simüle müşteri + hakem:** `claude-sonnet-5-5`
-- **Yerel ajan vekili:** `claude-haiku-5-5`. Freya'nın canlı ajanı küçük ve hızlı bir LLM ile çalışıyor; prompt zayıf modelde çalışıyorsa orada da çalışır.
-- **Gerçek test:** `--runner freya` ile ajan Freya'ya deploy edilir ve `/chat/message` üzerinden gerçek ajanla konuşulur.
-
-## Kurulum
+One command turns a bank's collections brief (clean spec *or* raw mails/memos/code lists) plus its tool API file
+into a tested phone agent on Freya:
 
 ```bash
-pip install -r requirements.txt
-cp .env.example .env   # ANTHROPIC_API_KEY, FREYA_API_KEY, FREYA_WORKSPACE_ID doldur
-python -m builder freya-check                                   # anahtar + default config kontrol
-python -m builder build briefs/sample_collections_brief.md      # yerel döngü (Freya'sız)
-python -m builder build <brief> --runner freya --deploy         # gerçek Freya ajanıyla
+python3 builder/build.py <brief.md> [<more brief files>...] <tool_api.json>
+# e.g.
+python3 builder/build.py kit/build-the-builder/briefs/brief-a.md kit/build-the-builder/tools/openapi.json
+python3 builder/build.py kit/build-the-builder/briefs/brief-a.md kit/build-the-builder/briefs/brief-b.md kit/build-the-builder/tools/openapi.json
 ```
 
-Çıktılar `runs/<zaman>/` altına yazılır: `policy.json`, `scenarios.json`, `agent_v*.json`, `results_*.json`, `system_prompt.md`.
+Needs Python 3.10+, `pip install -r requirements.txt` (Claude Agent SDK), a Claude login or `ANTHROPIC_API_KEY`,
+and `FREYA_API_KEY` (+ `FREYA_API_URL`). Output: the agent on Freya, `submission/<slot>.workflow.json` (export),
+`submission/<slot>.spec.json` (what the builder understood) and `traces/<slot>.log` (the trace). A run takes
+about 1–3 minutes.
 
-## Freya API'den öğrendiklerimiz (`docs/freya/`)
+## The idea: the weak model only listens, code decides
 
-- Base URL `https://app.freyavoice.ai/api/v2`, `Authorization: Bearer <key>`. Yanıt zarfı `{success, data:{message, result}}`.
-- `POST /agents` → `config.llmConfig.{systemPrompt, firstMessage, firstMessageMode, tools[], farewellMessage, temperature}` + tts/stt/compliance (zorunlu; `GET /agents/defaults` ile doldur).
-- Prompt değişkenleri `{{customer_name}}` sözdizimiyle yazılıyor, değerleri `customerVariables` ile geçiliyor.
-- **Hızlı test döngüsü:** `POST /chat/message {agentId, message, callId?, customerVariables}` → `{response, callId, endedByAgent}`.
-- **Freya'nın kendi değerlendirme araçları:** `POST /personas` (prompt + successCriteria + evaluationPrompt), `POST /simulations` (mode chat|voice, runsPerPersona), `POST /unit-tests` (tool_call / extraction / routing assertion'ları). Muhtemelen hakem de bunları kullanıyor, starter kit'te kontrol edeceğiz.
-- Tools: `{type:"function", function:{name, handler, description, parameters, transition_to}, extraction_schema[], response_mapping[]}`.
-- `postConversationAnalysis.insights` ile yapılandırılmış sonuç alanları (outcome kodu, söz verilen tarih/tutar) eklenebilir. Hakem outcome'u buradan okuyorsa kritik.
+The phone agent runs on a small fixed model and every case must pass 3 runs out of 3. So the builder does **not**
+write one big prompt and hope. It compiles the brief into a deterministic state machine and lets the model do
+only what models are good at: understanding what the customer said.
 
-## 13:00'te yapılacaklar (sırayla)
+```
+brief(s) + tool API ──► 1. Claude (Opus) reads them into a typed SPEC      builder/extract.py, builder/spec_doc.md
+                          · two independent readings, field-by-field diff,
+                            adjudication with quotes, schema/enum validation, repair loop
+                        2. local self-test: the in-agent engine is run      builder/selftest.py
+                           against synthetic customers derived from the spec
+                        3. deterministic compile: spec ──► Freya workflow   builder/compile.py
+                        4. dry-run, save+publish, chat smoke test, export   builder/build.py
+```
 
-1. Challenge sayfasını ve starter kit'i oku. Şunları not al: **puanlama nasıl yapılıyor** (outcome alanı mı, transcript mi, tool çağrısı mı?), değişken isimleri, beklenen outcome kodları, zorunlu tool'lar, kullanılacak LLM.
-2. Freya hesabını aç, API key ve workspace id'yi `.env`'e yaz, `python -m builder freya-check` çalıştır.
-3. Starter kit'teki platform detaylarını `platform_notes.md`'ye yaz (tool handler'ları, outcome mekanizması) ve `--platform-notes platform_notes.md` ile ver.
-4. Gerçek brief ile ilk `build` çalışmasını yap. İlk skoru gör.
-5. Starter kit'te örnek vakalar ya da değerlendirme formatı varsa senaryo üretecini birebir ona benzet. **Kazancın %80'i hakemi doğru taklit etmekte.**
-6. Freya `simulations` ile resmi skora en yakın ölçümü al, sonra iterasyon yap.
+The compiled workflow:
 
-## Kazanma stratejisi
+```
+talk_<stage>  (fixed speech {{say}} + per-stage extraction: intent, side question, verbatim answer/date, amount)
+     │ always
+     ▼
+step (code node: the engine, builder/runtime/engine.py + cal.py, with the spec embedded)
+     ├──► talk_<next stage>
+     ├──► api_verify / api_account / api_promise / api_note / api_callback / api_transfer   (engine-run bank calls)
+     └──► api_close (says goodbye, close_call) ──► end
+```
 
-- **Ölçmeden değişiklik yok:** her prompt değişikliğinde train/holdout skoru loglanıyor.
-- **Overfit yok:** optimizer kök nedeni düzeltiyor; holdout düşüyorsa değişiklik geri alınıyor.
-- **Genellenebilirlik:** builder hiçbir şeyi bu brief için hard-code etmiyor. Jüri farklı bir brief verse de çalışır. Bu, "builder that builds builders" vizyonunun kanıtı.
-- **Güvenlik/uyum önce:** doğrulamadan önce hiçbir bilgi verilmez, limit dışı teklif yapılmaz, baskı dili kullanılmaz. Bunlar otomatik fail sebepleri.
-- **Demo:** sonunda kısa bir video ve bir rapor (brief → policy → senaryolar → skor eğrisi) hazırlanacak. YC başvurusunda da kullanılabilir.
+* **The model never calls a bank tool.** Every call is an engine-run node with values computed in code, so there
+  are no invented product ids, no forgotten calls, no "recorded" before the bank said `ok`.
+* **Dates, deadlines, holidays, floors, persuasion attempts, product order, retries and the outcome table** are
+  Python, parameterised by the spec. Relative dates are resolved against the call's `now`, never the real clock.
+* **Speech is fixed text from the spec**, written by Claude at build time in the brief's own words (and linted:
+  no debt wording before verification, no "recorded" outside the promise confirmation, no unfilled placeholders).
+* **Spoken input is parsed in code** (numbers in words, digits in two parts, "twenty-eighth of April nineteen
+  ninety-three", corrections), with the extractor's own normalisation as a fallback.
+* **Compound turns** ("Friday works — are you a robot?") are handled: a separate side-question slot is answered first.
 
-## Açık riskler
+## What changes between briefs
 
-- Freya'nın ajan LLM'i, tool handler türleri ve outcome okuma mekanizması starter kit'e kadar belirsiz.
-- Rate limit / maliyet: senaryo × iterasyon × tur. Gerekirse `--scenarios 12 --iterations 2` ile başla.
+Everything brief-specific lives in the spec: identity questions and their formats, wrong-answer limits, hint
+handling, callback window, calendar and holidays, lateness bands with deadline rules, floors (field or
+percentage), persuasion ladder, notes, multi-product rules, the outcome/reason/queue/note codes, tool field names
+(read from the tool API file) and every spoken line. Nothing from any brief is hard-coded in the builder.
+`variants/` holds two extra briefs we wrote to test this (a clean one with renamed fields/codes and three bands,
+and a messy mail + policy + overriding memo + code list), with their own tool API files.
+
+## Repository
+
+| Path | |
+|---|---|
+| `builder/build.py` | the one command |
+| `builder/extract.py`, `builder/spec_doc.md`, `builder/claude.py` | brief → spec with Claude |
+| `builder/compile.py` | spec → Freya workflow |
+| `builder/runtime/` | the code that runs inside the phone agent (engine + calendar/parsing) |
+| `builder/selftest.py`, `builder/trace.py` | self-tests and the trace |
+| `tests/` | local tests: the engine against the 13 public cases with a fake bank, parsing tests |
+| `specs/` | hand-written reference specs for briefs A and B (test oracles only, never read by the builder) |
+| `kit/build-the-builder/` | the official starter kit (Freya client, scorer, briefs, docs) |
+| `probes/` | scripts used to learn the platform's behaviour |
+| `submission/`, `traces/` | builder outputs |
