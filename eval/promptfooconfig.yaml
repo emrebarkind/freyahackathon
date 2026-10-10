@@ -1,0 +1,20 @@
+# A (two readings + adjudication) vs B (one strong reading + targeted source audit), same repair budget.
+# Run from eval/:  npx promptfoo eval --no-cache --repeat 2 -j 3 -o out/results.json
+description: spec extraction A vs B on frozen packages
+prompts:
+  - "{{pkg}}"
+providers:
+  - id: file://provider.py
+    label: A-two-readings-adjudicate
+    config: {mode: A}
+  - id: file://provider.py
+    label: B-one-reading-audit
+    config: {mode: B}
+defaultTest:
+  assert:
+    - type: python
+      value: file://assert_key.py
+tests:
+  - vars: {pkg: p1}
+  - vars: {pkg: p2}
+  - vars: {pkg: p3}

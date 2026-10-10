@@ -18,3 +18,6 @@ traces/variant-*.trace.log
 traces/test-*.trace.log
 .claude/worktrees/
 submission/test-*
+eval/runs/
+eval/out/
+eval/node_modules/
