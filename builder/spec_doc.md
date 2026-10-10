@@ -159,6 +159,8 @@ offer_short, offer_short_date, anything_else, promise_change, go_on, goodbye
 Meaning of the less obvious ones:
 - opening: the first sentence of the call (who is calling). confirm_ask: "Am I speaking with {title} {last_name}?"-style question.
 - tp_*: someone else answered. tp_ask asks when the customer can be reached; tp_booked confirms a booked callback ({date} {time}).
+- id_continue: said when the customer gave only part of an answer (e.g. the day and month without the year): an
+  invitation to go on, e.g. "Yes, and the year?" or "Please go on." (never "Thank you.", which sounds like the answer was accepted).
 - id_intro precedes the first security question; id_why/id_explain explain why the questions are needed; id_failed is said after too many wrong answers (include where to go instead, if the brief says).
 - disclose_intro: the sentence after verification that says why you call; product_line: one late product ({name} {amount} {days}).
 - ask_today / ask_today_multi: the first payment question (one product / several).

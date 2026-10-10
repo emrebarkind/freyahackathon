@@ -710,15 +710,17 @@ def stage_id(V, s, k, t):
         both = normalize_answer(q, (s["partial"] + " " + t).strip())   # 3. the earlier fragment + this turn
         if both and both != "partial":
             ans = both
-    looks_partial = t and not re.search(r"(19|20)\d\d|\b(nineteen|two thousand)\b", t.lower()) and kind in ("date", "year")
-    if (ans == "partial" or (not ans and looks_partial)) and len((s.get("partial", "") + " " + t).split()) < 14 and not s.get("partial_used"):
+    # a date or year that did not parse but carries a piece of one (a day, a month, a year): wait for the rest
+    looks_partial = bool(t) and kind in ("date", "year") and bool(re.search(
+        r"\d|\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b|\b(first|second|third|[a-z]+th|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b", t.lower()))
+    if (ans == "partial" or (not ans and looks_partial)) and len((s.get("partial", "") + " " + t).split()) < 16 and s.get("partial_used", 0) < 2:
         s["partial"] = (s.get("partial", "") + " " + t).strip()
         if ans != "partial":
-            s["partial_used"] = True       # one 'go on' for a date/year with the year still to come
+            s["partial_used"] = s.get("partial_used", 0) + 1     # up to two 'go on's while pieces of a date arrive
         say(V, L("id_continue"))
         return talk(V, "id", s)
     s["partial"] = ""
-    s["partial_used"] = False
+    s["partial_used"] = 0
     if ans == "partial":
         ans = ""
     if not ans:

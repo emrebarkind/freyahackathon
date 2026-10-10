@@ -261,6 +261,8 @@ def kinds_for(stage, spec):
     for k, v in ((spec or {}).get("intents") or {}).items():
         if k in OVERRIDABLE and k in kinds and isinstance(v, str) and v.strip() and stage in ("nego", "confirm", "after"):
             kinds[k] = v.strip().replace("{", "(").replace("}", ")")
+    if "hardship" in kinds:              # chatty customers talk about their day: that is not a hardship disclosure
+        kinds["hardship"] += " (small talk about being busy, tired, stressed or having a lot of work is NOT this: use unclear)"
     return kinds
 
 

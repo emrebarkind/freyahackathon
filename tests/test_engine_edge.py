@@ -448,3 +448,12 @@ def test_peak_call_variables_stay_small():
     finally:
         engine.main = orig
     assert peak[0] < 12000, peak[0]
+
+
+def test_date_of_birth_in_pieces_day_month_then_year():
+    case = copy.deepcopy(CASES["PUB-01"])
+    case["identity"] = dict(date_of_birth="1983-10-19", phone_last4="4410")
+    script = [C, dict(k="answer", t="nineteen October."), dict(k="answer", t="nineteen eighty-three."),
+              dict(k="answer", t="four four one zero"), dict(k="yes"), dict(k="yes")]
+    led, tr = run_case(A, case, script)
+    assert len(led["promises"]) == 1, agent_lines(tr)
