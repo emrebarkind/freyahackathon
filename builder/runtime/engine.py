@@ -69,7 +69,7 @@ def pay(p, amt):
 
 def say(V, *parts):
     pre = V.pop("_prefix", "") if "_prefix" in V else ""
-    V["say"] = " ".join(p.strip() for p in (pre,) + parts if p and p.strip())
+    V["say"] = " ".join(p.strip()[:1].upper() + p.strip()[1:] for p in (pre,) + parts if p and p.strip())
 
 
 def jget(V, key, default=None):
@@ -725,6 +725,11 @@ def stage_id(V, s, k, t):
     s["partial_used"] = 0
     if ans == "partial":
         ans = ""
+    if not ans and k in ("unclear", "none") and not t:
+        s["id_chat"] = s.get("id_chat", 0) + 1         # small talk, no answer in it: ask again, more patiently
+        if s["id_chat"] < 7:
+            say(V, q["ask"])
+            return talk(V, "id", s)
     if not ans:
         s["repeats"] = s.get("repeats", 0) + 1
         if s["repeats"] >= 4:
@@ -970,6 +975,7 @@ def make_offer(V, s, p, step_idx, pre=""):
         return advance(V, s, pre)
     p["used"] = step_idx
     p["offer"] = offer
+    s["unclear_n"] = 0
     floor_first = amt == p["floor"] and amt < p["full"] and not p.get("floor_note_said")
     if floor_first:
         p["floor_note_said"] = True
@@ -1298,6 +1304,10 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         p = cur(s)
         if p is None:
             return advance(V, s)
+    if k in ("no", "refuses", "cannot") and dtxt and a is None:
+        dd = parse_spoken_date(dtxt, today_of(V), S.get("date_rules"))
+        if dd is None or (p.get("offer") and p["offer"][1] == iso(dd)):
+            dtxt = ""                     # "I cannot pay on Friday" refuses the offered day; it proposes nothing
     again = L("repeat_offer", name=p["name"], amount=pay(p, p["offer"][0]), date=spoken(p["offer"][1])) if p.get("offer") and p["offer"][1] else ask_today_line(V, s)
     # after a side turn the offer was already spoken: re-prompt without naming the amount again
     short = (L("offer_short") or "Would that work for you?") if p.get("offer") and p["offer"][1] else again

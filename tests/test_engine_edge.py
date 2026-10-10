@@ -483,3 +483,23 @@ def test_extractor_year_not_said_is_not_sent():
     led, tr = run_case(A, case, script)
     sent = [c["args"]["answer"] for c in led["calls"] if c["tool"] == "verify_identity"]
     assert "2024-07-12" not in sent and len(led["promises"]) == 1, (sent, agent_lines(tr))
+
+
+def test_no_with_the_offered_day_is_a_refusal_not_a_promise():
+    script = ids_b("PUB-13") + [dict(k="no", f="all", t="I'm afraid I can't pay that"),
+                                dict(k="no", d="Friday", f="credit_card", t="I cannot make that payment on Friday")]
+    led, tr = run_case(B, CASES["PUB-13"], script + [dict(k="no")] * 6)
+    assert not any(p["date"] == "2026-10-16" for p in led["promises"]), agent_lines(tr)
+
+
+def test_small_talk_during_identity_gets_patience():
+    script = [C, dict(k="answer", t=CASES["PUB-01"]["identity"]["date_of_birth"])] + [dict(k="unclear")] * 5 + \
+             [dict(k="answer", t=CASES["PUB-01"]["identity"]["phone_last4"]), dict(k="yes"), dict(k="yes")]
+    led, tr = run_case(A, CASES["PUB-01"], script)
+    assert len(led["promises"]) == 1, agent_lines(tr)
+
+
+def test_unclear_count_restarts_with_each_offer():
+    script = ids("PUB-04") + [dict(k="unclear")] * 4 + [dict(k="unclear"), dict(k="yes"), dict(k="yes")]
+    led, tr = run_case(A, CASES["PUB-04"], script)
+    assert led["promises"] and led["promises"][0]["amount"] == CASES["PUB-04"]["products"][0]["past_due"], agent_lines(tr)
