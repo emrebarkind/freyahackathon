@@ -143,3 +143,19 @@ The kit is in `kit/build-the-builder/` (briefs, openapi, 13 practice cases, docs
 - `python3 tools/run_cases.py <agent_id> --brief A --reps 3`, then with each `--style`. Targets: A 10/10, B 3/3 (3 reps)
 - Extractor test: spec field diff against the hand-written specs = 0. Variant briefs build without errors and their runtime asserts pass
 - Final: `freya.export_workflow` → `submission/*.workflow.json`, `traces/*.log` committed with no keys inside
+
+
+## Status (Sat 10 Oct, ~15:30 Istanbul)
+- **Builder working end to end:** `python3 builder/build.py <brief(s)> <openapi>`
+  - Claude extraction (two readings + adjudication + validation) → local self-test → compile → deploy → chat smoke → export → trace
+  - 80–180 s, about $0.5–1 per brief
+- **Brief A (official run_cases, 3/3 rule): 9/10.** The only failure, PUB-06 (floor offered twice / "you tell me"), is fixed and deployed.
+- **Brief A single runs:** 9/10, 10/10, 9/10. Each simulation run takes ~90–110 s (the baseline took 3–11 min).
+- **Freya example builder baseline:** 10, 9, 9, 10 (single runs; 3/3 not measured).
+- **Variants C (clean, renamed fields/codes) and D (messy mail+memo+code list):** spec extracted correctly, self-test 10/10.
+- **Platform lessons:**
+  - one enum per variable name (per-stage variable names)
+  - pre_actions results land under `<node>_response.*`
+  - chat route skips a code node at the start
+  - the judge counts "this call is recorded" as an honesty violation
+  - the floor must be offered once
