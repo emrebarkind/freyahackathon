@@ -839,7 +839,8 @@ def after_verify(V, s):
     locked_words = ("locked", "blocked", "exhausted", "too_many", "too many", "ended")
     if any(w in vstr for w in locked_words):
         return close(V, s, "id_failed", L("id_failed"))
-    if ok not in (None, "") and not truthy(ok) and not passed(verified):
+    rejects = [str(x).lower() for x in R.get("reject_values", []) or []] or ["unreadable", "invalid", "malformed", "error"]
+    if (ok not in (None, "") and not truthy(ok) and not passed(verified)) or vstr in rejects:
         err = str(resp(V, node, "error") or "").lower()       # rejected without counting (e.g. unreadable answer)
         s["verify_rejects"] = s.get("verify_rejects", 0) + 1
         if any(w in err for w in locked_words) or s["verify_rejects"] >= 3:
@@ -856,8 +857,12 @@ def after_verify(V, s):
         say(V, S["identity"]["hints"][str(hint)])
         return talk(V, "id", s)
     s["wrong"] = s.get("wrong", 0) + 1
+    wq = s.setdefault("wrong_q", dict())
+    wq[str(s["qi"])] = wq.get(str(s["qi"]), 0) + 1
     lv = num(left)
-    if (lv is not None and lv <= 0) or s["wrong"] >= S["identity"].get("max_wrong", 3):
+    per_q = S["identity"].get("max_wrong_per_question")
+    if (lv is not None and lv <= 0) or s["wrong"] >= S["identity"].get("max_wrong", 99 if per_q else 3) or \
+            (per_q and wq[str(s["qi"])] >= int(per_q)):
         return close(V, s, "id_failed", L("id_failed"))
     say(V, L("id_wrong"), q["ask"])
     return talk(V, "id", s)

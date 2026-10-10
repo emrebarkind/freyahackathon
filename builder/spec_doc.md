@@ -33,13 +33,15 @@ use the default shown and record it in `assumptions`.
       "ask": "<the spoken question>"}
    ],
    "max_wrong": 3,                                 // wrong answers in total that end the check
+   "max_wrong_per_question": null,                 // only if the brief counts wrong answers per question instead
    "date_order": "dmy",                            // how a numeric-only date is read: "dmy" or "mdy"
    "hints": {"<hint value from the tool API>": "<what the agent says when that hint comes back>"},
    "purpose_is_decline": true,                     // asking what the call is about instead of answering counts as declining
    "question_is_decline": false,
    "response": {"ok": "ok", "verified": "verified", "all_verified": "all_verified",
                 "left": "wrong_answers_left", "hint": "hint",   // field names in the verify tool's response
-                "pass_values": []}                 // only if `verified` is not a boolean: the values that mean the answer matched
+                "pass_values": [],                 // only if `verified` is not a boolean: the values that mean the answer matched
+                "reject_values": []}               // values meaning the answer was not checked (e.g. "unreadable"), not counted
  },
  "products": {
    "names": {"<product type>": "<spoken name, may use {field} from the account record, e.g. credit card ending {card_last4}>"},

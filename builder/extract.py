@@ -109,7 +109,7 @@ def validate(spec, openapi):
             if not (str(slot) in ALL_SLOTS or str(slot).startswith("const:")):
                 errs.append(f"tool_bodies.{tool}.{param}: '{slot}' is not a slot (slots: {sorted(ALL_SLOTS)}, or const:<value>)")
         for req in tool_required(openapi, tool):
-            if req != "customer_id" and req not in tb[tool]:
+            if req != "customer_id" and req in props and req not in tb[tool]:
                 errs.append(f"tool_bodies.{tool}: required field '{req}' of the tool API is not mapped (map it to a slot or const:<value>)")
     inv = {tool: {v: k for k, v in m.items()} for tool, m in tb.items()}
 
