@@ -51,7 +51,16 @@ def compact(src):
     return "\n".join(out) + "\n"
 
 
+_MINI = dict()
+
+
 def minify(src):
+    if src not in _MINI:
+        _MINI[src] = _minify(src)
+    return _MINI[src]
+
+
+def _minify(src):
     """Python source without comments/docstrings, optional spaces or deep indentation: the code node's code and
     data must stay under the platform's 128 KB limit for a sandboxed process. The result must parse to the same
     program (same AST), else the plainer form is used."""
