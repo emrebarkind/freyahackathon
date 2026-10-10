@@ -177,7 +177,85 @@ def words_to_number(text):
     return val
 
 
+HOUR_WORDS = dict(one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9, ten=10, eleven=11, twelve=12)
+MIN_WORDS = dict(oclock=0, fifteen=15, thirty=30, fortyfive=45, five=5, ten=10, twenty=20, twentyfive=25, fifty=50)
+
+
+def spoken_time(text):
+    """Last time of day mentioned -> 'HH:MM' or None. Handles 11:30, 3pm, 3 o'clock, eleven in the morning,
+    half past two, quarter to five, noon. Hours 1-7 without am/pm are read as afternoon (business hours)."""
+    t = str(text or "").lower().replace("-", " ").replace("o'clock", "oclock").replace("o clock", "oclock")
+    t = re.sub(r"forty five", "fortyfive", t)
+    t = re.sub(r"twenty five", "twentyfive", t)
+    cands = []
+    W = "|".join(HOUR_WORDS)
+    for m in re.finditer(r"\b(noon|midday)\b", t):
+        cands.append((m.start(), 12, 0, "pm"))
+    for m in re.finditer(r"\b(\d{1,2})[:.](\d{2})\s*(am|pm|a\.m\.|p\.m\.)?", t):
+        cands.append((m.start(), int(m.group(1)), int(m.group(2)), m.group(3) or ""))
+    for m in re.finditer(r"\b(\d{1,2})\s*(am|pm|a\.m\.|p\.m\.|oclock)\b", t):
+        cands.append((m.start(), int(m.group(1)), 0, m.group(2)))
+    for m in re.finditer(r"\b(?:at|around|about|after|by|before|from|until|till)\s+(\d{1,2})\b(?!\s*(?:st|nd|rd|th|dollars?|days?|weeks?|[:.]\d))", t):
+        cands.append((m.start(1), int(m.group(1)), 0, ""))
+    for m in re.finditer(r"\b(half|quarter)\s+(past|to)\s+(" + W + r"|\d{1,2})\b", t):
+        h = HOUR_WORDS.get(m.group(3)) or int(m.group(3))
+        mi = 30 if m.group(1) == "half" else 15
+        if m.group(2) == "to":
+            h, mi = h - 1, 60 - mi
+        cands.append((m.start(), h, mi, ""))
+    for m in re.finditer(r"\b(" + W + r")(?:\s+(oclock|fifteen|thirty|fortyfive|twentyfive|twenty|fifty|oh five|five))?\b", t):
+        before = t[max(0, m.start() - 12):m.start()]
+        after = t[m.end():m.end() + 12]
+        if re.search(r"(past|to)\s*$", before) or re.search(r"^\s*(of|th|st|nd|rd|days?|weeks?|months?|years?|dollars?|hundred|thousand)\b", after):
+            continue
+        timeish = m.group(2) or re.search(r"(at|around|about|by|after|before|from|until|till)\s*$", before) or \
+            re.search(r"^\s*(in the|this|tonight|am|pm|a\.m|p\.m)", after)
+        if not timeish:
+            continue
+        mi = MIN_WORDS.get((m.group(2) or "oclock").replace(" ", ""), 5 if m.group(2) == "oh five" else 0)
+        cands.append((m.start(), HOUR_WORDS[m.group(1)], mi, ""))
+    if not cands:
+        return None
+    pos, h, mi, ap = sorted(cands)[-1]
+    tail = t[pos:pos + 40]
+    if ap.startswith("p") and h < 12:
+        h += 12
+    elif ap.startswith("a") and h == 12:
+        h = 0
+    elif not ap:
+        if re.search(r"afternoon|evening|tonight", tail) and h < 12:
+            h += 12
+        elif not re.search(r"morning", tail) and 1 <= h <= 7:
+            h += 12
+    if h > 23 or mi > 59:
+        return None
+    return "%02d:%02d" % (h, mi)
+
+
+CORRECTION = re.compile(r"\b(sorry|i mean|i meant|actually|make that|no wait|wait no|rather|correction|let me correct)\b[,.]?", re.I)
+
+
+def after_correction(text):
+    """'the 21st, sorry, I mean the 20th' -> 'the 20th' (the part after the last correction marker)."""
+    t = str(text or "")
+    parts = CORRECTION.split(t)
+    if len(parts) > 1:
+        tail = parts[-1].strip(" ,.")
+        if re.search(r"\d|[a-z]", tail, re.I):
+            return tail
+    return t
+
+
 def parse_spoken_date(text, today, rules=None):
+    corrected = after_correction(text)
+    if corrected != str(text or ""):
+        d = _parse_spoken_date(corrected, today, rules)
+        if d is not None:
+            return d
+    return _parse_spoken_date(text, today, rules)
+
+
+def _parse_spoken_date(text, today, rules=None):
     """Best-effort: returns a datetime.date or None. Handles ISO, 'today', 'tomorrow',
     '(this|next) <weekday>', bare weekday (next occurrence), '<day> <month>' / '<month> <day>' with
     digits or ordinal words, and 'the 23rd'. `rules` may set next_weekday='following_week' (default)."""

@@ -423,35 +423,20 @@ def stage_tp(V, s, k, t, dtxt):
 
 
 def parse_callback(text, today, V):
-    t = text.lower()
-    d = parse_spoken_date(t, today, S.get("date_rules"))
-    if d is None and re.search(r"\b(this )?(morning|afternoon|evening|later|tonight)\b", t):
-        d = today
-    hm = None
-    m = re.search(r"\b(\d{1,2})(?::|\.)(\d{2})\s*(am|pm|a\.m\.|p\.m\.)?", t)
-    if m:
-        h, mi, ap = int(m.group(1)), int(m.group(2)), (m.group(3) or "")
-    else:
-        m = re.search(r"\b(\d{1,2})\s*(am|pm|a\.m\.|p\.m\.|o'clock|oclock)", t)
-        if m:
-            h, mi, ap = int(m.group(1)), 0, m.group(2)
-        else:
-            m = re.search(r"\b(?:at|around|about)\s+([a-z]+)(?:\s+(thirty|fifteen|forty five))?", t)
-            if m and m.group(1) in NUM_WORDS:
-                h = NUM_WORDS[m.group(1)]
-                mi = dict(thirty=30, fifteen=15).get(m.group(2) or "", 0)
-                ap = ""
-            else:
-                return d, None
-    if ap.startswith("p") and h < 12:
-        h += 12
-    if not ap and h < 8 and ("afternoon" in t or "evening" in t or h <= 7):
-        h += 12
-    if "noon" in t and not m:
-        h, mi = 12, 0
-    if h > 23 or mi > 59:
-        return d, None
-    return d, "%02d:%02d" % (h, mi)
+    """(date, 'HH:MM') of a callback request; a correction ('ten, sorry, eleven') wins."""
+    full = str(text or "").lower()
+    corr = after_correction(full).lower()
+    hm = spoken_time(corr) if corr != full else None
+    hm = hm or spoken_time(full)
+    d = None
+    explicit = r"\b(today|tomorrow|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(st|nd|rd|th)?\s+[a-z]{3,}|next|this)\b"
+    for part in ([corr] if corr != full and re.search(explicit, corr) else []) + [full]:
+        d = parse_spoken_date(part, today, S.get("date_rules"))
+        if d is None and re.search(r"\b(this )?(morning|afternoon|evening|later|tonight)\b", part) and not re.search(r"tomorrow", part):
+            d = today
+        if d is not None:
+            break
+    return d, hm
 
 
 def callback_ok(V, d, hm):

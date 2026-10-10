@@ -58,3 +58,19 @@ def test_spoken_forms():
         assert cal.parse_birth_date(t) == e, t
     for t, e in DIGITS.items():
         assert cal.digits_only(t) == e, t
+
+
+def test_spoken_times_and_corrections():
+    from builder.runtime import engine
+    import json, pathlib
+    engine.S = json.load(open(pathlib.Path(__file__).resolve().parent.parent / "specs" / "brief-a.gold.json"))
+    cases = {"tomorrow at ten, sorry, I mean eleven in the morning": ("2026-10-15", "11:00"),
+             "Friday at two, actually make that three": ("2026-10-16", "15:00"),
+             "tomorrow, maybe quarter to six in the evening": ("2026-10-15", "17:45"),
+             "around seven tonight": ("2026-10-14", "19:00"), "tomorrow at 11": ("2026-10-15", "11:00"),
+             "tomorrow morning around eleven": ("2026-10-15", "11:00"), "tomorrow at noon": ("2026-10-15", "12:00")}
+    for t, (d, h) in cases.items():
+        gd, gh = engine.parse_callback(t, TODAY, dict())
+        assert (gd.isoformat(), gh) == (d, h), t
+    assert cal.parse_spoken_date("the 21st, sorry, I mean the 20th", TODAY).isoformat() == "2026-10-20"
+    assert cal.parse_spoken_date("Friday, actually no, Thursday", TODAY).isoformat() == "2026-10-15"
