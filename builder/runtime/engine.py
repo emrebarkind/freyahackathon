@@ -1707,6 +1707,19 @@ def chain_step(V, s):
     return True
 
 
+def fallback_close(V):
+    """Outcome to close with if later engine runs keep failing on the platform (api_close_fb)."""
+    s = st(V)
+    prods = s.get("products") or []
+    if s.get("stage") == "closing" and V.get("c_outcome"):
+        o, r = V.get("c_outcome", ""), V.get("c_reason", "")
+    else:
+        e = ev("promise" if any(p.get("status") == "recorded" for p in prods) else ("service_error" if prods else "unclear"))
+        o, r = e.get("outcome", ""), e.get("reason", "") or ""
+    V["fb_outcome"], V["fb_reason"] = o, r
+    V["fb_say"] = (L("system_error") or "I'm sorry, we have a technical problem and need to end the call. Please call us back.") + " " + L("goodbye")
+
+
 # ----------------------------------------------------------------------------------------------- entry
 def run(V):
     s = st(V)
@@ -1856,6 +1869,7 @@ def main(V):
     try:
         run(V)
         plan_chain(V)
+        fallback_close(V)
     except Exception as e:  # never let the call die: apologise and close safely
         V["engine_error"] = (type(e).__name__ + ": " + str(e))[:300]
         s = st(V)

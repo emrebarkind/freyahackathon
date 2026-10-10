@@ -125,16 +125,23 @@ def engine_source(spec):
 
 def code_step(spec, routes):
     src = engine_source(spec)
-    trans = [{"target_node": r, "description": "engine routes to " + r,
-              "condition": {"logic": "or", "conditions": [{"variable": "next", "operator": "equals", "operand": r}]}}
-             for r in routes]
+    err = lambda extra: {"logic": "or", "conditions": [{"logic": "and", "conditions": [
+        {"variable": "step_response.status", "operator": "equals", "operand": "error"}] + extra}]}
+    # A failed or timed-out code run writes no variables, so `next` would still name the previous target and replay
+    # it. Retry the run instead; after repeated failures close the call safely with the engine's fallback outcome.
+    trans = [{"target_node": "api_close_fb", "description": "the engine keeps failing",
+              "condition": err([{"variable": "step_failure_count", "operator": "greater_than", "operand": 3}])},
+             {"target_node": "step", "description": "retry a failed engine run", "condition": err([])}]
+    trans += [{"target_node": r, "description": "engine routes to " + r,
+               "condition": {"logic": "or", "conditions": [{"variable": "next", "operator": "equals", "operand": r}]}}
+              for r in routes]
     trans.append({"target_node": "api_close", "description": "fallback", "condition": {"operator": "always"}})
     return {"name": "step", "node_type": "code", "passthrough": True, "passthrough_default_transition": "api_close",
             "on_enter": {"type": "silent"}, "disable_inactivity_monitor": True,
             "pre_actions": [{"type": "function", "function": {"name": "code_exec", "handler": "__function__:code_exec",
                              "parameters": {"type": "object", "properties": {
                                  "code": {"type": "string", "default": src},
-                                 "timeout_ms": {"type": "number", "default": 20000}}}}}],
+                                 "timeout_ms": {"type": "number", "default": 30000}}}}}],
             "transitions": trans}
 
 
@@ -467,6 +474,9 @@ def compile_workflow(spec, openapi):
             body["customer_id"] = "{{customer_id}}"
         if node in ("api_close", "api_close_nr"):
             nodes[node] = api_node(node, tool, f"{base}/{tool}", body, types, nxt="end", tts="{{say}}")
+            if node == "api_close":
+                fb = {k: v.replace("{{c_outcome}}", "{{fb_outcome}}").replace("{{c_reason}}", "{{fb_reason}}") for k, v in body.items()}
+                nodes["api_close_fb"] = api_node("api_close_fb", tool, f"{base}/{tool}", fb, types, nxt="end", tts="{{fb_say}}")
         elif node == "api_verify" and allv:
             # all questions passed: go straight to the account lookup (saves one code run before the disclosure)
             direct = [{"target_node": "api_account", "description": "identity fully verified",
