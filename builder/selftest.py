@@ -10,6 +10,8 @@ import re
 
 from builder.runtime import cal, engine
 
+KIT_OPENAPI = __import__("pathlib").Path(__file__).resolve().parent.parent / "kit" / "build-the-builder" / "tools" / "openapi.json"
+
 API_SLOTS = {
     "api_verify": ("verify_identity", ["q_field", "q_answer"]),
     "api_account": ("get_account", []),
@@ -86,57 +88,121 @@ def flatten(prefix, obj, out):
         out[prefix] = "true" if obj is True else "false" if obj is False else obj
 
 
-def simulate(spec, variables, bank, turns, max_steps=300):
-    """turns: list of dicts k/t/d/a/s (what extraction would produce). Returns (ledger, transcript)."""
+# ------------------------------------------------------------------ the compiled workflow, walked like the platform
+def cond_true(c, V):
+    if c.get("operator") == "always":
+        return True
+    if "conditions" in c:
+        vals = [cond_true(x, V) for x in c["conditions"]]
+        return all(vals) if c.get("logic") == "and" else any(vals)
+    v, op, x = V.get(c.get("variable")), c.get("operator"), c.get("operand")
+    if op == "equals":
+        return v is not None and str(v) == str(x)
+    if op == "not_equals":
+        return v is None or str(v) != str(x)
+    if op == "greater_than":
+        try:
+            return float(v) > float(x)
+        except (TypeError, ValueError):
+            return False
+    return False
+
+
+def route(node, V):
+    for t in node.get("transitions", []):
+        if cond_true(t["condition"], V):
+            return t["target_node"]
+    return node.get("passthrough_default_transition")
+
+
+def resolve(tmpl, V):
+    if isinstance(tmpl, str):
+        m = re.fullmatch(r"\{\{([a-zA-Z_0-9.]+)\}\}", tmpl)
+        if m:
+            return V.get(m.group(1)), m.group(1)
+        return re.sub(r"\{\{([a-zA-Z_0-9.]+)\}\}", lambda g: str(V.get(g.group(1), "")), tmpl), None
+    return tmpl, None
+
+
+def walk(wf, spec, V, bank_call, turns, feed, max_steps=400):
+    """Run a call through the compiled workflow: the step node runs the engine, api nodes call the bank with the
+    compiled request body, transitions are evaluated as the platform does. Returns the transcript."""
     engine.S = spec
     cal.P = dict(workdays=spec["calendar"]["workdays"], holidays=spec["calendar"]["holidays"])
-    V = dict(variables)
     turns = list(turns)
-    tr = []
-
-    def feed(stage, u):
-        V.update({stage + "_kind": u.get("k", "none"), stage + "_text": u.get("t", ""), stage + "_date": u.get("d", ""),
-                  stage + "_amount": u.get("a", ""), stage + "_side": u.get("side", "none"),
-                  stage + "_for": u.get("f", "none"), stage + "_cut": u.get("cut", "no")})
-
-    tr.append(("agent", "<opening>"))
-    feed("open", turns.pop(0))
+    tr = [("agent", "<opening>")]
+    u = turns.pop(0)
+    tr.append(("customer", json.dumps(u)))
+    feed("open", u)
+    node = "step"
     for _ in range(max_steps):
-        engine.main(V)
-        if V.get("engine_error"):
-            raise RuntimeError("engine error: " + V["engine_error"])
-        nxt = V.get("next")
-        if nxt in API_SLOTS:
-            tool, slots = API_SLOTS[nxt]
-            if nxt in ("api_close", "api_close_nr"):
-                tr.append(("agent", V.get("say", "")))
-            for k in [k for k in V if k.startswith(nxt + "_response.")]:
-                del V[k]
-            r = bank.call(tool, {s: V.get(s) for s in slots})
-            if r is not None:
-                flatten(nxt + "_response.data", r, V)
-            allv = spec["identity"].get("response", {}).get("all_verified")
-            if nxt == "api_verify" and allv and str(V.get("api_verify_response.data." + allv)).lower() == "true":
-                for k in [k for k in V if k.startswith("api_account_response.")]:
-                    del V[k]
-                r = bank.call("get_account", {})            # the workflow's direct transition verify -> account
-                if r is not None:
-                    flatten("api_account_response.data", r, V)
-            if nxt in ("api_close", "api_close_nr"):
-                break
+        if node in (None, "end"):
+            break
+        n = wf["nodes"][node]
+        if node == "step":
+            engine.main(V)
+            if V.get("engine_error"):
+                raise RuntimeError("engine error: " + V["engine_error"])
+            node = route(n, V)
             continue
-        if nxt and nxt.startswith("talk_"):
+        if n["node_type"] == "api_request":
+            if n.get("on_enter", {}).get("type") == "tts":
+                tr.append(("agent", resolve(n["on_enter"]["text"], V)[0]))
+            fn = n["pre_actions"][0]["function"]
+            tool = fn["name"]
+            body, slots = {}, {}
+            for f, d in fn["parameters"]["properties"]["body"]["properties"].items():
+                val, var = resolve(d.get("default"), V)
+                if var is not None and val in (None, ""):
+                    continue                       # an unset single placeholder: the platform drops the field
+                body[f] = float(val) if d.get("type") == "number" and val not in (None, "") else val
+                if var:
+                    slots[re.sub(r"_[23]$", "", var)] = body[f]
+            for k in [k for k in V if k.startswith(node + "_response")]:
+                del V[k]
+            r = bank_call(tool, body, slots)
+            if r is None:
+                V[node + "_failure_count"] = (V.get(node + "_failure_count") or 0) + 1
+            else:
+                V[node + "_success_count"] = (V.get(node + "_success_count") or 0) + 1
+                flatten(node + "_response.data", r, V)
+                V[node + "_response.status_code"] = 200
+            node = route(n, V)
+            continue
+        if n["node_type"] == "conversation":
             tr.append(("agent", V.get("say", "")))
-            if not turns and nxt == "talk_after":
+            if not turns and node == "talk_after":
                 turns = [dict(k="done", t="no, that's all, thank you")]
             if not turns:
                 tr.append(("customer", "<silence>"))
                 break
             u = turns.pop(0)
             tr.append(("customer", json.dumps(u)))
-            feed(nxt[5:].replace("open_again", "open"), u)
+            feed(node[5:].replace("open_again", "open"), u)
+            node = route(n, V)
             continue
         break
+    return tr
+
+
+def simulate(spec, variables, bank, turns, max_steps=400, openapi=None):
+    """turns: list of dicts k/t/d/a/f/side/cut (what extraction would produce). Returns (ledger, transcript)."""
+    from builder import compile as comp
+    if openapi is None:
+        openapi = json.load(open(KIT_OPENAPI))
+    spec = comp.apply_defaults(json.loads(json.dumps(spec)), openapi)
+    wf = comp.compile_workflow(spec, openapi)
+    bank.spec = spec
+    V = dict(variables)
+
+    def feed(stage, u):
+        V.update({stage + "_kind": u.get("k", "none"), stage + "_text": u.get("t", ""), stage + "_date": u.get("d", ""),
+                  stage + "_amount": u.get("a", ""), stage + "_side": u.get("side", "none"),
+                  stage + "_for": u.get("f", "none"), stage + "_cut": u.get("cut", "no")})
+        if stage == "id":
+            V["id_norm"] = u.get("norm", "")
+
+    tr = walk(wf, spec, V, lambda tool, body, slots: bank.call(tool, slots), turns, feed, max_steps)
     return bank.led, tr
 
 
@@ -252,7 +318,7 @@ def run_all(spec, openapi):
             name, turns, prods, exp = sc[:4]
             try:
                 bank = GenericBank(spec, ident, copy.deepcopy(prods), sc[4] if len(sc) > 4 else None)
-                led, tr = simulate(spec, V0, bank, turns)
+                led, tr = simulate(spec, V0, bank, turns, openapi=openapi)
                 got = dict(outcome=led["outcome"], reason=led["reason"] or "", promises=sorted(led["promises"]), notes=sorted(led["notes"]),
                            callbacks=sorted(led["callbacks"]), transfers=sorted(led["transfers"]))
                 spoken = " ".join(t for w, t in tr if w == "agent")
