@@ -1,0 +1,467 @@
+{
+ "package": "p1",
+ "rules": {
+  "R1": "Ask the postcode first, then the last four digits of the account number.",
+  "R2": "Two wrong identity answers in total end the identity check.",
+  "R3": "Postcodes are sent to verify_identity in capitals with all spaces removed.",
+  "R4": "Business days are Mon-Fri except 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31, 2027-01-01; promises only on business days.",
+  "R5": "Deadline by band: days_late 1-10 = 8th business day after today; 11-30 = today+14 calendar days, moved forward to a business day; 31-60 = last calendar day of the month, moved back to a business day.",
+  "R6": "Floor is minimum_due (credit card, overdraft) or monthly_instalment (personal loan), capped at past_due.",
+  "R7": "Ladder: attempt 1 past_due on next business day (or deadline if earlier); middle attempt 2 floor on deadline; late attempt 2 past_due on deadline, attempt 3 floor on deadline; exact repeats are skipped. Early 1, middle 2, late 3 attempts.",
+  "R8": "Third-party callback: business day, today or next two business days, 09:30-18:00 inclusive, later than now.",
+  "R9": "create_promise amount is sent in pence as a whole number.",
+  "R10": "Closing table: outcome/reason, note reason (paid, refused, dispute, system failure only) and transfer queue per situation."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "R5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-17T09:15",
+    "product": {
+     "product_id": "pr_c1",
+     "type": "credit_card",
+     "card_last4": "3307",
+     "past_due": 412.0,
+     "days_late": 1,
+     "minimum_due": 40.0
+    }
+   },
+   "expect": "2027-01-04",
+   "source": "| 1 to 10 | early | within 8 business days | 1 | \"Within 8 business days\" means the 8th business day after today; today does not count. Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C2",
+   "rule": "R5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-16T11:00",
+    "product": {
+     "product_id": "pr_l1",
+     "type": "personal_loan",
+     "past_due": 780.0,
+     "days_late": 30,
+     "monthly_instalment": 260.0
+    }
+   },
+   "expect": "2026-12-01",
+   "source": "| 11 to 30 | middle | within 14 calendar days | 2 | \"Within 14 calendar days\" means today plus 14 calendar days. If that date is a non-business day, the deadline moves forward to the next business day. Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C3",
+   "rule": "R5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-18T16:40",
+    "product": {
+     "product_id": "pr_o1",
+     "type": "overdraft",
+     "past_due": 155.4,
+     "days_late": 11,
+     "minimum_due": 50.0
+    }
+   },
+   "expect": "2027-01-04",
+   "source": "| 11 to 30 | middle | within 14 calendar days | 2 | \"Within 14 calendar days\" means today plus 14 calendar days. If that date is a non-business day, the deadline moves forward to the next business day. Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C4",
+   "rule": "R5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-24T10:05",
+    "product": {
+     "product_id": "pr_l1",
+     "type": "personal_loan",
+     "past_due": 930.0,
+     "days_late": 31,
+     "monthly_instalment": 310.0
+    }
+   },
+   "expect": "2026-11-27",
+   "source": "| 31 to 60 | late | end of the current month | 3 | \"End of the current month\" means the last calendar day of the month that contains today. If that day is a non-business day, the deadline moves back to the last business day before it. Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C5",
+   "rule": "R5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-14T13:30",
+    "product": {
+     "product_id": "pr_c1",
+     "type": "credit_card",
+     "card_last4": "8812",
+     "past_due": 1260.0,
+     "days_late": 60,
+     "minimum_due": 95.0
+    }
+   },
+   "expect": "2026-12-30",
+   "source": "| 31 to 60 | late | end of the current month | 3 | \"End of the current month\" means the last calendar day of the month that contains today. If that day is a non-business day, the deadline moves back to the last business day before it. Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C6",
+   "rule": "R6",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-09T10:00",
+    "product": {
+     "product_id": "pr_c1",
+     "type": "credit_card",
+     "card_last4": "5521",
+     "past_due": 380.0,
+     "days_late": 14,
+     "minimum_due": 45.5
+    }
+   },
+   "expect": 45.5,
+   "source": "The **floor** is `minimum_due` for a credit card or an overdraft, and `monthly_instalment` for a personal loan. If that field is higher than `past_due`, the floor is `past_due`."
+  },
+  {
+   "id": "C7",
+   "rule": "R6",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-02T14:00",
+    "product": {
+     "product_id": "pr_l1",
+     "type": "personal_loan",
+     "past_due": 240.75,
+     "days_late": 37,
+     "monthly_instalment": 310.0
+    }
+   },
+   "expect": 240.75,
+   "source": "The **floor** is `minimum_due` for a credit card or an overdraft, and `monthly_instalment` for a personal loan. If that field is higher than `past_due`, the floor is `past_due`."
+  },
+  {
+   "id": "C8",
+   "rule": "R7",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-04T10:00",
+    "product": {
+     "product_id": "pr_c1",
+     "type": "credit_card",
+     "card_last4": "1946",
+     "past_due": 275.0,
+     "days_late": 10,
+     "minimum_due": 35.0
+    }
+   },
+   "expect": 1,
+   "source": "| 1 to 10 | early | within 8 business days | 1 | This question is not a proposal and not a persuasion attempt."
+  },
+  {
+   "id": "C9",
+   "rule": "R7",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-27T10:00",
+    "product": {
+     "product_id": "pr_l1",
+     "type": "personal_loan",
+     "past_due": 600.0,
+     "days_late": 45,
+     "monthly_instalment": 150.0
+    }
+   },
+   "expect": 2,
+   "source": "| 31 to 60 | late | end of the current month | 3 | \"End of the current month\" means the last calendar day of the month that contains today. If that day is a non-business day, the deadline moves back to the last business day before it. | 1 | `past_due` on the first business day after today, or on the deadline if that is earlier | all | | 2 | `past_due` on the deadline | late | | 3 | the floor on the deadline | late | If an attempt would repeat an earlier proposal exactly, skip it: it is not a proposal and the customer is not asked again."
+  },
+  {
+   "id": "C10",
+   "rule": "R7",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-24T10:00",
+    "product": {
+     "product_id": "pr_c1",
+     "type": "credit_card",
+     "card_last4": "7730",
+     "past_due": 210.0,
+     "days_late": 5,
+     "minimum_due": 30.0
+    }
+   },
+   "expect": [
+    [
+     210.0,
+     "2026-12-29"
+    ]
+   ],
+   "source": "| 1 to 10 | early | within 8 business days | 1 | \"Within 8 business days\" means the 8th business day after today; today does not count. | 1 | `past_due` on the first business day after today, or on the deadline if that is earlier | all | Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C11",
+   "rule": "R7",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-11T11:20",
+    "product": {
+     "product_id": "pr_c1",
+     "type": "credit_card",
+     "card_last4": "4409",
+     "past_due": 520.0,
+     "days_late": 25,
+     "minimum_due": 75.0
+    }
+   },
+   "expect": [
+    [
+     520.0,
+     "2026-12-14"
+    ],
+    [
+     75.0,
+     "2026-12-29"
+    ]
+   ],
+   "source": "| 11 to 30 | middle | within 14 calendar days | 2 | \"Within 14 calendar days\" means today plus 14 calendar days. If that date is a non-business day, the deadline moves forward to the next business day. | 1 | `past_due` on the first business day after today, or on the deadline if that is earlier | all | | 2 | the floor on the deadline | middle | Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C12",
+   "rule": "R7",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-23T15:00",
+    "product": {
+     "product_id": "pr_l1",
+     "type": "personal_loan",
+     "past_due": 600.0,
+     "days_late": 45,
+     "monthly_instalment": 200.0
+    }
+   },
+   "expect": [
+    [
+     600.0,
+     "2026-11-24"
+    ],
+    [
+     600.0,
+     "2026-11-27"
+    ],
+    [
+     200.0,
+     "2026-11-27"
+    ]
+   ],
+   "source": "| 31 to 60 | late | end of the current month | 3 | \"End of the current month\" means the last calendar day of the month that contains today. If that day is a non-business day, the deadline moves back to the last business day before it. | 1 | `past_due` on the first business day after today, or on the deadline if that is earlier | all | | 2 | `past_due` on the deadline | late | | 3 | the floor on the deadline | late |"
+  },
+  {
+   "id": "C13",
+   "rule": "R7",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-01T09:40",
+    "product": {
+     "product_id": "pr_o1",
+     "type": "overdraft",
+     "past_due": 90.0,
+     "days_late": 40,
+     "minimum_due": 120.0
+    }
+   },
+   "expect": [
+    [
+     90.0,
+     "2026-12-02"
+    ],
+    [
+     90.0,
+     "2026-12-30"
+    ]
+   ],
+   "source": "The **floor** is `minimum_due` for a credit card or an overdraft, and `monthly_instalment` for a personal loan. If that field is higher than `past_due`, the floor is `past_due`. | 31 to 60 | late | end of the current month | 3 | \"End of the current month\" means the last calendar day of the month that contains today. If that day is a non-business day, the deadline moves back to the last business day before it. | 1 | `past_due` on the first business day after today, or on the deadline if that is earlier | all | | 2 | `past_due` on the deadline | late | | 3 | the floor on the deadline | late | If an attempt would repeat an earlier proposal exactly, skip it: it is not a proposal and the customer is not asked again."
+  },
+  {
+   "id": "C14",
+   "rule": "R4",
+   "type": "business_day",
+   "input": {
+    "date": "2026-11-30"
+   },
+   "expect": false,
+   "source": "Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01. A promise date must be today or later, a business day, and not after the deadline."
+  },
+  {
+   "id": "C15",
+   "rule": "R4",
+   "type": "business_day",
+   "input": {
+    "date": "2026-12-24"
+   },
+   "expect": true,
+   "source": "Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01. A promise date must be today or later, a business day, and not after the deadline."
+  },
+  {
+   "id": "C16",
+   "rule": "R8",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-12-24T17:30",
+    "date": "2026-12-24",
+    "time": "18:00"
+   },
+   "expect": true,
+   "source": "A callback may be booked only on a business day that is today or one of the next two business days, from 09:30 to 18:00 with both ends included, and only at a time later than `now`. Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C17",
+   "rule": "R8",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-12-24T17:30",
+    "date": "2026-12-28",
+    "time": "10:00"
+   },
+   "expect": false,
+   "source": "A callback may be booked only on a business day that is today or one of the next two business days, from 09:30 to 18:00 with both ends included, and only at a time later than `now`. Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C18",
+   "rule": "R8",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-12-24T17:30",
+    "date": "2026-12-30",
+    "time": "09:30"
+   },
+   "expect": true,
+   "source": "A callback may be booked only on a business day that is today or one of the next two business days, from 09:30 to 18:00 with both ends included, and only at a time later than `now`. Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C19",
+   "rule": "R8",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-11-27T15:00",
+    "date": "2026-12-02",
+    "time": "12:00"
+   },
+   "expect": true,
+   "source": "A callback may be booked only on a business day that is today or one of the next two business days, from 09:30 to 18:00 with both ends included, and only at a time later than `now`. Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C20",
+   "rule": "R1",
+   "type": "identity_fields",
+   "input": {},
+   "expect": [
+    "postcode",
+    "account_last4"
+   ],
+   "source": "Ask two security questions, one at a time, in this order: first the postcode, then the last four digits of the account number. Call `verify_identity` with each answer (field `postcode` or `account_last4`)."
+  },
+  {
+   "id": "C21",
+   "rule": "R2",
+   "type": "identity_max_wrong",
+   "input": {},
+   "expect": 2,
+   "source": "Two wrong answers in total, on either question, end the check"
+  },
+  {
+   "id": "C22",
+   "rule": "R3",
+   "type": "id_answer",
+   "input": {
+    "field": "postcode",
+    "value": "M1 4BT"
+   },
+   "expect": "M14BT",
+   "source": "Send a postcode in capital letters with every space removed (\"eh3 9qp\" is sent as `EH39QP`)."
+  },
+  {
+   "id": "C23",
+   "rule": "R9",
+   "type": "promise_amount",
+   "input": {
+    "amount": 85.5
+   },
+   "expect": 8550,
+   "source": "Send the amount to `create_promise` in pence, as a whole number: £85.50 is sent as `8550`."
+  },
+  {
+   "id": "C24",
+   "rule": "R10",
+   "type": "close",
+   "input": {
+    "situation": "paid"
+   },
+   "expect": {
+    "outcome": "already_paid",
+    "reason": ""
+   },
+   "source": "\"I have already paid\": say payments can take two business days to show and take no promise. Every call ends with exactly one `close_call`, the last tool call, with the outcome and reason below (\"none\" means no reason is sent). | already paid | 35 | `already_paid` | none | `claims_paid` | none |"
+  },
+  {
+   "id": "C25",
+   "rule": "R10",
+   "type": "close",
+   "input": {
+    "situation": "hardship"
+   },
+   "expect": {
+    "outcome": "transferred",
+    "reason": "hardship"
+   },
+   "source": "say one sentence of sympathy, make no further proposal and transfer the call to the care team. Every call ends with exactly one `close_call`, the last tool call, with the outcome and reason below (\"none\" means no reason is sent). | hardship | 37 | `transferred` | `hardship` | none | `care` |"
+  },
+  {
+   "id": "C26",
+   "rule": "R10",
+   "type": "close",
+   "input": {
+    "situation": "id_declined"
+   },
+   "expect": {
+    "outcome": "identity_failed",
+    "reason": "declined"
+   },
+   "source": "A second refusal means identity is declined. Every call ends with exactly one `close_call`, the last tool call, with the outcome and reason below (\"none\" means no reason is sent). | identity declined | 12 | `identity_failed` | `declined` | none | none |"
+  },
+  {
+   "id": "C27",
+   "rule": "R10",
+   "type": "note",
+   "input": {
+    "situation": "refused"
+   },
+   "expect": "customer_refused",
+   "source": "Where the table gives a note reason, call `add_note` with it and the `product_id` just before `close_call`; no other call gets a note. | refused | 29 | `no_promise` | `refused` | `customer_refused` | none |"
+  },
+  {
+   "id": "C28",
+   "rule": "R10",
+   "type": "note",
+   "input": {
+    "situation": "transfer_restructuring"
+   },
+   "expect": null,
+   "source": "Where the table gives a note reason, call `add_note` with it and the `product_id` just before `close_call`; no other call gets a note. | payment plan | 38 | `transferred` | `payment_plan` | none | `payment_plans` |"
+  },
+  {
+   "id": "C29",
+   "rule": "R10",
+   "type": "transfer",
+   "input": {
+    "situation": "hardship"
+   },
+   "expect": "care",
+   "source": "say one sentence of sympathy, make no further proposal and transfer the call to the care team. Where it gives a queue, call `transfer_to_agent` with it, then close. | hardship | 37 | `transferred` | `hardship` | none | `care` |"
+  },
+  {
+   "id": "C30",
+   "rule": "R10",
+   "type": "transfer",
+   "input": {
+    "situation": "transfer_human"
+   },
+   "expect": "customer_service",
+   "source": "If they insist, transfer the call. Where it gives a queue, call `transfer_to_agent` with it, then close. | human | 39 | `transferred` | `human_request` | none | `customer_service` |"
+  }
+ ]
+}
