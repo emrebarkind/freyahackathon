@@ -24,8 +24,11 @@ Rules:
   reuse values from examples or from your own knowledge.
 - Field names and allowed values for tool calls come from the tool API file.
 - Answer with the JSON object only."""
-if os.environ.get("BUILDER_EXTRACT_GUIDANCE"):       # optional extra reading guidance (eval/gepa_extract.py experiments)
-    SYSTEM += "\n\nAdditional guidance:\n" + pathlib.Path(os.environ["BUILDER_EXTRACT_GUIDANCE"]).read_text()
+# Reading guidance found by the GEPA search on dev packages (eval/gepa_extract.py) and kept because it helped on the
+# frozen test packages (docs/EXPERIMENTS.md). BUILDER_EXTRACT_GUIDANCE=<file> replaces it; set it to "" to turn it off.
+_G = os.environ.get("BUILDER_EXTRACT_GUIDANCE", str(pathlib.Path(__file__).resolve().parent / "extract_guidance.md"))
+if _G:
+    SYSTEM += "\n\nAdditional guidance:\n" + pathlib.Path(_G).read_text()
 
 
 def prompt_for(briefs, openapi):
@@ -332,7 +335,7 @@ def set_path(d, path, value):
 def read_and_audit(base, trace):
     """Mode B: one reading at the highest effort, then a targeted audit of the high-risk fields against the
     source documents. The audit answers with changes only, so nothing it did not look at can be lost."""
-    effort = os.environ.get("BUILDER_B_EFFORT", "max")
+    effort = os.environ.get("BUILDER_B_EFFORT", "high")
     out = claude.ask(base, SYSTEM, f"read the brief and tool API into a spec (single reading, effort {effort})", trace, effort=effort)
     spec = claude.json_block(out, keys=SPEC_KEYS)
     audit = claude.ask(base + "\n\n" + AUDIT.format(fields=", ".join(AUDIT_FIELDS), spec=json.dumps(spec, indent=1)),
@@ -354,10 +357,11 @@ def read_and_audit(base, trace):
 
 
 def extract(briefs, openapi, trace, budget=None, mode=None):
-    """mode A (default): two independent readings + adjudication. mode B: one strong reading + targeted audit
-    (BUILDER_EXTRACT_MODE=B). Both then share the same validation loop and repair budget."""
+    """mode B (default): one reading + targeted audit of the high-risk fields. mode A (BUILDER_EXTRACT_MODE=A): two
+    independent readings + adjudication. Equal accuracy on the frozen packages, B ~40% cheaper and a little faster
+    (docs/EXPERIMENTS.md). Both then share the same validation loop and repair budget."""
     base = prompt_for(briefs, openapi)
-    mode = mode or os.environ.get("BUILDER_EXTRACT_MODE", "A")
+    mode = mode or os.environ.get("BUILDER_EXTRACT_MODE", "B")
     trace.note(f"extraction mode {mode}")
     if mode == "B":
         return validate_loop(read_and_audit(base, trace), base, openapi, trace, budget)

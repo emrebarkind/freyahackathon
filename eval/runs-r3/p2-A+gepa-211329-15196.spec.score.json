@@ -1,0 +1,37 @@
+{
+ "ok": 28,
+ "total": 30,
+ "accuracy": 0.9333,
+ "rules": 12,
+ "missed_rules": [
+  "R4"
+ ],
+ "failed": [
+  {
+   "id": "C9",
+   "rule": "R4",
+   "type": "attempts",
+   "expect": 0,
+   "got": 1
+  },
+  {
+   "id": "C10",
+   "rule": "R4",
+   "type": "offers",
+   "expect": [],
+   "got": [
+    [
+     233.4,
+     "2026-11-12"
+    ]
+   ]
+  }
+ ],
+ "mode": "A+gepa",
+ "pkg": "p2",
+ "seconds": 187.8,
+ "cost": 1.1625,
+ "calls": 4,
+ "repairs": 1,
+ "error": ""
+}

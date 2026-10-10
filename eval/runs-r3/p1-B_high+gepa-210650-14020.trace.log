@@ -1,0 +1,25 @@
+[    0.0s] START 2026-10-10T21:06:50+0000
+[    0.0s] NOTE extraction mode B
+[   92.5s] MODEL CALL #1 model=claude-opus-5-5 seconds=92.5 cost_usd=0.363 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  129.1s] MODEL CALL #2 model=claude-opus-5-5 seconds=36.6 cost_usd=0.268 purpose: audit the high-risk fields of the reading against the source documents
+[  129.1s] NOTE audit: calendar: OK -- "Business days are Monday to Friday, except these Corran Bank holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01." -- the workdays are 0–4 and all five holidays are listed.
+[  129.1s] date_rules: OK -- the brief does not say how "next Friday" is read, so the default `following_week` is kept and recorded in assumptions.
+[  129.1s] confirm: OK -- "If unclear, ask once more; if still unclear, the call is unclear." -- that is 2 asks.
+[  129.1s] callback: OK -- "only on a business day that is today or one of the next two business days, from 09:30 to 18:00 with both ends included, and only at a time later than `now`" and "ask once for another. If that one is also outside, book nothing." -- the spec has today + within_business_days:2, business_days_only true, 09:30–18:00, after_now true and max_asks 2.
+[  129.1s] identity.questions: OK -- "first the postcode, then the last four digits of the account number" and "capital letters with every space removed … exactly four digits, keeping leading zeros" -- postcode is `upper` with no space format; account_last4 is `digits` with length 4. Both field values match the API enum.
+[  129.1s] identity.max_wrong: OK -- "Two wrong answers in total, on either question, end the check". The API summary says the same, so max_wrong is 2 and max_wrong_per_question is null.
+[  129.1s] identity.hints: OK -- the verify_identity response has no hint field, so hints is {}.
+[  129.1s] identity: OK -- "say once that the questions protect their account. A second refusal means identity is declined." The response field names (ok, verified, all_verified, wrong_answers_left) match the API. The `hint` key is an unused default and does no harm.
+[  129.1s] products.floor_field: OK -- "`minimum_due` for a credit card or an overdraft, and `monthly_instalment` for a personal loan". The rule that caps the floor at `past_due` is recorded in assumptions.
+[  129.1s] products.amount_field: OK -- "with the `past_due` amount".
+[  129.1s] products.floor_pct: OK -- the floor comes from a field, not a percentage, so this is null.
+[  129.1s] products: OK -- "`past_due` … pounds" and create_promise "Amount in pence, as a whole number" -- amount_scale is 1 and promise_scale is 100. The names "credit card ending {card_last4}", "personal loan" and "overdraft" follow rule 14.
+[  129.1s] bands: OK -- the table gives 1–10 early / 8 business days / 1 attempt, 11–30 middle / 14 calendar days / 2 attempts, and 31–60 late / end of month / 3 attempts. Rule 19: "moves back to the last business day before it … If that business day is earlier than today, use the last business day of the next month". `last_business_day_of_month` with roll false keeps today when today is the last business day; that is correct, because the brief only rolls when the date is *earlier* than today. Each band's ladder matches rule 26.
+[  129.1s] ladder: OK -- "1: `past_due` on the first business day after today, or on the deadline if that is earlier … 2 `past_due` on the deadline (late) … 3 the floor on the deadline". Steps that use past_due are `full_or_floor` because of rule 24: "From then on 
+[  129.1s] NOTE audit changed: nothing
+[  129.1s] NOTE validation round 1: 1 problem(s)
+[  129.1s]   - identity.response.hint 'hint' is not a field of the verify_identity response (fields: ['all_verified', 'error', 'ok', 'verified', 'wrong_answers_left'])
+[  129.1s] NOTE repair round 1/3: repair 1 validation problem(s)
+[  178.1s] MODEL CALL #3 model=claude-opus-5-5 seconds=49.0 cost_usd=0.326 purpose: repair 1 validation problem(s) in the spec
+[  178.1s] NOTE validation round 2: 0 problem(s)
+[  178.1s] END 2026-10-10T21:09:48+0000 total_seconds=178.1 model_calls=3 model_cost_usd=0.96
