@@ -88,8 +88,8 @@ KINDS = {
     "nego": {
         "yes": "agrees / accepts what was just offered or asked (yes, ok, fine, that works, I confirm)",
         "no": "says no / cannot / will not, without giving a date or an amount",
-        "proposes": "names a day, a date or an amount they can pay",
-        "too_much": "says the amount is too much / too high / cannot afford the full amount",
+        "proposes": "names a day, a date or an amount they can pay (the date of an unrelated event, e.g. a wedding or a trip, is not a proposal: use unclear)",
+        "too_much": "says the amount is too much / too high / cannot afford it, even if they also say 'you tell me'",
         "vague": "gives a vague time like next week, end of the month, when my salary comes, without an exact day",
         "already_paid": "says they already paid this amount",
         "dispute": "says the debt is not theirs, they never had this product, or it was closed or paid off in the past",
@@ -99,7 +99,7 @@ KINDS = {
         "robot": "asks whether you are a robot or an AI",
         "scam": "asks whether this is a scam",
         "not_talk": "says they do not want to talk about this",
-        "asks_amount": "asks how much they should or can pay, what the options are, or says 'you tell me'",
+        "asks_amount": "asks how much they should or can pay, what the options are, or says 'you tell me', without refusing in the same message",
         "question": "asks another question",
         "unclear": "anything else",
     },
@@ -162,8 +162,10 @@ def extraction(stage, spec):
         schema.append({"name": stage + "_text", "type": "string", "min_confidence": 0.0,
                        "description": "The day and time the customer can be reached, copied exactly as said in the latest message, e.g. 'tomorrow around eleven'. Empty if none."})
     if stage in ("nego", "hardship", "confirm"):
+        schema.append({"name": stage + "_text", "type": "string", "min_confidence": 0.0,
+                       "description": "The customer's latest message, copied exactly as written, including how it ends."})
         schema.append({"name": stage + "_date", "type": "string", "min_confidence": 0.0,
-                       "description": "The payment day or date the customer says in the latest message, copied exactly as said "
+                       "description": "The day or date the customer OFFERS TO PAY on in the latest message (not dates of other events), copied exactly as said "
                                       "(e.g. 'this Friday', 'next Tuesday', 'the 23rd', '30 October', 'next week'). If they correct themselves, "
                                       "only the corrected value. Empty if no day is mentioned."})
         schema.append({"name": stage + "_amount", "type": "float", "min_confidence": 0.0,

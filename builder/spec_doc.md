@@ -121,7 +121,7 @@ offer, offer_floor_date, offer_floor, below_floor, below_floor_again, date_past,
 after_deadline, vague_ask, propose_deadline, ask_date_for_amount, repeat_offer,
 readback_intro, readback_item, clamped_note, confirm_q, recorded, sms_line, record_failed,
 paid_line, dispute_line, hardship, hardship_declined, hardship_offer_again, restructure_line, human_ask_help, transfer,
-offer_short, offer_short_date, anything_else, promise_change, goodbye
+offer_short, offer_short_date, anything_else, promise_change, go_on, goodbye
 
 Meaning of the less obvious ones:
 - opening: the first sentence of the call (who is calling). confirm_ask: "Am I speaking with {title} {last_name}?"-style question.
@@ -143,6 +143,7 @@ Meaning of the less obvious ones:
 - hardship_offer_again: re-asks the support/transfer offer once if the answer was unclear.
 - offer_short: a neutral re-prompt after a side question, WITHOUT the amount ("Would that work for you?").
 - offer_short_date: the date of the pending floor offer ({date}), e.g. "That would be on {date}."
+- go_on: said when the customer stopped mid-sentence ("Sorry, please go on.").
 - anything_else: asked once after a recorded promise ("Is there anything else I can help you with?").
 - promise_change: what to say if the customer wants to change a promise that is already recorded (use the brief's rule,
   e.g. "You can change it in the mobile app."; if the brief says nothing, say it cannot be changed on this call).

@@ -19,6 +19,7 @@ import re
 try:                                   # local tests import the sibling module; on Freya the compiler
     from builder.runtime import cal    # concatenates cal.py above this file, so these names exist already
     from builder.runtime.cal import *  # noqa: F401,F403
+    from builder.runtime.cal import _parse_spoken_date  # noqa: F401
 except Exception:
     pass
 
@@ -497,7 +498,7 @@ def parse_callback(text, today, V):
         return x
     full_d, corr_d = strip_times(full), strip_times(corr)
     for part in ([corr_d] if corr != full and re.search(explicit, corr) else []) + [full_d]:
-        d = parse_spoken_date(part, today, S.get("date_rules"))
+        d = _parse_spoken_date(part, today, S.get("date_rules"))     # the correction was already applied above
         if d is None and re.search(r"\b(this )?(morning|afternoon|evening|later|tonight)\b", part) and not re.search(r"tomorrow", part):
             d = today
         if d is not None:
@@ -952,18 +953,18 @@ def product_target(s, scope):
 def stage_nego(V, s, k, t, dtxt, a, scope):
     prods = s["products"]
     multi = len(prods) > 1
-    pv = cur(s)
-    if k in ("unclear", "none") and not dtxt and a is None and not (pv and pv.get("vague_pending")):
-        if not s.get("unclear_once"):
-            s["unclear_once"] = True     # small talk / a fragment is not an answer yet: ask the same question once more
-            p0 = cur(s) if s.get("phase") != "today" else None
-            if p0 is not None and p0.get("offer") and p0["offer"][1]:
-                say(V, L("repeat_offer", name=p0["name"], amount=pay(p0, p0["offer"][0]), date=spoken(p0["offer"][1])))
+    pv = cur(s) if s.get("phase") != "today" else None
+    if k in ("unclear", "none") and not dtxt and a is None and not (pv is not None and pv.get("vague_pending")):
+        if s.get("unclear_n", 0) < S.get("max_unclear", 2):
+            s["unclear_n"] = s.get("unclear_n", 0) + 1     # small talk / a fragment is not an answer yet: re-ask the open question
+            s["reask"] = True
+            if pv is not None and pv.get("offer") and pv["offer"][1]:
+                say(V, L("offer_short") or "Would that work for you?")
             else:
                 say(V, L("ask_today_multi") if multi else L("ask_today"))
             return talk(V, "nego", s)
     else:
-        s["unclear_once"] = False
+        s["unclear_n"] = 0
     target = product_target(s, scope) if multi else None
     if target is not None:
         s["ci"] = target
@@ -1015,8 +1016,16 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
     if common_intents(V, s, k, short, True):
         return
     if k == "asks_amount":            # "you tell me" / "how much?": the agent always proposes the amount
-        say(V, again)
-        return talk(V, "nego", s)
+        if p.get("offer") and p["offer"][1] and abs(p["offer"][0] - p["floor"]) < 0.005 and p.get("floor_note_said"):
+            if p.get("floor_restated"):
+                k = "too_much"            # asked again after the floor was restated once: treat as not accepting it
+            else:
+                p["floor_restated"] = True
+                say(V, again)
+                return talk(V, "nego", s)
+        else:
+            say(V, again)
+            return talk(V, "nego", s)
     if k in ("question", "purpose"):
         say(V, L("no_info"), short)
         return talk(V, "nego", s)
@@ -1079,7 +1088,7 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         if p.get("after_deadline_offered") and S.get("rules", dict()).get("refuse_deadline_is_refusal", True):
             p["after_deadline_offered"] = False
         return refusal(V, s, p)
-    say(V, again)
+    say(V, short)                     # nothing new in the turn: re-prompt without restating the amount
     return talk(V, "nego", s)
 
 
@@ -1108,7 +1117,7 @@ def stage_hardship(V, s, k, t, dtxt, a):
         k = "yes"
     if k in ("unclear", "none", "question") and not dtxt and a is None and not s.get("hardship_reasked"):
         s["hardship_reasked"] = True
-        say(V, L("no_info") if k == "question" else "", L("hardship_offer_again") or L("hardship"))
+        say(V, L("no_info") if k == "question" else "", L("hardship_offer_again") or L("go_on") or "Sorry, I did not catch that.")
         return talk(V, "hardship", s)
     if k in ("yes", "agrees"):
         s["transferred"] = "support"
@@ -1270,10 +1279,14 @@ def run(V):
     k, t, dtxt, a, scope = take_input(V, stage)
     if s.pop("human_pending", False) and k in ("no", "refuses", "not_talk", "human", "unclear", "none", "asks_why"):
         k = "human"                                    # still wants a person after being asked once: transfer
+    if V.get("_cut") != "yes" and t and k in ("too_much", "no", "cannot", "unclear", "none") and not dtxt and a is None and \
+            not re.search(r"[.?!]\s*$", t) and re.search(r"\b(to|like|want|mean|i|the|a|an|on|and|but|because|would|can|pay|just|so|my)\s*$", t.lower()):
+        V["_cut"] = "yes"                              # text backup: the message ends on an unfinished phrase
     if V.get("_cut") == "yes" and stage in ("open", "tp", "nego", "confirm", "hardship") and not dtxt and a is None \
             and s.get("cut_waits", 0) < 2 and k not in ("wrong_number", "deceased", "dispute", "already_paid", "hardship", "restructure"):
         s["cut_waits"] = s.get("cut_waits", 0) + 1     # the customer stopped mid-sentence: let them finish
-        say(V, L("id_continue") or "Please go on.")
+        s["reask"] = True
+        say(V, L("go_on") or "Sorry, please go on.")
         return talk(V, stage, s)
     s["cut_waits"] = 0
     if s.get("same", 0) >= 2 and stage in ("nego", "confirm") and k in ("unclear", "none", "question", "asks_amount", "proposes") \
@@ -1283,7 +1296,10 @@ def run(V):
     dispatch(V, s, stage, k, t, dtxt, a, scope)
     s2 = st(V)
     if s2:
-        s2["same"] = (s2.get("same", 0) + 1) if V.get("say", "") == prev and s2.get("stage") in ("nego", "confirm") else 0
+        if s2.pop("reask", False):
+            pass                                   # a content-free re-ask is not an engine loop
+        else:
+            s2["same"] = (s2.get("same", 0) + 1) if V.get("say", "") == prev and s2.get("stage") in ("nego", "confirm") else 0
         put(V, s2)
 
 
