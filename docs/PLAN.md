@@ -78,6 +78,11 @@ The kit is in `kit/build-the-builder/` (briefs, openapi, 13 practice cases, docs
   - **Day-1 comparison:** run the example builder as the baseline (A ×3 reps, B, with styles). Measure our compiler against it.
 - **Critical:** there are no practice cases for a hidden brief. `run_cases --brief A` is meaningless for a hidden brief. Self-tests need synthetic cases (custom practice sessions or chat + Claude customer). This is still the top unknown to test on day 1.
 
+## Day-1 findings (10 Oct)
+- Freya connection OK (workspace `65b5c577…`). Practice bank + chat route + ledger work.
+- **The practice bank does not accept custom cases** (`unknown practice case`). Only the 13 public cases. → Hidden-brief self-tests: structural checks, chat smoke tests (third party, opening), and local unit tests on the runtime code.
+- `claude -p` / Claude Agent SDK works in this container without an API key, using managed auth.
+
 ## Files (new public repo; see "Repo" below)
 - `builder/build.py`: CLI, timing, trace, orchestration
 - `builder/normalize.py`, `builder/extract.py`: Claude calls (reuses `builder/llm.py`)

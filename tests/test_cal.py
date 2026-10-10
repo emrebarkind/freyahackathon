@@ -1,0 +1,46 @@
+import datetime as dt
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+from builder.runtime import cal
+
+A_HOLIDAYS = ["2026-10-26", "2026-11-11", "2026-11-26", "2026-12-25", "2027-01-01"]
+TODAY = dt.date(2026, 10, 14)  # Wednesday, every public case
+
+
+def setup_module(_):
+    cal.P = dict(workdays=[0, 1, 2, 3, 4], holidays=A_HOLIDAYS)
+
+
+def test_deadlines_brief_a():
+    assert cal.deadline(TODAY, {"kind": "business_days_after", "n": 7}) == dt.date(2026, 10, 23)   # PUB-04, PUB-13 loan
+    assert cal.deadline(TODAY, {"kind": "business_days_after", "n": 12}) == dt.date(2026, 11, 2)   # skips 26 Oct holiday
+
+
+def test_week_rules():
+    assert cal.last_business_day_of_week(TODAY) == dt.date(2026, 10, 16)
+    assert cal.parse_spoken_date("this Friday", TODAY) == dt.date(2026, 10, 16)
+    assert cal.parse_spoken_date("next Friday", TODAY) == dt.date(2026, 10, 23)
+    fri = dt.date(2026, 10, 16)
+    assert cal.parse_spoken_date("next Friday", fri) == dt.date(2026, 10, 23)
+    assert cal.parse_spoken_date("tomorrow", TODAY) == dt.date(2026, 10, 15)
+
+
+def test_holiday_and_next_business_day():
+    d = cal.parse_spoken_date("Monday the 26th", TODAY)
+    assert d == dt.date(2026, 10, 26) and not cal.is_business_day(d)
+    assert cal.next_business_day(d) == dt.date(2026, 10, 27)   # PUB-07
+    assert cal.parse_spoken_date("the twenty-second of October", TODAY) == dt.date(2026, 10, 22)
+    assert cal.parse_spoken_date("6 November", TODAY) == dt.date(2026, 11, 6)
+    assert cal.parse_spoken_date("30 October", TODAY) == dt.date(2026, 10, 30)
+
+
+def test_numbers_and_birthdates():
+    assert cal.words_to_number("four hundred and fifty-five") == 455
+    assert cal.words_to_number("six hundred thirty-seven fifty") is not None
+    assert cal.words_to_number("637.50") == 637.5
+    assert cal.digits_only("four four seven one") == "4471"
+    assert cal.digits_only("44 71") == "4471"
+    assert cal.parse_birth_date("14 March 1988") == "1988-03-14"
+    assert cal.parse_birth_date("the fourteenth of March nineteen eighty-eight") == "1988-03-14"
+    assert cal.parse_birth_date("12/07/1991") == "1991-07-12"
+    assert cal.parse_birth_date("March 14, 1988") == "1988-03-14"
