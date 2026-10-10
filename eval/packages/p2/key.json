@@ -1,0 +1,463 @@
+{
+ "package": "p2",
+ "rules": {
+  "R1": "Identity: date of birth first, then postcode; two wrong answers in total end the check.",
+  "R2": "Identity answers: date of birth sent as DDMMYYYY (eight digits, no separators); postcode in capitals with one space before the last three characters.",
+  "R3": "Business days: Mon-Fri except 2026-11-30, 2026-12-25, 2026-12-28, 2027-01-01, 2027-01-04, plus 2026-12-11 added by the memo; 2026-12-24 is a business day.",
+  "R4": "Bands (memo): early 1-14 days, mid 15-30, late 31-60, banded per product on days_in_arrears.",
+  "R5": "Deadlines: early = 8th business day after today; mid = today + 14 calendar days, moved back to the previous business day if not a business day; late = last business day of the month, or of next month if today is that day.",
+  "R6": "Floor: 30% of arrears_amount rounded up to the next whole pound (exact pounds unchanged); monthly_payment is not the floor.",
+  "R7": "Persuasion: attempts early 1 / mid 2 / late 3, opening ask included; ladder full today, full on 5th business day (or deadline if earlier), floor on deadline.",
+  "R8": "Third-party callback: today or next two business days, 09:00-18:30 inclusive (memo), later than now.",
+  "R9": "Close codes per situation, using memo code `declined` for refusals.",
+  "R10": "Notes: every product ending without a promise gets a note (refusal noted `declined` per memo); no notes on any transfer.",
+  "R11": "Transfers: payment plan -> arrears_solutions, person -> customer_care, hardship -> care_team.",
+  "R12": "create_promise amount is sent in pence as a whole number."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "R1",
+   "type": "identity_fields",
+   "input": {},
+   "expect": [
+    "date_of_birth",
+    "postcode"
+   ],
+   "source": "7. Ask two security questions, one at a time: first the date of birth, then the postcode of the address on file."
+  },
+  {
+   "id": "C2",
+   "rule": "R1",
+   "type": "identity_max_wrong",
+   "input": {},
+   "expect": 2,
+   "source": "9. Two wrong answers in total, across both questions, end the check. / Memo: The two-wrong-answers limit in rule 9 also stands."
+  },
+  {
+   "id": "C3",
+   "rule": "R2",
+   "type": "id_answer",
+   "input": {
+    "field": "date_of_birth",
+    "value": "1984-03-07"
+   },
+   "expect": "07031984",
+   "source": "8. Our system reads a date of birth only as eight digits, day then month then year, with no separators: 7 March 1984 is sent as `07031984`."
+  },
+  {
+   "id": "C4",
+   "rule": "R2",
+   "type": "id_answer",
+   "input": {
+    "field": "postcode",
+    "value": "G128QQ"
+   },
+   "expect": "G12 8QQ",
+   "source": "8. A postcode is sent in capital letters with a single space before its last three characters: eh129dn is sent as `EH12 9DN`."
+  },
+  {
+   "id": "C5",
+   "rule": "R3",
+   "type": "business_day",
+   "input": {
+    "date": "2026-12-11"
+   },
+   "expect": false,
+   "source": "Memo B: Friday 11 December 2026 is added as a non-business day because of the core banking migration. Treat it exactly like a bank holiday: no promise may fall on it, no callback may be booked on it, and it is skipped when counting business days."
+  },
+  {
+   "id": "C6",
+   "rule": "R3",
+   "type": "business_day",
+   "input": {
+    "date": "2026-11-30"
+   },
+   "expect": false,
+   "source": "11. Business days are Monday to Friday, except these bank holidays: 30 November 2026 (St Andrew's Day), 25 December 2026, 28 December 2026, 1 January 2027 and 4 January 2027. 24 December 2026 is a normal business day for the collections desk."
+  },
+  {
+   "id": "C7",
+   "rule": "R3",
+   "type": "business_day",
+   "input": {
+    "date": "2026-12-24"
+   },
+   "expect": true,
+   "source": "11. Business days are Monday to Friday, except these bank holidays: 30 November 2026 (St Andrew's Day), 25 December 2026, 28 December 2026, 1 January 2027 and 4 January 2027. 24 December 2026 is a normal business day for the collections desk."
+  },
+  {
+   "id": "C8",
+   "rule": "R4",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-03T10:30",
+    "product": {
+     "product_id": "p1",
+     "type": "personal_loan",
+     "arrears_amount": 640.0,
+     "days_in_arrears": 12,
+     "monthly_payment": 215.0
+    }
+   },
+   "expect": "2026-11-13",
+   "source": "Memo A: The early band now covers 1 to 14 days in arrears, and the mid band 15 to 30. The late band is unchanged. Deadlines and persuasion attempts per band are unchanged. / 13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 |"
+  },
+  {
+   "id": "C9",
+   "rule": "R4",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-03T10:30",
+    "product": {
+     "product_id": "p1",
+     "type": "credit_card",
+     "card_last4": "4821",
+     "arrears_amount": 412.37,
+     "days_in_arrears": 14,
+     "monthly_payment": 35.0
+    }
+   },
+   "expect": 1,
+   "source": "Memo A: The early band now covers 1 to 14 days in arrears, and the mid band 15 to 30. The late band is unchanged. Deadlines and persuasion attempts per band are unchanged. / 13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 |"
+  },
+  {
+   "id": "C10",
+   "rule": "R4",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-05T14:00",
+    "product": {
+     "product_id": "p2",
+     "type": "overdraft",
+     "arrears_amount": 233.4,
+     "days_in_arrears": 11,
+     "monthly_payment": 0.0
+    }
+   },
+   "expect": [
+    [
+     233.4,
+     "2026-11-05"
+    ]
+   ],
+   "source": "Memo A: The early band now covers 1 to 14 days in arrears, and the mid band 15 to 30. The late band is unchanged. Deadlines and persuasion attempts per band are unchanged. / 20. Every proposal Isla makes of an amount on a date is one persuasion attempt, the opening ask included. Attempts are counted per product and never exceed the band's number. ... Step 1: the full `arrears_amount`, today. Step 2: the full `arrears_amount` on the 5th business day after today, or on the deadline if that is earlier. Step 3: the floor, on the deadline."
+  },
+  {
+   "id": "C11",
+   "rule": "R4",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-05T14:00",
+    "product": {
+     "product_id": "p1",
+     "type": "personal_loan",
+     "arrears_amount": 780.0,
+     "days_in_arrears": 15,
+     "monthly_payment": 260.0
+    }
+   },
+   "expect": 2,
+   "source": "Memo A: The early band now covers 1 to 14 days in arrears, and the mid band 15 to 30. The late band is unchanged. Deadlines and persuasion attempts per band are unchanged. / 13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 |"
+  },
+  {
+   "id": "C12",
+   "rule": "R5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-16T11:00",
+    "product": {
+     "product_id": "p1",
+     "type": "personal_loan",
+     "arrears_amount": 450.0,
+     "days_in_arrears": 22,
+     "monthly_payment": 150.0
+    }
+   },
+   "expect": "2026-11-27",
+   "source": "13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 | / 14. If a mid-band deadline falls on a weekend or a bank holiday, bring it forward to the business day before it. If today is already the last business day of the month, the late-band deadline is the last business day of the following month. / 11. Business days are Monday to Friday, except these bank holidays: 30 November 2026 (St Andrew's Day), 25 December 2026, 28 December 2026, 1 January 2027 and 4 January 2027. 24 December 2026 is a normal business day for the collections desk."
+  },
+  {
+   "id": "C13",
+   "rule": "R5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-27T10:00",
+    "product": {
+     "product_id": "p1",
+     "type": "overdraft",
+     "arrears_amount": 310.0,
+     "days_in_arrears": 19,
+     "monthly_payment": 0.0
+    }
+   },
+   "expect": "2026-12-10",
+   "source": "14. If a mid-band deadline falls on a weekend or a bank holiday, bring it forward to the business day before it. If today is already the last business day of the month, the late-band deadline is the last business day of the following month. / Memo B: Friday 11 December 2026 is added as a non-business day because of the core banking migration. Treat it exactly like a bank holiday: no promise may fall on it, no callback may be booked on it, and it is skipped when counting business days."
+  },
+  {
+   "id": "C14",
+   "rule": "R5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-03T16:00",
+    "product": {
+     "product_id": "p1",
+     "type": "credit_card",
+     "card_last4": "7730",
+     "arrears_amount": 95.2,
+     "days_in_arrears": 5,
+     "monthly_payment": 25.0
+    }
+   },
+   "expect": "2026-12-16",
+   "source": "13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 | / Memo B: Friday 11 December 2026 is added as a non-business day because of the core banking migration. Treat it exactly like a bank holiday: no promise may fall on it, no callback may be booked on it, and it is skipped when counting business days."
+  },
+  {
+   "id": "C15",
+   "rule": "R5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-10T13:00",
+    "product": {
+     "product_id": "p1",
+     "type": "personal_loan",
+     "arrears_amount": 900.0,
+     "days_in_arrears": 45,
+     "monthly_payment": 300.0
+    }
+   },
+   "expect": "2026-11-27",
+   "source": "13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 | / 11. Business days are Monday to Friday, except these bank holidays: 30 November 2026 (St Andrew's Day), 25 December 2026, 28 December 2026, 1 January 2027 and 4 January 2027. 24 December 2026 is a normal business day for the collections desk."
+  },
+  {
+   "id": "C16",
+   "rule": "R5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-27T15:30",
+    "product": {
+     "product_id": "p2",
+     "type": "credit_card",
+     "card_last4": "1194",
+     "arrears_amount": 1500.0,
+     "days_in_arrears": 52,
+     "monthly_payment": 60.0
+    }
+   },
+   "expect": "2026-12-31",
+   "source": "14. If a mid-band deadline falls on a weekend or a bank holiday, bring it forward to the business day before it. If today is already the last business day of the month, the late-band deadline is the last business day of the following month. / 11. Business days are Monday to Friday, except these bank holidays: 30 November 2026 (St Andrew's Day), 25 December 2026, 28 December 2026, 1 January 2027 and 4 January 2027. 24 December 2026 is a normal business day for the collections desk."
+  },
+  {
+   "id": "C17",
+   "rule": "R5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-18T10:00",
+    "product": {
+     "product_id": "p1",
+     "type": "personal_loan",
+     "arrears_amount": 300.0,
+     "days_in_arrears": 8,
+     "monthly_payment": 100.0
+    }
+   },
+   "expect": "2027-01-05",
+   "source": "13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 | / 11. Business days are Monday to Friday, except these bank holidays: 30 November 2026 (St Andrew's Day), 25 December 2026, 28 December 2026, 1 January 2027 and 4 January 2027. 24 December 2026 is a normal business day for the collections desk."
+  },
+  {
+   "id": "C18",
+   "rule": "R6",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-12T12:00",
+    "product": {
+     "product_id": "p1",
+     "type": "personal_loan",
+     "arrears_amount": 250.0,
+     "days_in_arrears": 40,
+     "monthly_payment": 90.0
+    }
+   },
+   "expect": 75,
+   "source": "17. The floor for every product type is 30% of `arrears_amount`, rounded up to the next whole pound. A result that is already a whole number of pounds stays as it is. The `monthly_payment` field is not the floor and is never quoted."
+  },
+  {
+   "id": "C19",
+   "rule": "R6",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-01T09:30",
+    "product": {
+     "product_id": "p1",
+     "type": "overdraft",
+     "arrears_amount": 333.34,
+     "days_in_arrears": 20,
+     "monthly_payment": 0.0
+    }
+   },
+   "expect": 101,
+   "source": "17. The floor for every product type is 30% of `arrears_amount`, rounded up to the next whole pound. A result that is already a whole number of pounds stays as it is. The `monthly_payment` field is not the floor and is never quoted."
+  },
+  {
+   "id": "C20",
+   "rule": "R7",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-24T11:00",
+    "product": {
+     "product_id": "p1",
+     "type": "credit_card",
+     "card_last4": "5512",
+     "arrears_amount": 812.4,
+     "days_in_arrears": 38,
+     "monthly_payment": 40.0
+    }
+   },
+   "expect": [
+    [
+     812.4,
+     "2026-11-24"
+    ],
+    [
+     812.4,
+     "2026-11-27"
+    ],
+    [
+     244,
+     "2026-11-27"
+    ]
+   ],
+   "source": "20. Every proposal Isla makes of an amount on a date is one persuasion attempt, the opening ask included. Attempts are counted per product and never exceed the band's number. ... Step 1: the full `arrears_amount`, today. Step 2: the full `arrears_amount` on the 5th business day after today, or on the deadline if that is earlier. Step 3: the floor, on the deadline. / 13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 | / 11. Business days are Monday to Friday, except these bank holidays: 30 November 2026 (St Andrew's Day), 25 December 2026, 28 December 2026, 1 January 2027 and 4 January 2027. 24 December 2026 is a normal business day for the collections desk."
+  },
+  {
+   "id": "C21",
+   "rule": "R7",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-04T10:00",
+    "product": {
+     "product_id": "p2",
+     "type": "personal_loan",
+     "arrears_amount": 375.0,
+     "days_in_arrears": 27,
+     "monthly_payment": 125.0
+    }
+   },
+   "expect": [
+    [
+     375.0,
+     "2026-12-04"
+    ],
+    [
+     375.0,
+     "2026-12-14"
+    ]
+   ],
+   "source": "20. Every proposal Isla makes of an amount on a date is one persuasion attempt, the opening ask included. Attempts are counted per product and never exceed the band's number. ... Step 1: the full `arrears_amount`, today. Step 2: the full `arrears_amount` on the 5th business day after today, or on the deadline if that is earlier. Step 3: the floor, on the deadline. / Memo B: Friday 11 December 2026 is added as a non-business day because of the core banking migration. Treat it exactly like a bank holiday: no promise may fall on it, no callback may be booked on it, and it is skipped when counting business days."
+  },
+  {
+   "id": "C22",
+   "rule": "R8",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-12-04T10:00",
+    "date": "2026-12-07",
+    "time": "18:45"
+   },
+   "expect": false,
+   "source": "Memo D: A callback must now be between 09:00 and 18:30, both included. The rest of rule 4 is unchanged."
+  },
+  {
+   "id": "C23",
+   "rule": "R8",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-12-04T10:00",
+    "date": "2026-12-07",
+    "time": "18:30"
+   },
+   "expect": true,
+   "source": "Memo D: A callback must now be between 09:00 and 18:30, both included. The rest of rule 4 is unchanged. / 4. A callback may be booked for today or one of the next two business days, between 09:00 and 20:00 (both included), and must be later than `now`."
+  },
+  {
+   "id": "C24",
+   "rule": "R8",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-12-10T12:00",
+    "date": "2026-12-15",
+    "time": "09:00"
+   },
+   "expect": true,
+   "source": "4. A callback may be booked for today or one of the next two business days, between 09:00 and 20:00 (both included), and must be later than `now`. / Memo B: Friday 11 December 2026 is added as a non-business day because of the core banking migration. Treat it exactly like a bank holiday: no promise may fall on it, no callback may be booked on it, and it is skipped when counting business days."
+  },
+  {
+   "id": "C25",
+   "rule": "R8",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-11-05T15:00",
+    "date": "2026-11-05",
+    "time": "14:30"
+   },
+   "expect": false,
+   "source": "4. A callback may be booked for today or one of the next two business days, between 09:00 and 20:00 (both included), and must be later than `now`."
+  },
+  {
+   "id": "C26",
+   "rule": "R9",
+   "type": "close",
+   "input": {
+    "situation": "refused"
+   },
+   "expect": {
+    "outcome": "no_ptp",
+    "reason": "declined"
+   },
+   "source": "31. `no_ptp`: no promise was recorded; the reason is the note reason of the first product, in `get_account` order, that was not noted `paid`. / 22. The product ends without a promise as refused. / Memo C: The reason code `refused` is retired. Use `declined` instead, both as the `close_call` reason and as the `add_note` reason."
+  },
+  {
+   "id": "C27",
+   "rule": "R10",
+   "type": "note",
+   "input": {
+    "situation": "refused"
+   },
+   "expect": "declined",
+   "source": "25. Every product that ends without a promise gets one `add_note` with its `product_id` and a reason / Memo C: The reason code `refused` is retired. Use `declined` instead, both as the `close_call` reason and as the `add_note` reason."
+  },
+  {
+   "id": "C28",
+   "rule": "R9",
+   "type": "close",
+   "input": {
+    "situation": "hardship"
+   },
+   "expect": {
+    "outcome": "handoff",
+    "reason": "care"
+   },
+   "source": "28. Financial hardship ...: call `transfer_to_agent` with queue `care_team` and close as `handoff` / `care`."
+  },
+  {
+   "id": "C29",
+   "rule": "R11",
+   "type": "transfer",
+   "input": {
+    "situation": "transfer_restructuring"
+   },
+   "expect": "arrears_solutions",
+   "source": "29. A request for a payment plan or lower instalments: call `transfer_to_agent` with queue `arrears_solutions` and close as `handoff` / `restructure`."
+  },
+  {
+   "id": "C30",
+   "rule": "R12",
+   "type": "promise_amount",
+   "input": {
+    "amount": 87.5
+   },
+   "expect": 8750,
+   "source": "19. `create_promise` takes the amount in pence as a whole number: £87.50 is sent as 8750."
+  }
+ ]
+}

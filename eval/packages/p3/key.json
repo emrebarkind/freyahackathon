@@ -1,0 +1,473 @@
+{
+ "package": "p3",
+ "rules": {
+  "ID": "Identity: year of birth, customer code, date of birth, in that order; one wrong answer is forgiven, the second ends the check; date of birth sent as DD.MM.YYYY, customer code in capitals without spaces.",
+  "AMT": "create_promise takes the amount as an integer number of euro cents.",
+  "FLOOR": "Floor: card = statement_minimum_cents; overdraft = 20% of amount due rounded up to a whole euro.",
+  "CAL": "Business days are Monday to Saturday except Sunday and holidays 2026-11-21, 2026-12-08, 2026-12-25.",
+  "DL": "Deadline by days_overdue band: early = last business day of next week; middle = 8th (card) / 5th (overdraft) business day after today; late = later of last business day of the month and 3rd business day after today.",
+  "LADDER": "Persuasion: attempt 1 full amount on the 2nd business day after today; attempt 2 (middle, late) floor on the deadline; early 1 attempt; recoveries 0 attempts and transfer.",
+  "CB": "Callback: business day, today or the next two business days, after now; Mon-Fri 09:00-18:00, Sat 09:00-13:00 inclusive.",
+  "CLOSE": "Closing outcomes, notes and transfers per situation."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "ID",
+   "type": "identity_fields",
+   "input": {},
+   "expect": [
+    "birth_year",
+    "customer_code",
+    "birth_date"
+   ],
+   "source": "Ask three questions, one at a time, in this order: year of birth, then the five-character customer code from the welcome letter, then the full date of birth. / API field enum: birth_year, customer_code, birth_date"
+  },
+  {
+   "id": "C2",
+   "rule": "ID",
+   "type": "identity_max_wrong",
+   "input": {},
+   "expect": 2,
+   "source": "One wrong answer is forgiven over the whole check, whichever question it is on, and that question may be asked again. The next wrong answer ends the check."
+  },
+  {
+   "id": "C3",
+   "rule": "ID",
+   "type": "id_answer",
+   "input": {
+    "field": "birth_date",
+    "value": "1988-07-09"
+   },
+   "expect": "09.07.1988",
+   "source": "Send the date of birth as `DD.MM.YYYY` with leading zeros: 3 April 1979 is sent as `03.04.1979`."
+  },
+  {
+   "id": "C4",
+   "rule": "ID",
+   "type": "id_answer",
+   "input": {
+    "field": "customer_code",
+    "value": "k7r2p"
+   },
+   "expect": "K7R2P",
+   "source": "Send the customer code in capital letters with no spaces."
+  },
+  {
+   "id": "C5",
+   "rule": "AMT",
+   "type": "promise_amount",
+   "input": {
+    "amount": 19.99
+   },
+   "expect": 1999,
+   "source": "`create_promise` takes the amount as an integer number of cents: 98 euros is sent as `9800`, 312.45 euros as `31245`."
+  },
+  {
+   "id": "C6",
+   "rule": "AMT",
+   "type": "promise_amount",
+   "input": {
+    "amount": 1200.0
+   },
+   "expect": 120000,
+   "source": "`create_promise` takes the amount as an integer number of cents: 98 euros is sent as `9800`, 312.45 euros as `31245`."
+  },
+  {
+   "id": "C7",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-12T10:30",
+    "product": {
+     "product_id": "p_od_101",
+     "product_kind": "overdraft",
+     "amount_due_cents": 48735,
+     "days_overdue": 22,
+     "overdraft_limit_cents": 150000,
+     "currency": "EUR"
+    }
+   },
+   "expect": 98.0,
+   "source": "For an overdraft it is 20% of the amount due, rounded up to the next whole euro; a result that is already a whole euro is not raised. Its amounts are whole cents: `amount_due_cents` 48735 means 487.35 euros."
+  },
+  {
+   "id": "C8",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-12T10:30",
+    "product": {
+     "product_id": "p_od_102",
+     "product_kind": "overdraft",
+     "amount_due_cents": 42500,
+     "days_overdue": 30,
+     "overdraft_limit_cents": 100000,
+     "currency": "EUR"
+    }
+   },
+   "expect": 85.0,
+   "source": "For an overdraft it is 20% of the amount due, rounded up to the next whole euro; a result that is already a whole euro is not raised."
+  },
+  {
+   "id": "C9",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-12T10:30",
+    "product": {
+     "product_id": "p_cc_103",
+     "product_kind": "card",
+     "card_suffix": "4417",
+     "amount_due_cents": 83000,
+     "days_overdue": 25,
+     "statement_minimum_cents": 4150,
+     "credit_limit_cents": 300000,
+     "currency": "EUR"
+    }
+   },
+   "expect": 41.5,
+   "source": "For a credit card it is `statement_minimum_cents`. `credit_limit_cents` and `overdraft_limit_cents` are never used for the floor."
+  },
+  {
+   "id": "C10",
+   "rule": "CAL",
+   "type": "business_day",
+   "input": {
+    "date": "2026-11-14"
+   },
+   "expect": true,
+   "source": "Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C11",
+   "rule": "CAL",
+   "type": "business_day",
+   "input": {
+    "date": "2026-11-21"
+   },
+   "expect": false,
+   "source": "Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C12",
+   "rule": "DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-12T10:30",
+    "product": {
+     "product_id": "p_cc_201",
+     "product_kind": "card",
+     "card_suffix": "4417",
+     "amount_due_cents": 51000,
+     "days_overdue": 15,
+     "statement_minimum_cents": 2500,
+     "credit_limit_cents": 200000,
+     "currency": "EUR"
+    }
+   },
+   "expect": "2026-11-20",
+   "source": "| 1 to 15 | early | the last business day of next week | 1 | A week runs Monday to Sunday. Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C13",
+   "rule": "DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-12T10:30",
+    "product": {
+     "product_id": "p_cc_202",
+     "product_kind": "card",
+     "card_suffix": "4417",
+     "amount_due_cents": 51000,
+     "days_overdue": 16,
+     "statement_minimum_cents": 2500,
+     "credit_limit_cents": 200000,
+     "currency": "EUR"
+    }
+   },
+   "expect": "2026-11-23",
+   "source": "| 16 to 40 | middle | credit card: the 8th business day after today; overdraft: the 5th business day after today | 2 | \"The Nth business day after today\" counts from tomorrow: the 1st business day after today is the next business day. Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C14",
+   "rule": "DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-03T14:00",
+    "product": {
+     "product_id": "p_od_203",
+     "product_kind": "overdraft",
+     "amount_due_cents": 27350,
+     "days_overdue": 40,
+     "overdraft_limit_cents": 80000,
+     "currency": "EUR"
+    }
+   },
+   "expect": "2026-12-10",
+   "source": "| 16 to 40 | middle | credit card: the 8th business day after today; overdraft: the 5th business day after today | 2 | \"The Nth business day after today\" counts from tomorrow: the 1st business day after today is the next business day. Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C15",
+   "rule": "DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-27T09:15",
+    "product": {
+     "product_id": "p_od_204",
+     "product_kind": "overdraft",
+     "amount_due_cents": 66000,
+     "days_overdue": 41,
+     "overdraft_limit_cents": 120000,
+     "currency": "EUR"
+    }
+   },
+   "expect": "2026-12-01",
+   "source": "| 41 to 60 | late | the last business day of the current month, or the 3rd business day after today if that is later | 2 | \"The Nth business day after today\" counts from tomorrow: the 1st business day after today is the next business day. Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C16",
+   "rule": "DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-02T16:45",
+    "product": {
+     "product_id": "p_cc_206",
+     "product_kind": "card",
+     "card_suffix": "4417",
+     "amount_due_cents": 94010,
+     "days_overdue": 60,
+     "statement_minimum_cents": 4700,
+     "credit_limit_cents": 500000,
+     "currency": "EUR"
+    }
+   },
+   "expect": "2026-12-31",
+   "source": "| 41 to 60 | late | the last business day of the current month, or the 3rd business day after today if that is later | 2 | Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C17",
+   "rule": "DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-18T11:00",
+    "product": {
+     "product_id": "p_od_205",
+     "product_kind": "overdraft",
+     "amount_due_cents": 15900,
+     "days_overdue": 3,
+     "overdraft_limit_cents": 50000,
+     "currency": "EUR"
+    }
+   },
+   "expect": "2026-12-26",
+   "source": "| 1 to 15 | early | the last business day of next week | 1 | A week runs Monday to Sunday. Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C18",
+   "rule": "LADDER",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-16T10:00",
+    "product": {
+     "product_id": "p_cc_301",
+     "product_kind": "card",
+     "card_suffix": "4417",
+     "amount_due_cents": 220000,
+     "days_overdue": 61,
+     "statement_minimum_cents": 11000,
+     "credit_limit_cents": 500000,
+     "currency": "EUR"
+    }
+   },
+   "expect": 0,
+   "source": "| 61 or more | recoveries | none (rule 22) | 0 | Recoveries band: make no proposal and take no promise, even if the customer offers one."
+  },
+  {
+   "id": "C19",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-12T12:00",
+    "product": {
+     "product_id": "p_cc_302",
+     "product_kind": "card",
+     "card_suffix": "4417",
+     "amount_due_cents": 64020,
+     "days_overdue": 10,
+     "statement_minimum_cents": 3200,
+     "credit_limit_cents": 250000,
+     "currency": "EUR"
+    }
+   },
+   "expect": [
+    [
+     640.2,
+     "2026-11-14"
+    ]
+   ],
+   "source": "| 1 to 15 | early | the last business day of next week | 1 | Attempt 1: the full amount due on the 2nd business day after today. Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C20",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-05T10:20",
+    "product": {
+     "product_id": "p_od_303",
+     "product_kind": "overdraft",
+     "amount_due_cents": 31990,
+     "days_overdue": 30,
+     "overdraft_limit_cents": 60000,
+     "currency": "EUR"
+    }
+   },
+   "expect": [
+    [
+     319.9,
+     "2026-12-09"
+    ],
+    [
+     64.0,
+     "2026-12-12"
+    ]
+   ],
+   "source": "Attempt 1: the full amount due on the 2nd business day after today. Attempt 2, middle and late bands only: the floor on the deadline. | 16 to 40 | middle | credit card: the 8th business day after today; overdraft: the 5th business day after today | 2 | For an overdraft it is 20% of the amount due, rounded up to the next whole euro; a result that is already a whole euro is not raised. Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C21",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-19T15:30",
+    "product": {
+     "product_id": "p_cc_304",
+     "product_kind": "card",
+     "card_suffix": "4417",
+     "amount_due_cents": 120000,
+     "days_overdue": 52,
+     "statement_minimum_cents": 6000,
+     "credit_limit_cents": 400000,
+     "currency": "EUR"
+    }
+   },
+   "expect": [
+    [
+     1200.0,
+     "2026-11-23"
+    ],
+    [
+     60.0,
+     "2026-11-30"
+    ]
+   ],
+   "source": "Attempt 1: the full amount due on the 2nd business day after today. Attempt 2, middle and late bands only: the floor on the deadline. | 41 to 60 | late | the last business day of the current month, or the 3rd business day after today if that is later | 2 | For a credit card it is `statement_minimum_cents`. Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C22",
+   "rule": "CB",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-11-14T11:40",
+    "date": "2026-11-14",
+    "time": "13:00"
+   },
+   "expect": true,
+   "source": "A callback may be booked for today or for either of the next two business days, and must be later than `now`. Callback hours are 09:00 to 18:00 Monday to Friday and 09:00 to 13:00 on Saturday, both ends included."
+  },
+  {
+   "id": "C23",
+   "rule": "CB",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-11-14T11:40",
+    "date": "2026-11-14",
+    "time": "13:15"
+   },
+   "expect": false,
+   "source": "A callback may be booked for today or for either of the next two business days, and must be later than `now`. Callback hours are 09:00 to 18:00 Monday to Friday and 09:00 to 13:00 on Saturday, both ends included."
+  },
+  {
+   "id": "C24",
+   "rule": "CB",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-11-20T17:00",
+    "date": "2026-11-24",
+    "time": "09:00"
+   },
+   "expect": true,
+   "source": "A callback may be booked for today or for either of the next two business days, and must be later than `now`. Callback hours are 09:00 to 18:00 Monday to Friday and 09:00 to 13:00 on Saturday, both ends included. Business days are Monday to Saturday; Saturday is a full business day. Sunday and these Halden holidays are not: 2026-11-21, 2026-12-08, 2026-12-25."
+  },
+  {
+   "id": "C25",
+   "rule": "CLOSE",
+   "type": "close",
+   "input": {
+    "situation": "hardship"
+   },
+   "expect": {
+    "outcome": "handed_over",
+    "reason": "vulnerable"
+   },
+   "source": "Call `add_note` with reason `vulnerable`, then `transfer_to_agent` with queue `care`, and close as `handed_over` / `vulnerable`."
+  },
+  {
+   "id": "C26",
+   "rule": "CLOSE",
+   "type": "note",
+   "input": {
+    "situation": "paid"
+   },
+   "expect": "paid_claim",
+   "source": "\"I already paid\": say payments can take two business days to show, take no promise, call `add_note` with reason `paid_claim`, and close as `already_paid`."
+  },
+  {
+   "id": "C27",
+   "rule": "CLOSE",
+   "type": "note",
+   "input": {
+    "situation": "refused"
+   },
+   "expect": null,
+   "source": "`add_note` is called only under rules 24, 26, 27 and 28, exactly once, before any transfer and before `close_call`. No other situation gets a note."
+  },
+  {
+   "id": "C28",
+   "rule": "CLOSE",
+   "type": "close",
+   "input": {
+    "situation": "id_failed"
+   },
+   "expect": {
+    "outcome": "identity_failed",
+    "reason": "wrong_answers"
+   },
+   "source": "The next wrong answer ends the check. Do not state the debt; refer the customer to the number on their card and close as `identity_failed` / `wrong_answers`."
+  },
+  {
+   "id": "C29",
+   "rule": "CLOSE",
+   "type": "transfer",
+   "input": {
+    "situation": "transfer_restructuring"
+   },
+   "expect": "payment_plans",
+   "source": "A request for a payment plan or lower repayments: Call `transfer_to_agent` with queue `payment_plans` and close as `handed_over` / `restructure`."
+  },
+  {
+   "id": "C30",
+   "rule": "CLOSE",
+   "type": "close",
+   "input": {
+    "situation": "service_error"
+   },
+   "expect": {
+    "outcome": "no_commitment",
+    "reason": "system_error"
+   },
+   "source": "If it fails again, say you could not record it, call `add_note` with reason `system_fault`, and close as `no_commitment` / `system_error`."
+  }
+ ]
+}
