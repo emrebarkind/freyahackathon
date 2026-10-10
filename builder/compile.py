@@ -129,7 +129,10 @@ def code_step(spec, routes):
         {"variable": "step_response.status", "operator": "equals", "operand": "error"}] + extra}]}
     # A failed or timed-out code run writes no variables, so `next` would still name the previous target and replay
     # it. Retry the run instead; after repeated failures close the call safely with the engine's fallback outcome.
-    trans = [{"target_node": "api_close_fb", "description": "the engine keeps failing",
+    trans = [{"target_node": "api_close_fb", "description": "the engine keeps failing (fallback outcome known)",
+              "condition": err([{"variable": "step_failure_count", "operator": "greater_than", "operand": 3},
+                                {"variable": "fb_outcome", "operator": "is_set"}])},
+             {"target_node": "api_close_fb0", "description": "the engine keeps failing before it ever ran",
               "condition": err([{"variable": "step_failure_count", "operator": "greater_than", "operand": 3}])},
              {"target_node": "step", "description": "retry a failed engine run", "condition": err([])}]
     trans += [{"target_node": r, "description": "engine routes to " + r,
@@ -478,8 +481,16 @@ def compile_workflow(spec, openapi):
         if node in ("api_close", "api_close_nr"):
             nodes[node] = api_node(node, tool, f"{base}/{tool}", body, types, nxt="end", tts="{{say}}")
             if node == "api_close":
+                sorry = ((spec["lines"].get("system_error") or "I'm sorry, we have a technical problem and need to end the call. "
+                          "Please call us back.") + " " + spec["lines"].get("goodbye", "")).strip()
+                sorry = re.sub(r"\{[a-z_0-9]+\}", "", sorry)
                 fb = {k: v.replace("{{c_outcome}}", "{{fb_outcome}}").replace("{{c_reason}}", "{{fb_reason}}") for k, v in body.items()}
-                nodes["api_close_fb"] = api_node("api_close_fb", tool, f"{base}/{tool}", fb, types, nxt="end", tts="{{fb_say}}")
+                nodes["api_close_fb"] = api_node("api_close_fb", tool, f"{base}/{tool}", fb, types, nxt="end", tts=sorry)
+                un = spec["events"].get("unclear", {})
+                fb0 = {k: (v.replace("{{c_outcome}}", "const:" + un.get("outcome", "")).replace("{{c_reason}}", "const:" + (un.get("reason") or ""))
+                           if v in ("{{c_outcome}}", "{{c_reason}}") else v) for k, v in body.items()}
+                fb0 = {k: v for k, v in fb0.items() if v != "const:"}
+                nodes["api_close_fb0"] = api_node("api_close_fb0", tool, f"{base}/{tool}", fb0, types, nxt="end", tts=sorry)
         elif node == "api_verify" and allv:
             # all questions passed: go straight to the account lookup (saves one code run before the disclosure)
             direct = [{"target_node": "api_account", "description": "identity fully verified",
