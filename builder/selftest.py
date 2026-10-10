@@ -18,6 +18,7 @@ API_SLOTS = {
     "api_callback": ("schedule_callback", ["cb_date", "cb_time"]),
     "api_transfer": ("transfer_to_agent", ["t_queue"]),
     "api_close": ("close_call", ["c_outcome", "c_reason"]),
+    "api_close_nr": ("close_call", ["c_outcome"]),
 }
 
 
@@ -96,14 +97,21 @@ def simulate(spec, variables, bank, turns, max_steps=300):
         nxt = V.get("next")
         if nxt in API_SLOTS:
             tool, slots = API_SLOTS[nxt]
-            if nxt == "api_close":
+            if nxt in ("api_close", "api_close_nr"):
                 tr.append(("agent", V.get("say", "")))
             for k in [k for k in V if k.startswith(nxt + "_response.")]:
                 del V[k]
             r = bank.call(tool, {s: V.get(s) for s in slots})
             if r is not None:
                 flatten(nxt + "_response.data", r, V)
-            if nxt == "api_close":
+            allv = spec["identity"].get("response", {}).get("all_verified")
+            if nxt == "api_verify" and allv and str(V.get("api_verify_response.data." + allv)).lower() == "true":
+                for k in [k for k in V if k.startswith("api_account_response.")]:
+                    del V[k]
+                r = bank.call("get_account", {})            # the workflow's direct transition verify -> account
+                if r is not None:
+                    flatten("api_account_response.data", r, V)
+            if nxt in ("api_close", "api_close_nr"):
                 break
             continue
         if nxt and nxt.startswith("talk_"):

@@ -280,9 +280,10 @@ def close(V, s, event, pre=""):
     V["c_reason"] = e.get("reason", "") or ""
     s["stage"] = "closing"
     say(V, pre, L("goodbye"))
-    s["await"] = "api_close"
+    node = "api_close" if V["c_reason"] else "api_close_nr"
+    s["await"] = node
     put(V, s)
-    go(V, "api_close")
+    go(V, node)
 
 
 def finish(V, s, pre=""):
@@ -563,6 +564,8 @@ def normalize_answer(q, text):
 
 def after_verify(V, s):
     node = "api_verify"
+    if s.get("qi", 0) + 1 >= len(S["identity"]["questions"]) and read_products(V):
+        return after_account(V, s)          # the workflow went straight on to the account lookup
     qs = S["identity"]["questions"]
     R = S["identity"].get("response", dict())
     ok = resp(V, node, R.get("ok", "ok"))
@@ -622,8 +625,9 @@ def after_account(V, s):
 def focus(p):
     """Make the product's fields available to every line until the next step."""
     if p:
-        CTX.update(name=p["name"], amount=money(p["full"]), days=p["days_late"], deadline=spoken(p["deadline"]),
-                   floor=money(p["floor"]))
+        cur_amt = p["offer"][0] if p.get("offer") and p["offer"][0] else p["full"]
+        CTX.update(name=p["name"], amount=money(cur_amt), days=p["days_late"], deadline=spoken(p["deadline"]),
+                   floor=money(p["floor"]), full=money(p["full"]))
 
 
 def cur(s):
@@ -719,6 +723,7 @@ def apply_proposal(V, s, p, dtxt, a, scope_all=False):
     today = today_of(V)
     amount = None
     if a is not None:
+        a = snap_amount(p, a)
         stt, val = check_amount(p, a)
         if stt == "below_floor":
             if p["floor_offered"]:
@@ -772,6 +777,21 @@ def apply_proposal(V, s, p, dtxt, a, scope_all=False):
         p["offer"] = [amount, None]
         return "ask", L("ask_date_for_amount", amount=money(amount))
     return "none", ""
+
+
+def snap_amount(p, a):
+    """Spoken amounts lose cents ('six hundred thirty-seven' for 637.50): within 1 unit of the pending offer
+    or of the floor/full amount, take that exact figure."""
+    try:
+        a = float(a)
+    except Exception:
+        return a
+    targets = [p["offer"][0]] if p.get("offer") and p["offer"][0] else []
+    targets += [p["floor"], p["full"]]
+    for x in targets:
+        if x and abs(a - float(x)) < 1.0:
+            return float(x)
+    return a
 
 
 def default_amount(p):
@@ -903,6 +923,10 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         p["floor_note_said"] = True
         say(V, L("offer_floor_date", amount=money(p["floor"]), date=spoken(d)))
         return talk(V, "nego", s)
+    if k in ("yes", "agrees", "pay_today") and p.get("offer") and p["offer"][1] and not dtxt and \
+            (a is None or snap_amount(p, a) <= p["offer"][0] + 0.005):
+        agree(p, p["offer"][0], p["offer"][1])          # "yes, I can pay six hundred and thirty..." = yes to the offer
+        return advance(V, s)
     if dtxt or a is not None or k in ("proposes", "gives_date", "gives_amount", "vague"):
         res, pre = apply_proposal(V, s, p, dtxt if dtxt else (t if k == "vague" else ""), a)
         if res == "agreed":
@@ -911,7 +935,7 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             say(V, pre)
             return talk(V, "nego", s)
         if res == "refuse":
-            return refusal(V, s, p, L("below_floor_again"))
+            return refusal(V, s, p, L("below_floor_again", amount=money(p["floor"])))
     if k in ("yes", "agrees", "pay_today"):
         if p.get("offer") and p["offer"][1]:
             agree(p, p["offer"][0], p["offer"][1])
@@ -1084,7 +1108,7 @@ def run(V):
         return close(V, s, "callback", s.pop("pre", ""))
     if aw == "api_transfer":
         return close(V, s, "transfer_" + s.get("transferred", "human"), s.get("say_after_transfer", ""))
-    if aw == "api_close":
+    if aw in ("api_close", "api_close_nr"):
         go(V, "end")
         return
     stage = s.get("stage", "open")

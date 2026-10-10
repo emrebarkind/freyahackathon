@@ -168,25 +168,11 @@ def talk_node(stage, spec):
 
 
 # --------------------------------------------------------------------------------------------- api nodes
-DROP_EMPTY = ("try:\n"
-              "    b = config.get('body')\n"
-              "    if isinstance(b, dict):\n"
-              "        for k in list(b.keys()):\n"
-              "            if b[k] is None or b[k] == '' or (isinstance(b[k], str) and b[k].startswith('{' + '{')):\n"
-              "                b.pop(k)\n"
-              "        for k in list(b.keys()):\n"
-              "            if k in NUMS:\n"
-              "                try:\n"
-              "                    b[k] = float(b[k])\n"
-              "                except Exception:\n"
-              "                    pass\n"
-              "except Exception:\n"
-              "    pass\n")
-
-
-def api_node(node, tool, url, body, num_fields, nxt="step", tts=None):
-    props = {k: {"type": "string", "default": v} for k, v in body.items()}
-    hook = DROP_EMPTY.replace("NUMS", repr(sorted(num_fields)))
+def api_node(node, tool, url, body, types, nxt="step", tts=None, extra_transitions=None):
+    """An engine-run bank call. No pre/post hooks: every hook is an extra sandbox run (seconds under load).
+    Body fields take their JSON type from the tool API file, so numbers are sent as numbers."""
+    props = {k: {"type": types.get(k, "string"), "default": v} for k, v in body.items()}
+    trans = list(extra_transitions or []) + [{"target_node": nxt, "description": "always", "condition": {"operator": "always"}}]
     return {"name": node, "node_type": "api_request", "passthrough": True, "passthrough_default_transition": nxt,
             "on_enter": {"type": "tts", "text": tts} if tts else {"type": "silent"}, "disable_inactivity_monitor": True,
             "pre_actions": [{"type": "function", "config": {"timeoutMs": 12000, "maxRetries": 0},
@@ -195,14 +181,13 @@ def api_node(node, tool, url, body, num_fields, nxt="step", tts=None):
                                               "url": {"type": "string", "default": url},
                                               "method": {"type": "string", "default": "POST"},
                                               "headers": {"type": "object", "properties": {"Content-Type": {"type": "string", "default": "application/json"}}},
-                                              "body": {"type": "object", "properties": props}}}},
-                             "pre_process_code": hook}],
-            "transitions": [{"target_node": nxt, "description": "always", "condition": {"operator": "always"}}]}
+                                              "body": {"type": "object", "properties": props}}}}}],
+            "transitions": trans}
 
 
 API_NODES = {"api_verify": "verify_identity", "api_account": "get_account", "api_promise": "create_promise",
              "api_note": "add_note", "api_callback": "schedule_callback", "api_transfer": "transfer_to_agent",
-             "api_close": "close_call"}
+             "api_close": "close_call", "api_close_nr": "close_call"}
 
 
 def compile_workflow(spec, openapi):
@@ -217,16 +202,29 @@ def compile_workflow(spec, openapi):
     nodes["talk_open"]["on_enter"] = {"type": "tts", "text": first}
     nodes["talk_open"]["on_enter_first_entry_only"] = True
     nodes["talk_open_again"] = dict(talk_node("open", spec), name="talk_open_again")
+    allv = spec["identity"].get("response", {}).get("all_verified")
     for node, tool in API_NODES.items():
         schema = openapi["paths"]["/" + tool]["post"]["requestBody"]["content"]["application/json"]["schema"]
-        nums = [k for k, v in schema.get("properties", {}).items() if v.get("type") in ("number", "integer")]
-        body = {k: "{{" + v + "}}" for k, v in bodies.get(tool, {}).items()}
+        types = {k: ("number" if v.get("type") in ("number", "integer") else v.get("type", "string"))
+                 for k, v in schema.get("properties", {}).items()}
+        types = {k: (t if t in ("string", "number", "boolean") else "string") for k, t in types.items()}
+        mapping = dict(bodies.get(tool, {}))
+        if node == "api_close_nr":      # close without a reason field (outcomes whose table lists no reason)
+            mapping = {k: v for k, v in mapping.items() if v != "c_reason"}
+        body = {k: "{{" + v + "}}" for k, v in mapping.items()}
         if "customer_id" in schema.get("properties", {}):
             body["customer_id"] = "{{customer_id}}"
-        if node == "api_close":
-            nodes[node] = api_node(node, tool, f"{base}/{tool}", body, nums, nxt="end", tts="{{say}}")
+        if node in ("api_close", "api_close_nr"):
+            nodes[node] = api_node(node, tool, f"{base}/{tool}", body, types, nxt="end", tts="{{say}}")
+        elif node == "api_verify" and allv:
+            # all questions passed: go straight to the account lookup (saves one code run before the disclosure)
+            direct = [{"target_node": "api_account", "description": "identity fully verified",
+                       "condition": {"logic": "or", "conditions": [
+                           {"variable": f"api_verify_response.data.{allv}", "operator": "equals", "operand": "true"},
+                           {"variable": f"api_verify_response.data.{allv}", "operator": "equals", "operand": "True"}]}}]
+            nodes[node] = api_node(node, tool, f"{base}/{tool}", body, types, extra_transitions=direct)
         else:
-            nodes[node] = api_node(node, tool, f"{base}/{tool}", body, nums)
+            nodes[node] = api_node(node, tool, f"{base}/{tool}", body, types)
     routes = ["talk_" + s for s in stages if s != "open"] + ["talk_open_again"] + [n for n in API_NODES]
     nodes["step"] = code_step(spec, routes)
     nodes["end"] = {"name": "end", "node_type": "end_call", "on_enter": {"type": "silent"}, "disable_inactivity_monitor": True,

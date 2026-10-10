@@ -85,7 +85,8 @@ API = {  # node -> (tool, body builder)
     "api_note": ("add_note", lambda V: dict(product_id=V["n_product"], reason=V["n_reason"])),
     "api_callback": ("schedule_callback", lambda V: dict(date=V["cb_date"], time=V["cb_time"])),
     "api_transfer": ("transfer_to_agent", lambda V: dict(queue=V["t_queue"])),
-    "api_close": ("close_call", lambda V: dict(outcome=V["c_outcome"], **({"reason": V["c_reason"]} if V.get("c_reason") else {}))),
+    "api_close": ("close_call", lambda V: dict(outcome=V["c_outcome"], reason=V["c_reason"])),
+    "api_close_nr": ("close_call", lambda V: dict(outcome=V["c_outcome"])),
 }
 
 
@@ -125,14 +126,21 @@ def run_case(spec, case, script, verbose=False):
             raise RuntimeError(V["engine_error"])
         if nxt in API:
             tool, mk = API[nxt]
-            if nxt == "api_close" and V.get("say"):
+            if nxt in ("api_close", "api_close_nr") and V.get("say"):
                 transcript.append(("agent", V["say"]))
             for k in [k for k in V if k.startswith(nxt + "_response.")]:
                 del V[k]
             code, r = bank(tool, mk(V))
             if r is not None:
                 flatten(nxt + "_response.data", r, V)
-            if nxt == "api_close":
+            allv = spec["identity"].get("response", {}).get("all_verified")
+            if nxt == "api_verify" and allv and str(V.get("api_verify_response.data." + allv)).lower() == "true":
+                for k in [k for k in V if k.startswith("api_account_response.")]:
+                    del V[k]
+                code, r = bank("get_account", {})          # the workflow's direct transition verify -> account
+                if r is not None:
+                    flatten("api_account_response.data", r, V)
+            if nxt in ("api_close", "api_close_nr"):
                 break
             continue
         if nxt and nxt.startswith("talk_"):

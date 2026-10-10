@@ -1,0 +1,50 @@
+[    0.0s] START 2026-10-10T12:53:59+0000
+[    0.0s] NOTE briefs=['kit/build-the-builder/briefs/brief-a.md'] tool_api=kit/build-the-builder/tools/openapi.json slot=brief-a
+[    0.0s] STEP 1. spec extraction
+[    0.0s] NOTE spec loaded from submission/brief-a.spec.json (no model call)
+[    0.0s] NOTE assumption: The brief does not name a currency, so currency_word uses the default 'dollars'.
+[    0.0s] NOTE assumption: Workdays are Monday to Friday, [0,1,2,3,4] (section 7). Holidays are the five Freya Bank dates in section 7.
+[    0.0s] NOTE assumption: Rule 22: 'next <weekday>' means that weekday in the following calendar week, so date_rules.next_weekday = following_week.
+[    0.0s] NOTE assumption: Rule 3: if confirmation is still unclear after the second ask, the call closes as not_reached/unclear, so confirm.max_asks = 2.
+[    0.0s] NOTE assumption: Rules 6-7: callback is today or the next business day, 10:00-19:00 inclusive, later than now. One more ask after a bad time, so callback.max_asks = 2. The brief does not require 'today' to be a business day, so business_days_only = false.
+[    0.0s] NOTE assumption: Rule 1 says to state that the call is recorded. The spec format requires active voice, so the opening says 'we record this call'.
+[    0.0s] NOTE assumption: Identity order (rule 11): date_of_birth (sent as YYYY-MM-DD), then phone_last4 (4 digits). The field values come from the verify_identity enum. Numeric-only dates are read day-month-year (dmy).
+[    0.0s] NOTE assumption: Rule 12: three wrong answers in total end the check, so max_wrong = 3. Rule 13: a day_month_swapped hint asks for the month as a word and does not count as a wrong answer. The hint line asks for the whole date of birth again, with the month as a word, because the retry is a new verify_identity call that needs a full YYYY-MM-DD date.
+[    0.0s] NOTE assumption: Rule 15: asking what the call is about counts as declining (why_is_decline = true). Other questions, such as robot or scam questions, are answered and do not count as declining (question_is_decline = false).
+[    0.0s] NOTE assumption: Rule 17: product names are 'credit card ending {card_last4}', 'personal loan' and 'car loan'. Rule 25: the floor is minimum_payment for credit cards and instalment_amount for loans. The amount owed is past_due.
+[    0.0s] NOTE assumption: Bands come from rule 18: early is 1-7 days late, with the 12th business day as deadline and 1 attempt. Late is 8-45 days late, with the 7th business day as deadline and 2 attempts.
+[    0.0s] NOTE assumption: Ladder from rule 30: attempt 1 is the full amount, or the floor if the customer already said the full amount is too much, on the last business day of this week. If today is that day, the engine uses the last business day of next week. Attempt 2 (late band only) is the floor on the deadline.
+[    0.0s] NOTE assumption: Rules 23, 26 and 27: refusing the deadline, refusing the offered floor, or refusing the floor after a below-floor amount is a flat refusal, so refuse_deadline_is_refusal = true.
+[    0.0s] NOTE assumption: The brief says 'Brief A never uses add_note', so notes.enabled = false. The note values in events are taken from the add_note reason enum for completeness only.
+[    0.0s] NOTE assumption: Brief A covers only one product, so the multi settings keep their defaults.
+[    0.0s] NOTE assumption: Rule 42: the agent asks once whether it can help before transferring to a human (ask_first = true). The general queue is used for human transfers.
+[    0.0s] NOTE assumption: Rule 45: saying twice 'I don't want to talk' ends the call (max_not_talk = 2). After verification it closes as no_promise/refused, before verification as not_verified/declined.
+[    0.0s] NOTE assumption: Rule 32 (hardship) comes before rules 30 and 41. The support transfer uses queue 'support' and closes as transferred/support. If the customer declines, it closes as no_promise/hardship.
+[    0.0s] NOTE assumption: Rule 39: the paid outcome has no reason, and the promise outcome has no reason. If a transfer follows a recorded promise, the call closes as transferred with that transfer's reason (section 12).
+[    0.0s] NOTE assumption: Rule 37: if create_promise fails, the agent retries once. If it fails again, the call closes as no_promise/service_error.
+[    0.0s] NOTE assumption: Rule 36: if the customer asks to change a recorded promise, the agent tells them they can change it in the mobile app. No separate line key exists for this.
+[    0.0s] NOTE assumption: Prescribed wording is used exactly: 'Am I speaking with {title} {last_name}?', 'I am sorry for your loss.', 'Can you make this payment today?', 'Do you confirm?' and 'You will receive a text message confirming this promise.'
+[    0.0s] NOTE assumption: Tool body field names come from the OpenAPI file: field/answer, product_id/amount/date, product_id/reason, date/time, queue, outcome/reason.
+[    0.0s] STEP 2. local self-test of the engine on synthetic customers
+[    0.0s] TEST PASS local happy path, pays in full today
+[    0.0s] TEST PASS local someone else answers, books a callback
+[    0.0s] TEST PASS local wrong number
+[    0.0s] TEST PASS local identity fails
+[    0.0s] TEST PASS local already paid
+[    0.0s] TEST PASS local dispute
+[    0.0s] TEST PASS local hardship, accepts support
+[    0.0s] TEST PASS local restructuring request
+[    0.0s] TEST PASS local flat refusals
+[    0.0s] TEST PASS local several products, all paid today
+[    0.0s] NOTE local self-test: 10/10 passed
+[    0.0s] STEP 3. compile workflow
+[    0.0s] NOTE workflow: 17 nodes, 9 engine-run calls, 121661 bytes
+[    0.0s] STEP 4. validate, save, publish
+[    1.1s] TEST PASS platform dry-run validation
+[    5.8s] NOTE FREYA workflow_id=968b2ca2-56fa-45eb-a496-b718d83c93f9 agent_id=709b2618-eec2-42f3-a7a4-7fbc35dd9945 version=3
+[    5.8s] STEP 5. chat smoke test on Freya
+[   12.7s] TEST PASS chat workflow answers over chat -- Hello? / I can only explain why I am calling once I know I am speaking with the right person. Am I speaking with Mr Morgan? / When would be a good time to reach Mr Morgan?
+[   12.7s] TEST PASS chat nothing about the debt before verification
+[   12.7s] STEP 6. export
+[   13.6s] NOTE exported submission/brief-a.workflow.json
+[   13.6s] END 2026-10-10T12:54:12+0000 total_seconds=13.6 model_calls=0 model_cost_usd=0.00

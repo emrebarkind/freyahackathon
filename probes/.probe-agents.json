@@ -19,5 +19,13 @@
  "probe5": {
   "workflow_id": "97c5cdfd-3be3-4235-b635-d21b3d83216d",
   "agent_id": "90d18063-dca1-4850-a237-c2268152b810"
+ },
+ "probe6": {
+  "workflow_id": "7d3591dd-48b3-4a3a-b1bc-28def7ff4ed8",
+  "agent_id": "081b7aa7-e186-4abf-bb1c-c8c975fbb273"
+ },
+ "probe7": {
+  "workflow_id": "28d8327a-27bb-4573-a813-46474b762d78",
+  "agent_id": "0a167314-b0c9-4132-ba30-884eba990ecd"
  }
 }
