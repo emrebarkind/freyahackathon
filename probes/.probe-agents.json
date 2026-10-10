@@ -7,5 +7,17 @@
   "workflow_id": "a4ca0e8c-4b0d-46bd-9e51-97eb729b83b8",
   "agent_id": "35bac80a-02c6-42e3-a116-17e78b1a2be8",
   "version": 1
+ },
+ "probe3": {
+  "workflow_id": "06a01a66-f3d8-4554-91ea-636ac5ca5b2e",
+  "agent_id": "f2de40e4-22ed-4015-aa01-81159968883a"
+ },
+ "probe4": {
+  "workflow_id": "8eb3ffac-9a89-4260-96fa-52cb11bf4a04",
+  "agent_id": "2be7ab25-7548-48a1-93cb-bfb153feb2bc"
+ },
+ "probe5": {
+  "workflow_id": "97c5cdfd-3be3-4235-b635-d21b3d83216d",
+  "agent_id": "90d18063-dca1-4850-a237-c2268152b810"
  }
 }

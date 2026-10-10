@@ -101,7 +101,7 @@ def read_products(V):
     while True:
         base = "api_account_response.data.products." + str(i) + "."
         pid = V.get(base + "product_id")
-        if pid is None:
+        if pid is None or pid == "":
             break
         p = dict()
         for k in list(V.keys()):
@@ -208,16 +208,25 @@ def spoken(d):
 
 
 # ----------------------------------------------------------------------------------------------- input
-def take_input(V):
-    k = str(V.get("u_kind") or "none").strip().lower()
-    t = str(V.get("u_text") or "").strip()
-    dt = str(V.get("u_date") or "").strip()
-    a = num(V.get("u_amount"))
-    sc = str(V.get("u_scope") or "none").strip().lower()
-    for key in ("u_text", "u_date", "u_amount"):
-        V[key] = ""
-    V["u_kind"] = "none"
-    V["u_scope"] = "none"
+def take_input(V, stage):
+    """Extracted values of the talk node that just ran (variables are named per stage: <stage>_kind ...)."""
+    g = lambda f: V.get(stage + "_" + f)
+    k = str(g("kind") or "none").strip().lower()
+    t = str(g("text") or "").strip()
+    dt = str(g("date") or "").strip()
+    a = num(g("amount"))
+    sc = str(g("scope") or "none").strip().lower()
+    for f in ("text", "date"):
+        if (stage + "_" + f) in V:
+            V[stage + "_" + f] = ""
+    if (stage + "_amount") in V:
+        V[stage + "_amount"] = 0
+    if (stage + "_kind") in V:
+        V[stage + "_kind"] = "none"
+    if (stage + "_scope") in V:
+        V[stage + "_scope"] = "none"
+    if a == 0:
+        a = None
     return k, t, dt, a, sc
 
 
@@ -229,10 +238,13 @@ def talk(V, stage, s):
     s["await"] = "talk"
     s["stage"] = stage
     put(V, s)
-    go(V, "talk_" + stage)
+    go(V, "talk_open_again" if stage == "open" else "talk_" + stage)
 
 
 def call(V, s, api, **slots):
+    for k in list(V.keys()):            # stale results of an earlier call to the same node
+        if k.startswith(api + "_response.data"):
+            V[k] = ""
     for k, v in slots.items():
         V[k] = v
     s["await"] = api
@@ -950,8 +962,8 @@ def after_promise(V, s):
 def run(V):
     s = st(V)
     aw = s.get("await", "")
-    if not s:
-        return stage_init(V, s)
+    if not s:   # the initial talk_open node already spoke the opening and the first identity ask
+        s = dict(stage="open", asks=1, questions=0, not_talk=0)
     if aw == "api_verify":
         return after_verify(V, s)
     if aw == "api_account":
@@ -967,8 +979,8 @@ def run(V):
     if aw == "api_close":
         go(V, "end")
         return
-    k, t, dtxt, a, scope = take_input(V)
     stage = s.get("stage", "open")
+    k, t, dtxt, a, scope = take_input(V, stage)
     if stage == "open":
         return stage_open(V, s, k, t)
     if stage == "tp":

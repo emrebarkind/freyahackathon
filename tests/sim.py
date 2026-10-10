@@ -100,6 +100,11 @@ def flatten(prefix, obj, out):
         out[prefix] = ("true" if obj is True else "false" if obj is False else obj)
 
 
+def feed(V, stage, u):
+    V.update({stage + "_kind": u.get("k", "none"), stage + "_text": u.get("t", ""), stage + "_date": u.get("d", ""),
+              stage + "_amount": u.get("a", ""), stage + "_scope": u.get("s", "none")})
+
+
 def run_case(spec, case, script, verbose=False):
     engine.S = spec
     cal.P = dict(workdays=spec["calendar"]["workdays"], holidays=spec["calendar"]["holidays"])
@@ -107,6 +112,11 @@ def run_case(spec, case, script, verbose=False):
     bank = FakeBank(case)
     V = dict(case["variables"], customer_id="c_x")
     transcript, turns = [], list(script)
+    opening = (spec["lines"]["opening"] + " " + spec["lines"]["confirm_ask"]).replace("{title}", V.get("title", "")).replace("{last_name}", V.get("last_name", ""))
+    transcript.append(("agent", opening))
+    u = turns.pop(0)
+    transcript.append(("customer", json.dumps(u)))
+    feed(V, "open", u)
     for _ in range(200):
         engine.main(V)
         nxt = V.get("next")
@@ -131,8 +141,7 @@ def run_case(spec, case, script, verbose=False):
                 break
             u = turns.pop(0)
             transcript.append(("customer", json.dumps(u)))
-            V.update(u_kind=u.get("k", "none"), u_text=u.get("t", ""), u_date=u.get("d", ""),
-                     u_amount=u.get("a", ""), u_scope=u.get("s", "none"))
+            feed(V, nxt[len("talk_"):].replace("open_again", "open"), u)
             continue
         break
     if verbose:

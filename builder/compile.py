@@ -1,0 +1,229 @@
+"""Spec -> Freya workflow JSON. Deterministic: same spec in, same workflow out.
+
+Graph:  step(code, initial) --next--> talk_<stage> (tts {{say}} + extraction) --always--> step
+                            --next--> api_<tool>  (engine-run bank call)        --always--> step
+                            --next--> api_close   (tts goodbye + close_call)    -----------> end
+"""
+import json
+import pathlib
+import re
+
+RUNTIME = pathlib.Path(__file__).resolve().parent / "runtime"
+
+# --------------------------------------------------------------------------------------------- code node
+def engine_source(spec):
+    cal = (RUNTIME / "cal.py").read_text()
+    eng = (RUNTIME / "engine.py").read_text()
+    eng = re.sub(r"try:\s+# local tests.*?except Exception:\n    pass\n", "", eng, flags=re.S)
+    eng = eng.replace("S = dict()   # injected spec", "")
+    cal = cal.replace("P = dict(workdays=[0, 1, 2, 3, 4], holidays=[])", "")
+    params = dict(workdays=spec["calendar"]["workdays"], holidays=spec["calendar"]["holidays"])
+    head = ("import json\n"
+            "P = json.loads(bytes.fromhex('" + json.dumps(params).encode().hex() + "').decode())\n"
+            "S = json.loads(bytes.fromhex('" + json.dumps(spec, ensure_ascii=False).encode().hex() + "').decode())\n")
+    # Freya may exec the snippet with separate globals/locals; keep everything in one namespace.
+    body = head + cal + "\n" + eng + "\n"
+    assert "{{" not in body and "}}" not in body
+    src = ("_G = dict()\n"
+           "_SRC = " + repr(body) + "\n"
+           "exec(_SRC, _G)\n"
+           "_G['main'](vars)\n")
+    assert "{{" not in src and "}}" not in src
+    return src
+
+
+def code_step(spec, routes):
+    src = engine_source(spec)
+    trans = [{"target_node": r, "description": "engine routes to " + r,
+              "condition": {"logic": "or", "conditions": [{"variable": "next", "operator": "equals", "operand": r}]}}
+             for r in routes]
+    trans.append({"target_node": "api_close", "description": "fallback", "condition": {"operator": "always"}})
+    return {"name": "step", "node_type": "code", "passthrough": True, "passthrough_default_transition": "api_close",
+            "on_enter": {"type": "silent"}, "disable_inactivity_monitor": True,
+            "pre_actions": [{"type": "function", "function": {"name": "code_exec", "handler": "__function__:code_exec",
+                             "parameters": {"type": "object", "properties": {
+                                 "code": {"type": "string", "default": src},
+                                 "timeout_ms": {"type": "number", "default": 20000}}}}}],
+            "transitions": trans}
+
+
+# --------------------------------------------------------------------------------------------- talk nodes
+KINDS = {
+    "open": {
+        "confirmed": "the person confirms they are the customer: yes, that's me, speaking, or says the customer's own name",
+        "third_party": "someone else answered (a relative, partner, colleague, child) or says the customer is not available",
+        "wrong_number": "says this number does not belong to the customer or they do not know the customer",
+        "deceased": "says the customer has died / passed away",
+        "robot": "asks whether you are a robot, a machine or an AI",
+        "scam": "asks whether this call is a scam or fraud, or doubts that you are the bank",
+        "purpose": "asks what the call is about or who is calling, without confirming",
+        "human": "asks to speak to a real person / a human agent",
+        "not_talk": "says they do not want to talk / are not interested / asks you to stop",
+        "unclear": "anything else: hello, go ahead, who is this, unclear or no answer",
+    },
+    "tp": {
+        "gives_time": "gives a day and/or time when the customer can be reached",
+        "no_time": "does not know when the customer can be reached, or will not say",
+        "customer_now": "says the customer is coming to the phone or hands the phone over",
+        "wrong_number": "says the number does not belong to the customer / does not know them",
+        "deceased": "says the customer has died / passed away",
+        "purpose": "asks what the call is about",
+        "offers_pay": "offers to pay or to answer questions for the customer",
+        "robot": "asks whether you are a robot or an AI",
+        "scam": "asks whether this is a scam",
+        "unclear": "anything else",
+    },
+    "id": {
+        "answer": "gives an answer to the security question (any date, number, digits or words), even partial",
+        "refuses": "refuses or does not want to answer the security question",
+        "asks_why": "asks why you need this / what the call is about instead of answering",
+        "robot": "asks whether you are a robot or an AI",
+        "scam": "asks whether this is a scam",
+        "human": "asks to speak to a human",
+        "not_talk": "says they do not want to talk",
+        "wrong_person": "says they are not the customer after all",
+        "unclear": "anything else",
+    },
+    "nego": {
+        "yes": "agrees / accepts what was just offered or asked (yes, ok, fine, that works, I confirm)",
+        "no": "says no / cannot / will not, without giving a date or an amount",
+        "proposes": "names a day, a date or an amount they can pay",
+        "too_much": "says the amount is too much / too high / cannot afford the full amount",
+        "vague": "gives a vague time like next week, end of the month, when my salary comes, without an exact day",
+        "already_paid": "says they already paid this amount",
+        "dispute": "says the debt is not theirs, they never had this product, or it was closed or paid off in the past",
+        "hardship": "mentions illness, a death in the family, or job loss",
+        "restructure": "asks for a new payment plan, lower instalments, or restructuring",
+        "human": "asks to speak to a human",
+        "robot": "asks whether you are a robot or an AI",
+        "scam": "asks whether this is a scam",
+        "not_talk": "says they do not want to talk about this",
+        "question": "asks another question",
+        "unclear": "anything else",
+    },
+    "hardship": {
+        "yes": "accepts being connected / transferred",
+        "no": "declines being connected / transferred",
+        "proposes": "names a date or an amount they can pay themselves",
+        "unclear": "anything else",
+    },
+    "confirm": {
+        "yes": "confirms the read-back (yes, correct, I confirm)",
+        "no": "does not confirm / refuses",
+        "proposes": "changes the date or the amount",
+        "restructure": "asks for a new payment plan or lower instalments",
+        "human": "asks to speak to a human",
+        "unclear": "anything else",
+    },
+}
+
+
+def extraction(stage, spec):
+    kinds = KINDS[stage]
+    desc = ("Classify ONLY the customer's latest message. Values: " +
+            "; ".join(f"{k} = {v}" for k, v in kinds.items()) + "; none = nothing new was said.")
+    schema = [{"name": stage + "_kind", "type": "string", "enum_values": list(kinds) + ["none"], "description": desc, "min_confidence": 0.0}]
+    if stage == "id":
+        schema.append({"name": stage + "_text", "type": "string", "min_confidence": 0.0,
+                       "description": "The customer's answer to the security question in their latest message, copied exactly as said "
+                                      "(keep every digit and word, e.g. 'the fourteenth of March 1988' or 'four four seven one'). Empty if none."})
+    if stage in ("tp",):
+        schema.append({"name": stage + "_text", "type": "string", "min_confidence": 0.0,
+                       "description": "The day and time the customer can be reached, copied exactly as said in the latest message, e.g. 'tomorrow around eleven'. Empty if none."})
+    if stage in ("nego", "hardship", "confirm"):
+        schema.append({"name": stage + "_date", "type": "string", "min_confidence": 0.0,
+                       "description": "The payment day or date the customer says in the latest message, copied exactly as said "
+                                      "(e.g. 'this Friday', 'next Tuesday', 'the 23rd', '30 October', 'next week'). If they correct themselves, "
+                                      "only the corrected value. Empty if no day is mentioned."})
+        schema.append({"name": stage + "_amount", "type": "float", "min_confidence": 0.0,
+                       "description": "An amount of money the customer offers or agrees to pay in the latest message, as a number "
+                                      "(e.g. 'six hundred thirty-seven fifty' = 637.5). If they correct themselves, the corrected value. Empty if none."})
+        schema.append({"name": stage + "_scope", "type": "string", "enum_values": ["all", "one", "none"], "min_confidence": 0.0,
+                       "description": "all = the customer's statement is about all of their products together (both, all three, everything); "
+                                      "one = about one specific product; none = not stated."})
+    return schema
+
+
+def talk_node(stage, spec):
+    return {"name": "talk_" + stage, "node_type": "conversation",
+            "on_enter": {"type": "tts", "text": "{{say}}"},
+            "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+            "extraction_schema": extraction(stage, spec),
+            "max_node_turns": 30,
+            "transitions": [{"target_node": "step", "description": "always", "condition": {"operator": "always"}}]}
+
+
+# --------------------------------------------------------------------------------------------- api nodes
+DROP_EMPTY = ("try:\n"
+              "    b = config.get('body')\n"
+              "    if isinstance(b, dict):\n"
+              "        for k in list(b.keys()):\n"
+              "            if b[k] is None or b[k] == '' or (isinstance(b[k], str) and b[k].startswith('{' + '{')):\n"
+              "                b.pop(k)\n"
+              "        for k in list(b.keys()):\n"
+              "            if k in NUMS:\n"
+              "                try:\n"
+              "                    b[k] = float(b[k])\n"
+              "                except Exception:\n"
+              "                    pass\n"
+              "except Exception:\n"
+              "    pass\n")
+
+
+def api_node(node, tool, url, body, num_fields, nxt="step", tts=None):
+    props = {k: {"type": "string", "default": v} for k, v in body.items()}
+    hook = DROP_EMPTY.replace("NUMS", repr(sorted(num_fields)))
+    return {"name": node, "node_type": "api_request", "passthrough": True, "passthrough_default_transition": nxt,
+            "on_enter": {"type": "tts", "text": tts} if tts else {"type": "silent"}, "disable_inactivity_monitor": True,
+            "pre_actions": [{"type": "function", "config": {"timeoutMs": 12000, "maxRetries": 0},
+                             "function": {"name": tool, "handler": "__function__:api_call", "description": tool,
+                                          "parameters": {"type": "object", "properties": {
+                                              "url": {"type": "string", "default": url},
+                                              "method": {"type": "string", "default": "POST"},
+                                              "headers": {"type": "object", "properties": {"Content-Type": {"type": "string", "default": "application/json"}}},
+                                              "body": {"type": "object", "properties": props}}}},
+                             "pre_process_code": hook}],
+            "transitions": [{"target_node": nxt, "description": "always", "condition": {"operator": "always"}}]}
+
+
+API_NODES = {"api_verify": "verify_identity", "api_account": "get_account", "api_promise": "create_promise",
+             "api_note": "add_note", "api_callback": "schedule_callback", "api_transfer": "transfer_to_agent",
+             "api_close": "close_call"}
+
+
+def compile_workflow(spec, openapi):
+    base = openapi["servers"][0]["url"].rstrip("/")
+    bodies = spec["tool_bodies"]
+    nodes = {}
+    stages = ["open", "tp", "id", "nego", "hardship", "confirm"]
+    for st in stages:
+        nodes["talk_" + st] = talk_node(st, spec)
+    first = (spec["lines"]["opening"] + " " + spec["lines"]["confirm_ask"]).replace("{title}", "{{title}}").replace(
+        "{last_name}", "{{last_name}}").replace("{first_name}", "{{first_name}}")
+    nodes["talk_open"]["on_enter"] = {"type": "tts", "text": first}
+    nodes["talk_open"]["on_enter_first_entry_only"] = True
+    nodes["talk_open_again"] = dict(talk_node("open", spec), name="talk_open_again")
+    for node, tool in API_NODES.items():
+        schema = openapi["paths"]["/" + tool]["post"]["requestBody"]["content"]["application/json"]["schema"]
+        nums = [k for k, v in schema.get("properties", {}).items() if v.get("type") in ("number", "integer")]
+        body = {k: "{{" + v + "}}" for k, v in bodies.get(tool, {}).items()}
+        if "customer_id" in schema.get("properties", {}):
+            body["customer_id"] = "{{customer_id}}"
+        if node == "api_close":
+            nodes[node] = api_node(node, tool, f"{base}/{tool}", body, nums, nxt="end", tts="{{say}}")
+        else:
+            nodes[node] = api_node(node, tool, f"{base}/{tool}", body, nums)
+    routes = ["talk_" + s for s in stages if s != "open"] + ["talk_open_again"] + [n for n in API_NODES]
+    nodes["step"] = code_step(spec, routes)
+    nodes["end"] = {"name": "end", "node_type": "end_call", "on_enter": {"type": "silent"}, "disable_inactivity_monitor": True,
+                    "transitions": [], "terminal": {"type": "function", "function": {
+                        "name": "call_closed", "handler": "__function__:end_call",
+                        "parameters": {"type": "object", "properties": {"message_mode": {"type": "string", "default": "none"}}}}}}
+    return {
+        "initial_node": "talk_open",
+        "system_prompt": spec.get("system_prompt", "You are a bank's digital assistant on a phone call. Speak English."),
+        "nodes": nodes,
+        "global_nodes": {},
+        "test_variables": spec.get("test_variables", {"customer_id": "c_test", "first_name": "Daniel", "last_name": "Reyes",
+                                                      "title": "Mr", "now": "2026-10-14T11:00"}),
+    }

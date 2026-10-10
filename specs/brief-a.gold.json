@@ -1,109 +1,281 @@
 {
  "currency_word": "dollars",
- "calendar": {"workdays": [0,1,2,3,4], "holidays": ["2026-10-26","2026-11-11","2026-11-26","2026-12-25","2027-01-01"]},
- "date_rules": {"next_weekday": "following_week"},
- "confirm": {"max_asks": 2},
- "callback": {"days": ["today","next_business_day"], "start": "10:00", "end": "19:00", "after_now": true, "max_asks": 2},
+ "calendar": {
+  "workdays": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "holidays": [
+   "2026-10-26",
+   "2026-11-11",
+   "2026-11-26",
+   "2026-12-25",
+   "2027-01-01"
+  ]
+ },
+ "date_rules": {
+  "next_weekday": "following_week"
+ },
+ "confirm": {
+  "max_asks": 2
+ },
+ "callback": {
+  "days": [
+   "today",
+   "next_business_day"
+  ],
+  "start": "10:00",
+  "end": "19:00",
+  "after_now": true,
+  "max_asks": 2
+ },
  "identity": {
-   "questions": [
-     {"field": "date_of_birth", "kind": "date", "ask": "Could you please tell me your date of birth?"},
-     {"field": "phone_last4", "kind": "digits", "length": 4, "ask": "And what are the last four digits of the phone number we have on file?"}
-   ],
-   "max_wrong": 3, "date_order": "dmy",
-   "hints": {"day_month_swapped": "Thank you. Could you please say the month of your birth as a word?"},
-   "why_is_decline": true, "question_is_decline": false,
-   "response": {"ok": "ok", "verified": "verified", "all_verified": "all_verified", "left": "wrong_answers_left", "hint": "hint"}
+  "questions": [
+   {
+    "field": "date_of_birth",
+    "kind": "date",
+    "ask": "Could you please tell me your date of birth?"
+   },
+   {
+    "field": "phone_last4",
+    "kind": "digits",
+    "length": 4,
+    "ask": "And what are the last four digits of the phone number we have on file?"
+   }
+  ],
+  "max_wrong": 3,
+  "date_order": "dmy",
+  "hints": {
+   "day_month_swapped": "Thank you. Could you please say the month of your birth as a word?"
+  },
+  "why_is_decline": true,
+  "question_is_decline": false,
+  "response": {
+   "ok": "ok",
+   "verified": "verified",
+   "all_verified": "all_verified",
+   "left": "wrong_answers_left",
+   "hint": "hint"
+  }
  },
  "products": {
-   "names": {"credit_card": "credit card ending {card_last4}", "personal_loan": "personal loan", "car_loan": "car loan"},
-   "amount_field": "past_due",
-   "floor_field": {"credit_card": "minimum_payment", "personal_loan": "instalment_amount", "car_loan": "instalment_amount"}
+  "names": {
+   "credit_card": "credit card ending {card_last4}",
+   "personal_loan": "personal loan",
+   "car_loan": "car loan"
+  },
+  "amount_field": "past_due",
+  "floor_field": {
+   "credit_card": "minimum_payment",
+   "personal_loan": "instalment_amount",
+   "car_loan": "instalment_amount"
+  }
  },
  "bands": [
-   {"name": "early", "min": 1, "max": 7, "deadline": {"kind": "business_days_after", "n": 12}, "attempts": 1},
-   {"name": "late", "min": 8, "max": 45, "deadline": {"kind": "business_days_after", "n": 7}, "attempts": 2}
+  {
+   "name": "early",
+   "min": 1,
+   "max": 7,
+   "deadline": {
+    "kind": "business_days_after",
+    "n": 12
+   },
+   "attempts": 1
+  },
+  {
+   "name": "late",
+   "min": 8,
+   "max": 45,
+   "deadline": {
+    "kind": "business_days_after",
+    "n": 7
+   },
+   "attempts": 2
+  }
  ],
  "ladder": [
-   {"amount": "full_or_floor", "date": "last_business_day_this_week"},
-   {"amount": "floor", "date": "deadline"}
+  {
+   "amount": "full_or_floor",
+   "date": "last_business_day_this_week"
+  },
+  {
+   "amount": "floor",
+   "date": "deadline"
+  }
  ],
- "rules": {"refuse_deadline_is_refusal": true},
- "notes": {"enabled": false},
- "multi": {"clamp_single_date": true, "continue_after_paid": true, "continue_after_dispute": true},
- "human": {"ask_first": true},
+ "rules": {
+  "refuse_deadline_is_refusal": true
+ },
+ "notes": {
+  "enabled": false
+ },
+ "multi": {
+  "clamp_single_date": true,
+  "continue_after_paid": true,
+  "continue_after_dispute": true
+ },
+ "human": {
+  "ask_first": true
+ },
  "max_not_talk": 2,
  "events": {
-   "promise": {"outcome": "promise", "reason": ""},
-   "paid": {"outcome": "paid", "reason": "", "note": "paid"},
-   "transfer_restructuring": {"outcome": "transferred", "reason": "restructuring", "queue": "restructuring"},
-   "transfer_human": {"outcome": "transferred", "reason": "human", "queue": "general"},
-   "transfer_support": {"outcome": "transferred", "reason": "support", "queue": "support"},
-   "refused": {"outcome": "no_promise", "reason": "refused", "note": "refused"},
-   "hardship": {"outcome": "no_promise", "reason": "hardship", "note": "hardship"},
-   "dispute": {"outcome": "no_promise", "reason": "dispute", "note": "dispute"},
-   "service_error": {"outcome": "no_promise", "reason": "service_error", "note": "service_error"},
-   "id_failed": {"outcome": "not_verified", "reason": "failed"},
-   "id_declined": {"outcome": "not_verified", "reason": "declined"},
-   "callback": {"outcome": "not_reached", "reason": "callback"},
-   "no_callback": {"outcome": "not_reached", "reason": "no_callback"},
-   "wrong_number": {"outcome": "not_reached", "reason": "wrong_number"},
-   "deceased": {"outcome": "not_reached", "reason": "deceased"},
-   "unclear": {"outcome": "not_reached", "reason": "unclear"}
+  "promise": {
+   "outcome": "promise",
+   "reason": ""
+  },
+  "paid": {
+   "outcome": "paid",
+   "reason": "",
+   "note": "paid"
+  },
+  "transfer_restructuring": {
+   "outcome": "transferred",
+   "reason": "restructuring",
+   "queue": "restructuring"
+  },
+  "transfer_human": {
+   "outcome": "transferred",
+   "reason": "human",
+   "queue": "general"
+  },
+  "transfer_support": {
+   "outcome": "transferred",
+   "reason": "support",
+   "queue": "support"
+  },
+  "refused": {
+   "outcome": "no_promise",
+   "reason": "refused",
+   "note": "refused"
+  },
+  "hardship": {
+   "outcome": "no_promise",
+   "reason": "hardship",
+   "note": "hardship"
+  },
+  "dispute": {
+   "outcome": "no_promise",
+   "reason": "dispute",
+   "note": "dispute"
+  },
+  "service_error": {
+   "outcome": "no_promise",
+   "reason": "service_error",
+   "note": "service_error"
+  },
+  "id_failed": {
+   "outcome": "not_verified",
+   "reason": "failed"
+  },
+  "id_declined": {
+   "outcome": "not_verified",
+   "reason": "declined"
+  },
+  "callback": {
+   "outcome": "not_reached",
+   "reason": "callback"
+  },
+  "no_callback": {
+   "outcome": "not_reached",
+   "reason": "no_callback"
+  },
+  "wrong_number": {
+   "outcome": "not_reached",
+   "reason": "wrong_number"
+  },
+  "deceased": {
+   "outcome": "not_reached",
+   "reason": "deceased"
+  },
+  "unclear": {
+   "outcome": "not_reached",
+   "reason": "unclear"
+  }
  },
  "lines": {
-   "opening": "Hello, this is Freya Bank's digital assistant calling from Freya Bank. Please note this call is recorded.",
-   "confirm_ask": "Am I speaking with {title} {last_name}?",
-   "robot": "I am Freya Bank's digital assistant.",
-   "scam": "You can verify this call by phoning Freya Bank's customer service number.",
-   "purpose_before_verify": "I can only discuss the reason for my call with the account holder.",
-   "no_info": "I'm sorry, I don't have that information.",
-   "not_talk_once": "I understand. This will only take a moment.",
-   "tp_ask": "When would be a good time to reach them?",
-   "tp_ask_time": "What time would suit, between 10 in the morning and 7 in the evening?",
-   "tp_outside_window": "I'm sorry, I can only arrange a call today or on the next business day, between 10 in the morning and 7 in the evening. Is there another time that works?",
-   "tp_no_info": "I'm sorry, I can only speak with the account holder.",
-   "tp_booked": "Thank you, we will call back on {date} at {time}.",
-   "wrong_number": "I'm sorry for the inconvenience.",
-   "condolence": "I am sorry for your loss.",
-   "id_intro": "Before we continue, I need to ask you two security questions.",
-   "id_why": "These questions protect your account.",
-   "id_explain": "I understand. These questions protect your account, and I need them before I can continue.",
-   "id_declined": "I understand. Without the security check I can't continue.",
-   "id_repeat": "Sorry, I didn't catch that.",
-   "id_continue": "Please go on.",
-   "id_wrong": "I'm sorry, that doesn't match our records.",
-   "id_failed": "I'm sorry, I couldn't verify your identity. Please use the Freya Bank mobile app or visit a branch.",
-   "disclose_intro": "Thank you, you're verified. I'm calling from the collections team about a late payment.",
-   "product_line": "Your {name} has {amount} past due, {days} days late.",
-   "ask_today": "Can you make this payment today?",
-   "ask_today_multi": "Can you pay all of them today?",
-   "next_product": "About your {name}, with {amount} past due.",
-   "offer": "Could you pay {amount} on {date}?",
-   "offer_floor_date": "Could you pay {amount} on {date}?",
-   "offer_floor": "I understand. I can record the minimum of {amount} instead; the rest stays overdue. Can you pay that?",
-   "below_floor": "I'm sorry, I can't record less than {amount}. Could you pay {amount}? The rest stays overdue.",
-   "below_floor_again": "I understand.",
-   "date_past": "That date has passed. Which day from today can you pay?",
-   "not_business_day": "That day is not a business day. The next business day is {date}. Can you pay then?",
-   "after_deadline": "The latest date I can record is {date}. Can you pay by then?",
-   "vague_ask": "Which exact day can you pay?",
-   "propose_deadline": "Could you pay {amount} on {date}?",
-   "ask_date_for_amount": "On which day can you pay {amount}?",
-   "repeat_offer": "Could you pay {amount} on {date}?",
-   "readback_intro": "Let me read that back.",
-   "readback_item": "Your {name}: {amount} on {date}.",
-   "clamped_note": "That is the latest date I can record for this one.",
-   "confirm_q": "Do you confirm?",
-   "recorded": "Your promise is recorded.",
-   "sms_line": "You will receive a text message confirming this promise.",
-   "record_failed": "I'm sorry, I could not record the promise.",
-   "paid_line": "Thank you. Payments can take one business day to appear.",
-   "dispute_line": "I understand. I have noted that you dispute this.",
-   "hardship": "I'm sorry to hear that. Would you like me to connect you with our customer support team?",
-   "hardship_declined": "I understand.",
-   "restructure_line": "I'll transfer you to our restructuring team.",
-   "human_ask_help": "I can help you with this. Is there something I can do for you first?",
-   "transfer": "I'll transfer you now.",
-   "goodbye": "Thank you for your time. Goodbye."
+  "opening": "Hello, this is Freya Bank's digital assistant calling from Freya Bank. Please note this call is recorded.",
+  "confirm_ask": "Am I speaking with {title} {last_name}?",
+  "robot": "I am Freya Bank's digital assistant.",
+  "scam": "You can verify this call by phoning Freya Bank's customer service number.",
+  "purpose_before_verify": "I can only discuss the reason for my call with the account holder.",
+  "no_info": "I'm sorry, I don't have that information.",
+  "not_talk_once": "I understand. This will only take a moment.",
+  "tp_ask": "When would be a good time to reach them?",
+  "tp_ask_time": "What time would suit, between 10 in the morning and 7 in the evening?",
+  "tp_outside_window": "I'm sorry, I can only arrange a call today or on the next business day, between 10 in the morning and 7 in the evening. Is there another time that works?",
+  "tp_no_info": "I'm sorry, I can only speak with the account holder.",
+  "tp_booked": "Thank you, we will call back on {date} at {time}.",
+  "wrong_number": "I'm sorry for the inconvenience.",
+  "condolence": "I am sorry for your loss.",
+  "id_intro": "Before we continue, I need to ask you two security questions.",
+  "id_why": "These questions protect your account.",
+  "id_explain": "I understand. These questions protect your account, and I need them before I can continue.",
+  "id_declined": "I understand. Without the security check I can't continue.",
+  "id_repeat": "Sorry, I didn't catch that.",
+  "id_continue": "Please go on.",
+  "id_wrong": "I'm sorry, that doesn't match our records.",
+  "id_failed": "I'm sorry, I couldn't verify your identity. Please use the Freya Bank mobile app or visit a branch.",
+  "disclose_intro": "Thank you, you're verified. I'm calling from the collections team about a late payment.",
+  "product_line": "Your {name} has {amount} past due, {days} days late.",
+  "ask_today": "Can you make this payment today?",
+  "ask_today_multi": "Can you pay all of them today?",
+  "next_product": "About your {name}, with {amount} past due.",
+  "offer": "Could you pay {amount} on {date}?",
+  "offer_floor_date": "Could you pay {amount} on {date}?",
+  "offer_floor": "I understand. I can record the minimum of {amount} instead; the rest stays overdue. Can you pay that?",
+  "below_floor": "I'm sorry, I can't record less than {amount}. Could you pay {amount}? The rest stays overdue.",
+  "below_floor_again": "I understand.",
+  "date_past": "That date has passed. Which day from today can you pay?",
+  "not_business_day": "That day is not a business day. The next business day is {date}. Can you pay then?",
+  "after_deadline": "The latest date I can record is {date}. Can you pay by then?",
+  "vague_ask": "Which exact day can you pay?",
+  "propose_deadline": "Could you pay {amount} on {date}?",
+  "ask_date_for_amount": "On which day can you pay {amount}?",
+  "repeat_offer": "Could you pay {amount} on {date}?",
+  "readback_intro": "Let me read that back.",
+  "readback_item": "Your {name}: {amount} on {date}.",
+  "clamped_note": "That is the latest date I can record for this one.",
+  "confirm_q": "Do you confirm?",
+  "recorded": "Your promise is recorded.",
+  "sms_line": "You will receive a text message confirming this promise.",
+  "record_failed": "I'm sorry, I could not record the promise.",
+  "paid_line": "Thank you. Payments can take one business day to appear.",
+  "dispute_line": "I understand. I have noted that you dispute this.",
+  "hardship": "I'm sorry to hear that. Would you like me to connect you with our customer support team?",
+  "hardship_declined": "I understand.",
+  "restructure_line": "I'll transfer you to our restructuring team.",
+  "human_ask_help": "I can help you with this. Is there something I can do for you first?",
+  "transfer": "I'll transfer you now.",
+  "goodbye": "Thank you for your time. Goodbye."
+ },
+ "tool_bodies": {
+  "verify_identity": {
+   "field": "q_field",
+   "answer": "q_answer"
+  },
+  "get_account": {},
+  "create_promise": {
+   "product_id": "p_product",
+   "amount": "p_amount",
+   "date": "p_date"
+  },
+  "add_note": {
+   "product_id": "n_product",
+   "reason": "n_reason"
+  },
+  "schedule_callback": {
+   "date": "cb_date",
+   "time": "cb_time"
+  },
+  "transfer_to_agent": {
+   "queue": "t_queue"
+  },
+  "close_call": {
+   "outcome": "c_outcome",
+   "reason": "c_reason"
+  }
  }
 }
