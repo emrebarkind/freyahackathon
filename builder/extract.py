@@ -245,8 +245,9 @@ BEHAVIOUR = """The phone agent built from your spec was run against synthetic cu
 differently from what your spec's own events say they should:
 {problems}
 Some failures can come from the synthetic test itself (it uses generic data). Re-read the materials. If a failure shows a
-real mistake in the spec (a wrong code, field, window, limit, missing line or rule), fix it. Do not change values the
-materials decide. Output the complete spec JSON in a ```json block."""
+real mistake in the spec (a wrong code, field, window, limit, missing line or rule), fix it. Never remove or loosen a
+value the materials state (a length, a format, a limit, a code, a window) just to make a test pass: if the materials
+decide it, keep it. Output the complete spec JSON in a ```json block."""
 
 REPAIR = """Your spec has these problems:
 {errs}

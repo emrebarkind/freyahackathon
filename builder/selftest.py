@@ -215,8 +215,29 @@ def pick_now(spec):
     return d
 
 
-SPOKEN = {"date": "the twenty-first of June nineteen eighty-five", "year": "nineteen eighty-five", "upper": "it's A B one two, C D",
-          "text": "it's Smith", "email": "alex dot morgan at example dot com"}
+DIGIT_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+
+
+def code_value(n):
+    """A letters-then-digits code of length n (e.g. 8 -> AB123456), like a postcode or a customer reference."""
+    n = int(n or 6)
+    letters = "AB"[:min(2, n)]
+    return letters + "".join(str((i % 9) + 1) for i in range(n - len(letters)))
+
+
+def spoken_form(q, value):
+    k = q.get("kind")
+    if k == "date":
+        return "the twenty-first of June nineteen eighty-five"
+    if k == "year":
+        return "nineteen eighty-five"
+    if k == "email":
+        return "alex dot morgan at example dot com"
+    if k == "text":
+        return "it's " + value
+    if k in ("upper", "digits"):
+        return "it's " + " ".join(DIGIT_WORDS[int(c)] if c.isdigit() else c for c in value)
+    return value
 
 
 def identity_values(spec):
@@ -231,10 +252,11 @@ def identity_values(spec):
         elif k == "digits":
             n = int(q.get("length") or 4)
             vals[q["field"]], wrong[q["field"]] = "7" * n, "3" * n
+        elif k == "upper":
+            vals[q["field"]] = code_value(q.get("length") or 6)
+            wrong[q["field"]] = "Z" + vals[q["field"]][1:]
         elif k == "year":
             vals[q["field"]], wrong[q["field"]] = "1985", "1971"
-        elif k == "upper":
-            vals[q["field"]], wrong[q["field"]] = "AB12CD", "ZZ99ZZ"
         else:
             vals[q["field"]], wrong[q["field"]] = "Smith", "Jones"
     return vals, wrong
@@ -278,8 +300,7 @@ def run_all(spec, openapi):
         def notes_for(event, pids=("p1",)):
             n = ev_.get(event, {}).get("note")
             return [(p, n) for p in pids] if notes_on and n else []
-        spoken = [dict(k="answer", t=SPOKEN.get(q.get("kind"), " ".join("seven" for _ in range(int(q.get("length") or 4)))))
-                  for q in spec["identity"]["questions"]]
+        spoken = [dict(k="answer", t=spoken_form(q, ident[q["field"]])) for q in spec["identity"]["questions"]]
         full = single[0][spec["products"].get("amount_field", "past_due")]
         cb = spec["callback"]
         nb = cal.next_business_day(today, include_self=False)

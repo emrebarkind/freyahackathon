@@ -77,7 +77,11 @@ def main():
             r2 = selftest.run_all(fixed, openapi)
             n_err, n_err2 = len(extract.validate(spec, openapi)), len(extract.validate(fixed, openapi))
             trace.note(f"repaired spec: self-test {sum(r[1] for r in r2)}/{len(r2)}, validation problems {n_err2} (before {n_err})")
-            if n_err2 <= n_err and sum(not r[1] for r in r2) < len(failed):
+            touched = extract.diff(spec, fixed)
+            id_failed = any("identity" in n for n, _, _ in failed)
+            if "identity.questions" in touched and not id_failed:
+                trace.note("repair changed the identity questions although no identity scenario failed; rejected")
+            elif n_err2 <= n_err and sum(not r[1] for r in r2) < len(failed):
                 spec, results = fixed, r2
                 (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
                 for name, ok, detail in results:
