@@ -1021,6 +1021,17 @@ def ladder_of(p):
     return (p.get("ladder") if p else None) or S["ladder"]
 
 
+def start_product(V, s, p, pre=""):
+    """The first proposal for product p after the opening ask. With rules.opening_is_attempt the opening ask has
+    already used attempt 1 (see the today-phase branch), so the next proposal is step used+1, and a product whose
+    attempts are all used ends here."""
+    if p.get("used", 0) > 0 and p["used"] >= p["attempts"]:
+        p["status"] = "refused"
+        p["offer"] = None
+        return advance(V, s, pre)
+    return make_offer(V, s, p, p.get("used", 0) + 1, pre)
+
+
 def make_offer(V, s, p, step_idx, pre=""):
     """Persuasion attempt number step_idx (1-based)."""
     focus(p)
@@ -1090,7 +1101,7 @@ def advance(V, s, pre=""):
         s["ci"] = i
         p = s["products"][i]
         intro = L("next_product", name=p["name"], amount=money(p["full"])) if len(s["products"]) > 1 else ""
-        return make_offer(V, s, p, 1, (pre + " " + intro).strip())
+        return start_product(V, s, p, (pre + " " + intro).strip())
     agreed = [p for p in s["products"] if p["status"] == "agreed"]
     if agreed:
         return readback(V, s, pre)
@@ -1421,7 +1432,13 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             s["ci"] = next_open(s)
             p = cur(s)
             intro = L("next_product", name=p["name"], amount=money(p["full"])) if multi else ""
-            return make_offer(V, s, p, 1, intro)
+            if (S.get("rules") or dict()).get("opening_is_attempt"):      # the brief counts the opening ask as attempt 1
+                for q in prods:                                           # a flat no is step 1 for every open product
+                    if q["status"] == "open" and q.get("used", 0) == 0:
+                        q["used"] = 1
+                        q["refused_offers"].append([round(q["full"], 2), iso(today_of(V))])
+                p = cur(s) or p
+            return start_product(V, s, p, intro)
         else:
             s["ci"] = next_open(s)
     p = cur(s)
@@ -1739,6 +1756,8 @@ def promise_amount(p):
     # create_promise may take another unit than get_account gives (pounds in, pence out): promise_scale, else amount_scale
     scale = float(S["products"].get("promise_scale") or S["products"].get("amount_scale") or 1)
     a = round(p["agreed"][0] * scale, 2)
+    if S["products"].get("promise_integer"):           # the API declares an integer: whole units, rounded to nearest
+        return int(round(a))
     return int(round(a)) if scale != 1 else a
 
 

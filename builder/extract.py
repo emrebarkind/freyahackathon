@@ -174,6 +174,11 @@ def validate(spec, openapi):
         if t not in (spec["products"].get("floor_field") or {}) and "*" not in (spec["products"].get("floor_field") or {}) \
                 and spec["products"].get("floor_pct") is None:
             errs.append(f"products.floor_field missing for product type {t}")
+    amt_key = next((k for k, v in (spec.get("tool_bodies") or {}).get("create_promise", {}).items() if v == "p_amount"), "amount")
+    if (tool_props(openapi, "create_promise") or {}).get(amt_key, {}).get("type") == "integer" \
+            and not (spec["products"].get("promise_scale") or spec["products"].get("amount_scale")):
+        errs.append("create_promise takes an integer amount: state the unit with products.promise_scale "
+                    "(100 if the promise is sent in pence/cents, 1 if in whole pounds/euros)")
     LADDER_DATES = {"today", "deadline", "last_business_day_this_week", "last_business_day_next_week", "tomorrow", "next_business_day"}
     for st_ in list(spec["ladder"]) + [x for b in spec["bands"] for x in (b.get("ladder") or [])]:
         d = str(st_.get("date", "deadline"))

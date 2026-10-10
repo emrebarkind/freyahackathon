@@ -488,6 +488,12 @@ def apply_defaults(spec, openapi):
     success flags, the shape of the account record, the verify pass values of a non-boolean field."""
     from builder import spec_model
     spec_model.normalise(spec)                # lossless format fixes only ('9:00' -> '09:00')
+    amt_key = next((k for k, v in (spec.get("tool_bodies") or {}).get("create_promise", {}).items() if v == "p_amount"), "amount")
+    try:
+        amt = openapi["paths"]["/create_promise"]["post"]["requestBody"]["content"]["application/json"]["schema"]["properties"].get(amt_key) or {}
+    except KeyError:
+        amt = {}
+    spec.setdefault("products", {})["promise_integer"] = amt.get("type") == "integer"   # the API takes whole units only
     spec.setdefault("products", {}).update({k: v for k, v in account_shape(openapi, spec).items()
                                             if k not in spec["products"]})
     rs = spec.setdefault("responses", {})

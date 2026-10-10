@@ -75,7 +75,10 @@ use the default shown and record it in `assumptions`.
                                                    // period's date if the computed one is today (e.g. 'or next month's')
     "deadline_by_type": {},                        // only if a product type has its own deadline in this band:
                                                    // {"<product type>": <deadline rule>}
-    "attempts": 1,                                 // persuasion attempts allowed in this band
+    "attempts": 1,                                 // persuasion attempts allowed in this band. Counting: if rules.opening_is_attempt
+                                                   // is false (the default), attempts are the proposals AFTER the opening ask
+                                                   // ("can you pay the full amount today?"). If it is true, attempts are the brief's
+                                                   // total, the opening ask included. Copy the brief's number; do not convert it.
     "ladder": null}                                // only if this band has its own persuasion steps (same format as "ladder")
  ],
  "bands_outside": null,                            // only if the brief says what happens to a days_late value that is in no
@@ -92,7 +95,11 @@ use the default shown and record it in `assumptions`.
            "first_ask": "today",                   // the first payment question after disclosure: "today" (full amount today) or
                                                    // "deadline" (full amount by the deadline); a plain yes agrees to that
            "too_much_floor": "attempt_1",
-           "ladder_repeat_last": false},           // true only if the brief says the last step is repeated for further attempts         // when the customer says the full amount is too much before any attempt:
+           "ladder_repeat_last": false,            // true only if the brief says the last step is repeated for further attempts
+           "opening_is_attempt": false},           // true only if the brief counts the opening ask ("can you pay the full amount
+                                                   // today?") as persuasion attempt 1: its refusal then uses an attempt and the
+                                                   // ladder's step 1 is that ask; the attempts of each band include it
+                                                   // when the customer says the full amount is too much before any attempt:
                                                    // "attempt_1" = the floor is attempt 1 (on attempt 1's date, uses the attempt);
                                                    // "asked_date" = the floor for the date just asked, using no attempt
  "after_promise": {"ask_anything_else": true},     // give the customer one more turn after a recorded promise

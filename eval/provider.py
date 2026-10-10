@@ -30,7 +30,8 @@ def call_api(prompt, options, context):
     from builder import extract
     from builder.build import REPAIR_SECONDS, REPAIRS, Budget
     from builder.trace import Trace
-    stamp = time.strftime("%H%M%S") + f"-{os.getpid()}"
+    import uuid
+    stamp = uuid.uuid4().hex[:10]                  # unique per call (parallel calls in one process must not collide)
     RUNS.mkdir(exist_ok=True)
     name = f"{pkg}-{mode}-{stamp}"
     trace = Trace(str(RUNS / f"{name}.trace.log"))
