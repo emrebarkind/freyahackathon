@@ -1,0 +1,4 @@
+[    0.0s] START 2026-10-10T21:45:17+0000
+[    0.0s] NOTE briefs=['eval/packages/p2/brief.md'] tool_api=eval/packages/p2/openapi.json slot=rehearsal-p2
+[    0.0s] STEP 1. spec extraction
+[    0.8s] NOTE extraction mode B
