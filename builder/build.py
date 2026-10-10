@@ -39,7 +39,7 @@ def main():
     if len(tool_api) != 1 or not briefs:
         sys.exit("usage: build.py <brief files...> <tool_api.json>")
     slot = a.slot or "+".join(pathlib.Path(b).stem for b in briefs)
-    trace = Trace(str(ROOT / "traces" / f"{slot}.log"))
+    trace = Trace(str(ROOT / "traces" / f"{slot}.trace.log"))
     trace.note(f"briefs={briefs} tool_api={tool_api[0]} slot={slot}")
     openapi = json.load(open(tool_api[0]))
     docs = [(pathlib.Path(b).name, pathlib.Path(b).read_text(errors="ignore")) for b in briefs]

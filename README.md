@@ -12,7 +12,7 @@ python3 builder/build.py kit/build-the-builder/briefs/brief-a.md kit/build-the-b
 
 Needs Python 3.10+, `pip install -r requirements.txt` (Claude Agent SDK), a Claude login or `ANTHROPIC_API_KEY`,
 and `FREYA_API_KEY` (+ `FREYA_API_URL`). Output: the agent on Freya, `submission/<slot>.workflow.json` (export),
-`submission/<slot>.spec.json` (what the builder understood) and `traces/<slot>.log` (the trace). A run takes
+`submission/<slot>.spec.json` (what the builder understood) and `traces/<slot>.trace.log` (the trace; everything is also printed, so `2>&1 | tee traces/<slot>.log` works too). A run takes
 about 1–3 minutes.
 
 ## The idea: the weak model only listens, code decides
