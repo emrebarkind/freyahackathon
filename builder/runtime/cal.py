@@ -628,7 +628,7 @@ def _year_exact(nt):
     return None, ""
 
 
-def spoken_year(tokens):
+def spoken_year(tokens, round_ok=False):
     """Year from the tokens left after month/day are removed (a list, or a text). None when there is no year
     or only a century prefix ('nineteen', 'two thousand' ...: see year_is_prefix)."""
     try:
@@ -639,6 +639,8 @@ def spoken_year(tokens):
         y, _ = _year_exact(nt)
         if y is None and len(nt) > 2 and nt[0] in ("oh", "o"):     # "oh, nineteen eighty-eight"
             y, _ = _year_exact(nt[1:])
+        if y is None and round_ok and nt[-2:] in (["two", "thousand"], ["nineteen", "hundred"], ["twenty", "hundred"]):
+            y = dict(two=2000, nineteen=1900, twenty=2000)[nt[-2]]  # the year itself, said as a round number
         return y
     except Exception:
         return None
@@ -728,7 +730,7 @@ def _month_day_year(after, month):
     if not any(_is_ord_tok(w) for w in tail) and _year_exact(tail)[1] == "full":
         return ""
     for d, n, _ in _day_opts(after, k):
-        y = spoken_year(after[:k] + after[k + n:])
+        y = spoken_year(after[:k] + after[k + n:], round_ok=True)
         if y:
             return _ymd(y, month, d)
     if re.fullmatch(r"(19|20)\d\d", after[k]):               # "March 1988, the 14th"
@@ -772,11 +774,11 @@ def _birth_with_month(toks, month, mi):
         k += 1
     o = _day_opts(after, k)
     if o and o[0][2]:
-        y = spoken_year(after[:k] + after[k + o[0][1]:])
+        y = spoken_year(after[:k] + after[k + o[0][1]:], round_ok=True)
         if y:
             return _ymd(y, month, o[0][0])
     day, s, n = bd
-    y = spoken_year(after)
+    y = spoken_year(after, round_ok=True)
     if y is None:                       # "1988, the 14th of March": a full year phrase before the day
         rest = [w for w in before[:s] + before[s + n:] if _is_num_tok(w)]
         y = _year_exact(rest)[0] if _year_exact(rest)[1] == "full" else None

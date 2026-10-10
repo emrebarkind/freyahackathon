@@ -123,7 +123,9 @@ def test_year_prefix_is_partial():
         assert cal.spoken_year(t) == y, t
     # the engine's year question parses "1 january <answer>"
     assert cal.parse_birth_date("1 january nineteen") == ""
-    assert cal.parse_birth_date("1 january two thousand") == ""
+    assert cal.parse_birth_date("1 january two thousand") == "2000-01-01"   # a full date ending in a round year
+    from builder.runtime import engine                                      # the year question still waits
+    assert engine.normalize_answer({"kind": "year"}, "two thousand") == "partial"
     assert cal.parse_birth_date("1 january eighty-four") == "1984-01-01"
     assert not cal.year_is_prefix("") and not cal.year_is_prefix(None) and cal.spoken_year(None) is None
 

@@ -135,6 +135,9 @@ def one_line_literal(t):
     """A one-line Python string literal for t, quoted with whichever quote needs fewer escapes."""
     q = '"' if t.count('"') < t.count("'") else "'"
     esc = t.replace("\\", "\\\\").replace(q, "\\" + q).replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+    # control characters and Unicode line separators (a PDF form feed, a pasted U+2028) would end the line or the
+    # source when the platform splits and indents the code: write them as escapes
+    esc = re.sub("[\x00-\x1f\x7f\x85\u2028\u2029]", lambda m: "\\u%04x" % ord(m.group(0)), esc)
     lit = q + esc + q
     assert eval(lit) == t
     return lit
