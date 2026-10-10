@@ -176,3 +176,15 @@ def test_runtime_source_rules():
     assert "{{" not in src and "}}" not in src
     imports = set(re.findall(r"^\s*(?:import|from)\s+(\w+)", src, re.M))
     assert imports <= set(["json", "re", "datetime"]), imports
+
+
+def test_relative_week_forms_and_day_dot_month():
+    import datetime as _d
+    from builder.runtime import cal as _c
+    t = _d.date(2026, 10, 14)
+    R = {"next_weekday": "following_week"}
+    assert _c._parse_spoken_date("a week from Friday", t, R) == _d.date(2026, 10, 23)
+    assert _c._parse_spoken_date("Friday week", t, R) == _d.date(2026, 10, 23)
+    assert _c._parse_spoken_date("ten days from now", t, R) == _d.date(2026, 10, 24)
+    assert _c._parse_spoken_date("20.10", t, R) == _d.date(2026, 10, 20)
+    assert _c._parse_spoken_date("this Friday", t, R) == _d.date(2026, 10, 16)

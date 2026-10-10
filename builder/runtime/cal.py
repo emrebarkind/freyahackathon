@@ -291,12 +291,28 @@ def _parse_spoken_date_x(text, today, rules=None):
             pass
     t = re.sub(NEG_RE + r"(?:pay\s+|do\s+it\s+|make\s+it\s+)?(today|tomorrow|now|right now|this week)\b", " ", t)
     t = re.sub(NEG_RE + r"(?:pay\s+|do\s+it\s+|make\s+it\s+)?(?:on\s+)?(?:this\s+(?:coming\s+)?|next\s+)?" + WEEKDAY_RE + r"s?\b", " ", t)
+    # day.month written with a dot or a slash ('20.10', '20/10'): day first
+    m = re.search(r"\b([0-3]?\d)[./](1[0-2]|0?[1-9])\b(?![./]\d)", t)
+    if m and 1 <= int(m.group(1)) <= 31 and not re.search(r"\b(at|around|about|by|until|till)\s*$", t[:m.start()]) \
+            and not re.match(r"\s*(am|pm|a\.m|p\.m|o'clock)", t[m.end():]):
+        try:
+            d = datetime.date(today.year, int(m.group(2)), int(m.group(1)))
+            return d if d >= today else datetime.date(today.year + 1, d.month, d.day)
+        except ValueError:
+            pass
+    # 'a week from Friday', 'Friday week', 'a week on Friday', 'the Friday after next': that weekday one week later
+    m = re.search(r"\ba week (?:from|on)\s+(?:this\s+)?" + WEEKDAY_RE + r"\b", t) or \
+        re.search(r"\b" + WEEKDAY_RE + r"\s+week\b", t)
+    if m:
+        wd = WEEKDAYS.index(m.group(1))
+        return today + datetime.timedelta(days=(wd - today.weekday()) % 7 + 7)
     # relative offsets
-    m = re.search(r"\b(?:in|within)\s+(a|an|one|two|three|four|five|six|seven|eight|nine|ten|couple of|\d+)\s+(day|days|week|weeks)\b", t) or \
-        re.search(r"\b(a|an|one|two|three|four|five|six|seven|\d+)\s+(day|days|week|weeks)\s+from\s+(?:today|now)\b", t)
+    nums = r"(a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|twenty|thirty|couple of|\d+)"
+    m = re.search(r"\b(?:in|within)\s+" + nums + r"\s+(day|days|week|weeks)\b", t) or \
+        re.search(r"\b" + nums + r"\s+(day|days|week|weeks)\s+from\s+(?:today|now)\b", t)
     if m:
         n = m.group(1).replace(" of", "")
-        n = int(n) if n.isdigit() else SMALL_N.get(n, 1)
+        n = int(n) if n.isdigit() else SMALL_N.get(n, NUM_WORDS.get(n, 1))
         return today + datetime.timedelta(days=n * (7 if m.group(2).startswith("week") else 1))
     month = None
     for mm in re.finditer(MONTH_RE, t):

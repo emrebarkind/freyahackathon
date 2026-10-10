@@ -503,3 +503,31 @@ def test_unclear_count_restarts_with_each_offer():
     script = ids("PUB-04") + [dict(k="unclear")] * 4 + [dict(k="unclear"), dict(k="yes"), dict(k="yes")]
     led, tr = run_case(A, CASES["PUB-04"], script)
     assert led["promises"] and led["promises"][0]["amount"] == CASES["PUB-04"]["products"][0]["past_due"], agent_lines(tr)
+
+
+def test_no_with_a_vague_period_still_asks_for_the_exact_day():
+    script = ids("PUB-01") + [dict(k="no"), dict(k="no", d="next week", t="No, I can't on Friday. Maybe next week."),
+                              dict(k="proposes", d="Tuesday the 20th"), dict(k="yes"), dict(k="yes")]
+    led, tr = run_case(A, CASES["PUB-01"], script)
+    assert [p["date"] for p in led["promises"]] == ["2026-10-20"], agent_lines(tr)
+
+
+def test_refused_adjusted_day_for_all_is_not_booked_for_the_others():
+    script = ids_b("PUB-13") + [dict(k="proposes", d="Saturday", f="all", t="Not today, but I can pay both on Saturday"),
+                                dict(k="no", d="Monday", t="No, Monday is no good"), dict(k="yes"), dict(k="no"), dict(k="no"), dict(k="yes")]
+    led, tr = run_case(B, CASES["PUB-13"], script)
+    assert not any(p["date"] == "2026-10-19" for p in led["promises"]), agent_lines(tr)
+
+
+def test_scoped_yes_for_one_product_labelled_no_keeps_the_day():
+    script = ids_b("PUB-11") + [dict(k="no"), dict(k="no", d="Friday", f="credit_card", t="The card on Friday is okay, but the loans, no, I can't."),
+                                dict(k="no"), dict(k="no"), dict(k="no"), dict(k="yes")]
+    led, tr = run_case(B, CASES["PUB-11"], script)
+    assert ("p1", "2026-10-16") in [(p["product_id"], p["date"]) for p in led["promises"]], agent_lines(tr)
+
+
+def test_read_back_items_start_with_capitals():
+    led, tr = run_case(B, CASES["PUB-11"], ids_b("PUB-11") + [dict(k="yes"), dict(k="yes")])
+    rb = [x for x in agent_lines(tr) if "read that back" in x.lower() or "confirm" in x.lower()][0]
+    import re as _re
+    assert not _re.search(r"\. [a-z]", rb), rb
