@@ -16,3 +16,4 @@ kit/build-the-builder/.personas.json
 traces/brief-*.trace.log
 traces/variant-*.trace.log
 traces/test-*.trace.log
+.claude/worktrees/
