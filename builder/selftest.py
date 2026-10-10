@@ -268,26 +268,33 @@ def run_all(spec, openapi):
 
 
 def chat_smoke(freya, workflow_id, spec):
-    """The published workflow starts, speaks the opening logic and handles a third party without bank calls."""
+    """The published workflow runs the engine on the platform: after the customer confirms, the agent must ask
+    the brief's first security question (that line comes from the code node), with nothing unfilled."""
     out = []
     v = dict(customer_id="c_smoke_test", first_name="Alex", last_name="Morgan", title="Mr", now="2026-10-14T11:00")
-    try:
-        cid = None
-        replies = []
-        for m in ["Hello?", "Sorry, who is this?", "No, this is her brother, she is not home."]:
-            body = {"workflowId": workflow_id, "message": m, "customerVariables": v}
-            if cid:
-                body["callId"] = cid
-            r = freya.api("POST", "/api/v2/chat/message", body)
-            cid = r.get("callId", cid)
-            replies.append(r.get("response", ""))
+    ask = spec["identity"]["questions"][0]["ask"]
+    for attempt in range(2):
         try:
-            freya.api("POST", "/api/v2/chat/end", {"callId": cid})
-        except Exception:
-            pass
-        out.append(("workflow answers over chat", all(replies), " / ".join(replies)[:600]))
-        bad = [w for w in ("collection", "debt", "overdue", "past due") if any(w in x.lower() for x in replies)]
-        out.append(("nothing about the debt before verification", not bad, ",".join(bad)))
-    except Exception as e:
-        out.append(("chat", False, str(e)[:300]))
+            cid, replies = None, []
+            for m in ["Hello?", "Yes, this is Alex Morgan speaking."]:
+                body = {"workflowId": workflow_id, "message": m, "customerVariables": v}
+                if cid:
+                    body["callId"] = cid
+                r = freya.api("POST", "/api/v2/chat/message", body)
+                cid = r.get("callId", cid)
+                replies.append(r.get("response", "") or "")
+            try:
+                freya.api("POST", "/api/v2/chat/end", {"callId": cid})
+            except Exception:
+                pass
+            key = " ".join(re.findall(r"[a-z]+", ask.lower())[-4:])
+            ran = key in " ".join(re.findall(r"[a-z]+", replies[-1].lower()))
+            out.append(("the engine runs on the platform (asks the first security question)", ran, " / ".join(replies)[:600]))
+            out.append(("no unfilled placeholder spoken", not any("{" in x for x in replies), ""))
+            bad = [w for w in ("collection", "debt", "overdue", "past due") if any(w in x.lower() for x in replies)]
+            out.append(("nothing about the debt before verification", not bad, ",".join(bad)))
+            return out
+        except Exception as e:
+            err = str(e)[:300]
+    out.append(("chat", False, err))
     return out

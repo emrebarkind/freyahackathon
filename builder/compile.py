@@ -4,13 +4,92 @@ Graph:  step(code, initial) --next--> talk_<stage> (tts {{say}} + extraction) --
                             --next--> api_<tool>  (engine-run bank call)        --always--> step
                             --next--> api_close   (tts goodbye + close_call)    -----------> end
 """
+import ast
+import io
 import json
 import pathlib
 import re
+import tokenize
 
 RUNTIME = pathlib.Path(__file__).resolve().parent / "runtime"
 
 # --------------------------------------------------------------------------------------------- code node
+class _StripDocs(ast.NodeTransformer):
+    """Drops every bare string statement (docstrings, the module notes)."""
+    def generic_visit(self, node):
+        super().generic_visit(node)
+        for field in ("body", "orelse", "finalbody"):
+            b = getattr(node, field, None)
+            if isinstance(b, list) and b and all(isinstance(x, ast.stmt) for x in b):
+                kept = [x for x in b if not (isinstance(x, ast.Expr) and isinstance(x.value, ast.Constant) and isinstance(x.value.value, str))]
+                setattr(node, field, kept or ([ast.Pass()] if field == "body" else []))
+        return node
+
+
+def compact(src):
+    """Tokens joined without optional spaces, one space per indentation level."""
+    out, line, indent, prev = [], [], 0, ""
+    for tok in tokenize.generate_tokens(io.StringIO(src).readline):
+        tt, t = tok.type, tok.string
+        if tt == tokenize.INDENT:
+            indent += 1
+            continue
+        if tt == tokenize.DEDENT:
+            indent -= 1
+            continue
+        if tt in (tokenize.NEWLINE, tokenize.NL):
+            if line:
+                out.append(" " * indent + "".join(line))
+            line, prev = [], ""
+            continue
+        if tt in (tokenize.COMMENT, tokenize.ENDMARKER, tokenize.ENCODING):
+            continue
+        if prev and (prev[-1].isalnum() or prev[-1] == "_") and (t[:1].isalnum() or t[:1] == "_"):
+            line.append(" ")
+        line.append(t)
+        prev = t
+    return "\n".join(out) + "\n"
+
+
+def minify(src):
+    """Python source without comments/docstrings, optional spaces or deep indentation: the code node's code and
+    data must stay under the platform's 128 KB limit for a sandboxed process. The result must parse to the same
+    program (same AST), else the plainer form is used."""
+    tree = _StripDocs().visit(ast.parse(src))
+    plain = ast.unparse(tree)
+    try:
+        small = compact(plain)
+        if ast.dump(ast.parse(small)) == ast.dump(ast.parse(plain)):
+            return small
+    except Exception:
+        pass
+    return plain
+
+
+def embed_json(obj):
+    """JSON text that holds no double braces (allowed whitespace between structural braces), else hex."""
+    t = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+    t2 = t.replace("}}", "} }").replace("{{", "{ {")
+    while "}}" in t2 or "{{" in t2:
+        t2 = t2.replace("}}", "} }").replace("{{", "{ {")
+    if json.loads(t2) == obj:
+        return "json.loads(" + repr(t2) + ")"
+    return "json.loads(bytes.fromhex('" + t.encode().hex() + "').decode())"
+
+
+ENGINE_UNUSED = ("assumptions", "tool_bodies", "intents", "system_prompt", "test_variables")
+CODE_LIMIT = 100_000      # platform limit 131072 bytes for code + call variables; leave room for the variables
+
+
+def one_line_literal(t):
+    """A one-line Python string literal for t, quoted with whichever quote needs fewer escapes."""
+    q = '"' if t.count('"') < t.count("'") else "'"
+    esc = t.replace("\\", "\\\\").replace(q, "\\" + q).replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+    lit = q + esc + q
+    assert eval(lit) == t
+    return lit
+
+
 def engine_source(spec):
     cal = (RUNTIME / "cal.py").read_text()
     eng = (RUNTIME / "engine.py").read_text()
@@ -18,17 +97,20 @@ def engine_source(spec):
     eng = eng.replace("S = dict()   # injected spec", "")
     cal = cal.replace("P = dict(workdays=[0, 1, 2, 3, 4], holidays=[])", "")
     params = dict(workdays=spec["calendar"]["workdays"], holidays=spec["calendar"]["holidays"])
-    head = ("import json\n"
-            "P = json.loads(bytes.fromhex('" + json.dumps(params).encode().hex() + "').decode())\n"
-            "S = json.loads(bytes.fromhex('" + json.dumps(spec, ensure_ascii=False).encode().hex() + "').decode())\n")
-    # Freya may exec the snippet with separate globals/locals; keep everything in one namespace.
-    body = head + cal + "\n" + eng + "\n"
+    body = minify(cal + "\n" + eng)
+    used = {k: v for k, v in spec.items() if k not in ENGINE_UNUSED}
+    body = "import json\nP = " + embed_json(params) + "\nS = " + embed_json(used) + "\n" + body + "\n"
     assert "{{" not in body and "}}" not in body
+    # Freya may exec the snippet with separate globals/locals; keep everything in one namespace.
+    # one physical line: the platform wraps the code in a function and indents every line
+    lit = one_line_literal(body)
     src = ("_G = dict()\n"
-           "_SRC = " + repr(body) + "\n"
+           "_SRC = " + lit + "\n"
            "exec(_SRC, _G)\n"
            "_G['main'](vars)\n")
     assert "{{" not in src and "}}" not in src
+    if len(src.encode()) > CODE_LIMIT:
+        raise ValueError(f"engine code is {len(src.encode())} bytes, over the {CODE_LIMIT}-byte budget for the code node")
     return src
 
 

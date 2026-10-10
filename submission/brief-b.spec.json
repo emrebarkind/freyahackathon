@@ -38,13 +38,14 @@
    {
     "field": "date_of_birth",
     "kind": "date",
-    "ask": "Could you please tell me your date of birth?"
+    "format": "%Y-%m-%d",
+    "ask": "What is your date of birth?"
    },
    {
     "field": "phone_last4",
     "kind": "digits",
     "length": 4,
-    "ask": "And what are the last four digits of the phone number on file?"
+    "ask": "What are the last four digits of the phone number we have on file for you?"
    }
   ],
   "max_wrong": 3,
@@ -59,7 +60,8 @@
    "verified": "verified",
    "all_verified": "all_verified",
    "left": "wrong_answers_left",
-   "hint": "hint"
+   "hint": "hint",
+   "pass_values": []
   }
  },
  "products": {
@@ -80,7 +82,11 @@
    "credit_card": "minimum payment",
    "personal_loan": "instalment amount",
    "car_loan": "instalment amount"
-  }
+  },
+  "amount_scale": 1,
+  "list_field": "products",
+  "id_field": "product_id",
+  "type_field": "type"
  },
  "bands": [
   {
@@ -91,7 +97,8 @@
     "kind": "business_days_after",
     "n": 12
    },
-   "attempts": 1
+   "attempts": 1,
+   "ladder": null
   },
   {
    "name": "late",
@@ -101,7 +108,8 @@
     "kind": "business_days_after",
     "n": 7
    },
-   "attempts": 2
+   "attempts": 2,
+   "ladder": null
   }
  ],
  "ladder": [
@@ -116,7 +124,8 @@
  ],
  "rules": {
   "refuse_deadline_is_refusal": true,
-  "deadline_adjust": "previous_business_day"
+  "deadline_adjust": "previous_business_day",
+  "first_ask": "today"
  },
  "after_promise": {
   "ask_anything_else": true
@@ -234,86 +243,142 @@
    "reason": "c_reason"
   }
  },
+ "responses": {
+  "verify_identity": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "get_account": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "create_promise": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "add_note": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "schedule_callback": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "transfer_to_agent": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "close_call": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  }
+ },
+ "intents": {
+  "hardship": "The customer mentions illness, a death in the family or job loss.",
+  "dispute": "\"This debt is not mine\" or \"I never had this product\"; a claim that the product was closed or paid off in the past is also a dispute.",
+  "already_paid": "\"I already paid\": only a payment of this past-due amount; a claim that the product was closed or paid off in the past is a dispute instead.",
+  "restructure": "A request for a new payment plan or lower instalments.",
+  "vague": "A vague period such as \"next week\", \"end of the month\" or \"when my salary comes\".",
+  "too_much": "The customer says the full past-due amount is too much.",
+  "human": "The customer asks for a human."
+ },
+ "call_variables": [],
  "lines": {
-  "opening": "Hello, this is Freya Bank's digital assistant calling. We record this call.",
+  "opening": "Hello, I am a digital assistant calling from Freya Bank, and we record this call.",
   "confirm_ask": "Am I speaking with {title} {last_name}?",
   "robot": "I am Freya Bank's digital assistant.",
   "scam": "You can verify this call by phoning Freya Bank's customer service number.",
-  "purpose_before_verify": "I can only share that once I have confirmed I am speaking with the right person.",
-  "no_info": "I'm sorry, I do not have that information.",
-  "not_talk_once": "I understand. This will only take a few minutes.",
-  "tp_ask": "When can {title} {last_name} be reached?",
-  "tp_ask_time": "What time would suit, between 10 AM and 7 PM, today or on the next business day?",
-  "tp_outside_window": "I'm sorry, I can only call back today or on the next business day, between 10 AM and 7 PM. Is there another time that would work?",
-  "tp_no_info": "I'm sorry, I can only speak with {title} {last_name} directly.",
+  "purpose_before_verify": "I can only discuss the reason for my call with {title} {last_name}, once I have confirmed who I am speaking with.",
+  "no_info": "I am sorry, I do not have that information.",
+  "not_talk_once": "I understand. This will only take a moment.",
+  "tp_ask": "When would be a good time to reach {title} {last_name}?",
+  "tp_ask_time": "At what time could we call back?",
+  "tp_outside_window": "I am sorry, we can only call back today or on the next business day, between 10 am and 7 pm. Could you suggest another time?",
+  "tp_no_info": "I am sorry, I can only speak with {title} {last_name} directly.",
   "tp_booked": "Thank you. We will call back on {date} at {time}.",
-  "wrong_number": "I'm sorry for the trouble. Thank you for letting me know.",
+  "wrong_number": "I am sorry for the trouble. Thank you for letting me know.",
   "condolence": "I am sorry for your loss.",
   "id_intro": "Before we continue, I need to ask you two security questions.",
-  "id_why": "These questions protect your account and make sure I am speaking with the right person.",
-  "id_explain": "I understand. The questions protect your account, so I can only continue once they are answered. Could you answer them?",
-  "id_declined": "I understand. I cannot continue without checking your identity.",
-  "id_repeat": "Sorry, I didn't catch that. Could you say it again?",
+  "id_why": "These questions protect your account.",
+  "id_explain": "I ask these questions to protect your account and to make sure I am speaking only with you.",
+  "id_declined": "I understand. Without these answers I cannot continue this call.",
+  "id_repeat": "Sorry, could you please repeat that?",
   "id_continue": "Thank you.",
-  "id_wrong": "That does not match our records. Could you try again?",
-  "id_failed": "I'm sorry, I could not verify your identity. Please use the Freya Bank mobile app or visit a branch.",
+  "id_wrong": "I am sorry, that does not match our records.",
+  "id_failed": "I am sorry, I could not verify your identity. Please use the Freya Bank mobile app or visit a branch.",
   "disclose_intro": "Thank you. I am calling from the collections team about a late payment.",
   "product_line": "Your {name} has {amount} past due and is {days} days late.",
   "ask_today": "Can you make this payment today?",
   "ask_today_multi": "Can you make all of these payments today?",
   "next_product": "Let's look at your {name}.",
   "offer": "Could you pay {amount} on {date}?",
-  "offer_floor_date": "I understand. Could you pay {amount} on {date}? The rest stays overdue.",
-  "offer_floor": "I understand. Could you pay {amount}? The rest stays overdue.",
-  "below_floor": "I'm sorry, I cannot record an amount that low. Could you pay {amount} instead? The rest stays overdue.",
-  "below_floor_again": "I'm sorry, I cannot record an amount below {amount}.",
-  "date_past": "That date has already passed. Which day from today onwards would work for you?",
-  "not_business_day": "That day is not a business day. Could you pay on {date} instead?",
-  "after_deadline": "The latest date I can record is {date}. Could you pay on {date}?",
+  "offer_floor_date": "I understand. The rest would stay overdue, but could you pay {amount} on {date}?",
+  "offer_floor": "I understand. The rest would stay overdue, but could you pay {amount}?",
+  "below_floor": "I am sorry, I cannot record an amount below {floor}. Could you pay {floor} instead?",
+  "below_floor_again": "I am sorry, I cannot record that amount.",
+  "date_past": "I am sorry, the date must be today or later. Which day from today would work for you?",
+  "not_business_day": "That day is not a business day. The next business day is {date}. Would that work for you?",
+  "after_deadline": "The latest date I can record is {date}. Could you pay by then?",
   "vague_ask": "Which exact day would that be?",
   "propose_deadline": "Could you pay {amount} on {date}?",
   "ask_date_for_amount": "On which day could you pay {amount}?",
-  "repeat_offer": "Just to repeat, could you pay {amount} on {date}?",
-  "readback_intro": "Let me read that back.",
-  "readback_item": "Your {name}: {amount} on {date}.",
-  "clamped_note": "For your {name}, the latest date I can accept is {date}, so I will use that date.",
+  "repeat_offer": "Could you pay {amount} on {date}?",
+  "readback_intro": "Let me read that back to you.",
+  "readback_item": "For your {name}, {amount} on {date}.",
+  "clamped_note": "For your {name}, the latest date I can record is {deadline}, so I will use that date.",
   "confirm_q": "Do you confirm?",
-  "recorded": "Your promise is recorded.",
+  "recorded": "Thank you, your promise is recorded.",
   "sms_line": "You will receive a text message confirming this promise.",
-  "record_failed": "I'm sorry, I could not record your promise.",
-  "paid_line": "Thank you. Payments can take one business day to appear.",
-  "dispute_line": "I understand. I will make a note of that.",
-  "hardship": "I'm very sorry to hear that. Would you like me to connect you with our customer support team?",
+  "record_failed": "I am sorry, I could not record your promise.",
+  "paid_line": "Thank you for letting me know. Payments can take one business day to appear.",
+  "dispute_line": "I understand, and I will make a note of that.",
+  "hardship": "I am very sorry to hear that. Would you like me to connect you with our customer support team?",
   "hardship_declined": "I understand.",
-  "hardship_offer_again": "Would you like me to connect you with our customer support team? Please say yes or no.",
-  "restructure_line": "I will transfer you to a colleague who can discuss that with you.",
-  "human_ask_help": "Before I transfer you, is there anything I can help you with myself?",
+  "hardship_short": "Would you like that?",
+  "restructure_line": "I will connect you with a colleague who can discuss that with you.",
+  "human_ask_help": "I may be able to help you myself. Is there something I can help you with?",
   "transfer": "I am transferring you now. Please hold.",
   "offer_short": "Would that work for you?",
   "offer_short_date": "That would be on {date}.",
   "anything_else": "Is there anything else I can help you with?",
-  "promise_change": "You can change it in the mobile app.",
-  "goodbye": "Thank you for your time. Goodbye."
+  "promise_change": "A promise cannot be changed or cancelled on this call, but you can change it in the mobile app.",
+  "go_on": "Sorry, please go on.",
+  "goodbye": "Thank you for your time. Goodbye.",
+  "callback_failed": "I am sorry, I could not book the callback.",
+  "transfer_failed": "I am sorry, the transfer did not go through.",
+  "confirm_again": "Sorry, I did not catch that. Do you confirm, yes or no?",
+  "system_error": "I am sorry, our system is not responding right now."
  },
  "assumptions": [
-  "Brief B is the later, more specific document and says every Brief A rule applies unless a Brief B rule replaces it. The spec follows Brief B, which also covers a single product. Brief B rule 8 replaces Brief A's 'never uses add_note', so notes.enabled is true.",
-  "Brief B rule 10 replaces the plain note rule on transfers: on any transfer (restructuring, support, human) no notes are added. Promises that were agreed but not yet recorded are dropped.",
-  "Brief B closing rule: with no promise recorded, close as 'paid' only if every product is noted 'paid'. Otherwise close as no_promise with the reason of the first product, in get_account order, whose note is not 'paid'. 'promise' wins if at least one promise was recorded, except on a transfer.",
-  "Neither brief names a currency. currency_word uses the default 'dollars'.",
-  "Brief A rule 1 requires saying the call is recorded. The opening says 'We record this call.' (active voice), as the spec format requires.",
-  "Callback: the brief does not require 'today' to be a business day, so business_days_only is false. The next day must be a business day ('next_business_day'). Window 10:00 to 19:00, both included, and later than now.",
-  "Callback max_asks is 2: one more ask after the first time outside the window (rule 7).",
-  "Confirm max_asks is 2 (rule 3). Answering a customer's question first does not reset the count.",
-  "Identity: date of birth first, then phone_last4, from rule 11. Numeric dates are read day, month, year (dmy). The day_month_swapped hint (the only hint in the tool API enum) asks the customer to repeat the date of birth with the month as a word (rule 13). The retry does not count as a wrong answer, and the full date is needed to call verify_identity again.",
-  "Asking what the call is about instead of answering counts as declining (rule 15). Other side questions, such as robot or scam, are not declines.",
-  "Floor names 'minimum payment' and 'instalment amount' come from the tool fields minimum_payment and instalment_amount (rule 25). The brief itself just calls it 'the floor'.",
-  "Ladder attempt 1 is full_or_floor on the last business day of this week. If today is that day, the engine uses the last business day of next week (rule 30). Attempt 2, late band only, is the floor on the deadline.",
-  "Deadlines are counted in business days, so they always fall on a business day. deadline_adjust keeps the default previous_business_day.",
-  "The brief says nothing about asking 'anything else' after a promise. The default ask_anything_else = true is kept.",
-  "After a recorded promise, sms_line uses the exact sentence from rule 38.",
-  "promise_change uses rule 36: the promise can be changed in the mobile app.",
-  "Queue mapping from the tool API: restructuring -> 'restructuring', human -> 'general', support -> 'support'.",
-  "Saying 'I don't want to talk' twice closes as no_promise/refused after verification and as not_verified/declined before it (rule 45).",
-  "Hardship (rule 32) comes before persuasion and restructuring. If the customer declines support, the call closes as no_promise/hardship with a hardship note for that product. A date or amount the customer offers is still recorded under sections 7 and 8."
+  "I was given both Brief A and Brief B. Brief B is the more specific, later document: it is Brief A plus rules for up to three products. So this spec follows Brief B, with Brief A's rules applying wherever Brief B does not replace them. It also works for one product, apart from add_note: Brief A never uses add_note, but Brief B requires it, so notes.enabled is true.",
+  "Brief B rule 10 overrides note events: on any transfer (restructuring, support or human), no add_note calls are made at all.",
+  "Brief B closing overrides Brief A for several products: if any promise is recorded, close as promise, unless there is a transfer. If no promise is recorded and every product is noted paid, close as paid. Otherwise, close as no_promise with the reason of the first product, in get_account order, whose note is not paid.",
+  "Brief B rule 11 overrides Brief A rule 37: if create_promise fails twice for one product, promises already recorded are kept, and that product gets an add_note with reason service_error.",
+  "The brief names no currency, so the default 'dollars' is used.",
+  "The callback window is today or the next business day, 10:00 to 19:00 inclusive, and later than now. The brief does not say whether a same-day callback must be on a business day, so business_days_only is false.",
+  "Rule 7 lets the agent ask once more after a time outside the window, so callback max_asks is 2.",
+  "Rule 3 allows two asks to confirm the customer, so confirm max_asks is 2.",
+  "Rule 15: asking what the call is about counts as declining. Other questions do not, so question_is_decline is false.",
+  "Rule 30, attempt 1: if today is the last business day of this week, the engine proposes the last business day of next week instead.",
+  "Deadlines are counted in business days, so they always fall on a business day. previous_business_day is kept only as a safeguard.",
+  "Floor names come from the field names: 'minimum payment' for credit cards and 'instalment amount' for loans.",
+  "The brief does not say whether to ask 'anything else' after a recorded promise, so the default (true) is used.",
+  "The brief says the call is recorded. It is phrased as 'we record this call' to keep the word 'recorded' out of the opening.",
+  "Response success flags use the 'ok' boolean, as described in the tool API file.",
+  "add_note 'text' is optional in the API and is not mapped. close_call 'reason' is sent only where the outcome table lists one."
  ]
 }
