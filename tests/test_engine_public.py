@@ -59,6 +59,11 @@ def test_brief_a_cases():
     assert not bad, json.dumps(bad, indent=1)[:4000]
 
 
+def test_sms_line_survives_notes():
+    led, tr = run_case(SPEC_B, CASES["PUB-12"], SCRIPTS["PUB-12"])
+    assert "text message" in [t for w, t in tr if w == "agent"][-1]
+
+
 def test_brief_b_cases():
     if SPEC_B is None:
         return

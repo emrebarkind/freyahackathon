@@ -32,7 +32,7 @@ CTX = dict()   # customer names, filled once per step from the call variables
 def L(key, **kw):
     """Spec line with {placeholders} filled (customer names always available). Never raises."""
     t = S.get("lines", dict()).get(key, "")
-    for k, v in list(kw.items()) + list(CTX.items()):
+    for k, v in list(kw.items()) + [(k, v) for k, v in CTX.items() if k not in kw]:
         t = t.replace("{" + k + "}", str(v))
     t = re.sub(r"\{[a-z_0-9]+\}", "", t)       # never speak an unfilled placeholder
     return re.sub(r"\s+", " ", t).strip()
@@ -281,14 +281,14 @@ def close(V, s, event, pre=""):
 def finish(V, s, pre=""):
     """End of a verified call: notes (if the brief uses them), then the outcome from the product states."""
     prods = s.get("products", [])
+    s["pre"] = (s.get("pre", "") + " " + (pre or "")).strip()     # lines to say before goodbye, kept across note calls
     if S.get("notes", dict()).get("enabled") and not s.get("transferred"):
         for p in prods:
             if p["status"] in ("refused", "hardship", "dispute", "paid", "service_error") and not p.get("noted"):
                 p["noted"] = True
-                s["pre"] = pre
                 note_reason = ev(p["status"]).get("note") or p["status"]
                 return call(V, s, "api_note", n_product=p["id"], n_reason=note_reason)
-    pre = s.pop("pre", pre) if "pre" in s and not pre else pre
+    pre = s.pop("pre", "")
     if s.get("transferred"):
         return close(V, s, "transfer_" + s["transferred"], pre)
     if any(p["status"] == "recorded" for p in prods):
@@ -627,6 +627,13 @@ def after_account(V, s):
     return talk(V, "nego", s)
 
 
+def focus(p):
+    """Make the product's fields available to every line until the next step."""
+    if p:
+        CTX.update(name=p["name"], amount=money(p["full"]), days=p["days_late"], deadline=spoken(p["deadline"]),
+                   floor=money(p["floor"]))
+
+
 def cur(s):
     ci = s.get("ci", -1)
     if 0 <= ci < len(s["products"]):
@@ -643,6 +650,7 @@ def next_open(s):
 
 def make_offer(V, s, p, step_idx, pre=""):
     """Persuasion attempt number step_idx (1-based)."""
+    focus(p)
     today = today_of(V)
     ladder = S["ladder"]
     st_ = ladder[min(step_idx, len(ladder)) - 1]
@@ -695,7 +703,8 @@ def readback(V, s, pre=""):
     agreed = [p for p in s["products"] if p["status"] == "agreed"]
     parts = []
     for p in agreed:
-        extra = L("clamped_note", date=spoken(p["agreed"][1])) if p.get("clamped") else ""
+        focus(p)
+        extra = L("clamped_note", date=spoken(p["agreed"][1]), name=p["name"]) if p.get("clamped") else ""
         parts.append((L("readback_item", name=p["name"], amount=money(p["agreed"][0]), date=spoken(p["agreed"][1])) + " " + extra).strip())
     s["stage"] = "confirm"
     say(V, pre, L("readback_intro"), " ".join(parts), L("confirm_q"))
@@ -711,6 +720,7 @@ def agree(p, amount, date, clamped=False):
 
 def apply_proposal(V, s, p, dtxt, a, scope_all=False):
     """Customer proposed a date and/or an amount for p. Returns (handled, pre_line)."""
+    focus(p)
     today = today_of(V)
     amount = None
     if a is not None:
@@ -775,6 +785,7 @@ def default_amount(p):
 
 def special(V, s, k, p):
     """Paid / dispute / hardship / restructure on product p (or the call). Returns True if handled."""
+    focus(p)
     multi = len(s["products"]) > 1
     if k == "already_paid":
         if multi and S.get("multi", dict()).get("continue_after_paid", True):
