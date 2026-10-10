@@ -158,7 +158,7 @@ KINDS = {
     "open": {
         "confirmed": "the person confirms they are the customer: yes, that's me, speaking, or says the customer's own name",
         "third_party": "someone else answered (a relative, partner, colleague, child) or says the customer is not available",
-        "wrong_number": "says this number does not belong to the customer or they do not know the customer",
+        "wrong_number": "says this number does not belong to the customer or they do not know the customer at all (a 'no' because someone else answered, e.g. a relative, is third_party)",
         "deceased": "says the customer has died / passed away",
         "robot": "asks whether you are a robot, a machine or an AI",
         "scam": "asks whether this call is a scam or fraud, or doubts that you are the bank",

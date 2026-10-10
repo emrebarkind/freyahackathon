@@ -1871,12 +1871,24 @@ def run_turn(V, s, stage):
         s["reask"] = True
         say(V, L("go_on") or "Sorry, please go on.")
         return talk(V, stage, s)
-    if V.get("_cut") == "yes" and (dtxt or a is not None) and stage in ("nego", "confirm", "hardship") \
-            and k not in ("yes", "agrees", "confirm") and not s.get("cut_value_waited"):
-        s["cut_value_waited"] = True                   # "I can pay six hundred and..." : let them finish the number
+    if V.get("_cut") == "yes" and stage in ("open", "tp") and k in ("wrong_number", "deceased") and not s.get("end_cut_waited"):
+        s["end_cut_waited"] = True                     # 'No, you're not...' cut off: hear the rest before ending the call
         s["reask"] = True
         say(V, L("go_on") or "Sorry, please go on.")
         return talk(V, stage, s)
+    if V.get("_cut") == "yes" and (dtxt or a is not None) and stage in ("nego", "confirm", "hardship") \
+            and k not in ("yes", "agrees", "confirm") and not s.get("cut_value_waited"):
+        s["cut_value_waited"] = True                   # "I can pay six hundred and..." : let them finish the number
+        s["held"] = [dtxt, a, scope, k]                # keep what was said in case the rest does not repeat it
+        s["reask"] = True
+        say(V, L("go_on") or "Sorry, please go on.")
+        return talk(V, stage, s)
+    held = s.pop("held", None)
+    if held and not dtxt and a is None and k in ("proposes", "unclear", "none", "yes", "agrees", "too_much"):
+        dtxt, a = held[0], held[1]                     # the finished sentence did not repeat the date/amount
+        scope = scope if scope != "none" else held[2]
+        if k in ("unclear", "none"):
+            k = held[3] if held[3] not in ("unclear", "none") else "proposes"
     if V.get("_cut") != "yes":
         s["cut_value_waited"] = False
     s["cut_waits"] = 0

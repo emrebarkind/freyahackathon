@@ -457,3 +457,19 @@ def test_date_of_birth_in_pieces_day_month_then_year():
               dict(k="answer", t="four four one zero"), dict(k="yes"), dict(k="yes")]
     led, tr = run_case(A, case, script)
     assert len(led["promises"]) == 1, agent_lines(tr)
+
+
+def test_date_said_in_a_cut_off_message_is_kept():
+    script = ids_b("PUB-13") + [dict(k="no"),
+                                dict(k="proposes", d="the thirtieth of October", f="all", cut="yes", t="I would prefer to pay both on the thirtieth of October. My cousin's wedding is also"),
+                                dict(k="proposes", t="My cousin's wedding is also then. I would like to pay both amounts on"),
+                                dict(k="yes")]
+    led, tr = run_case(B, CASES["PUB-13"], script)
+    assert sorted((p["product_id"], p["date"]) for p in led["promises"]) == [("p1", "2026-10-30"), ("p2", "2026-10-23")], agent_lines(tr)
+
+
+def test_cut_off_no_at_the_opening_is_heard_out():
+    script = [dict(k="wrong_number", cut="yes", t="Hello. No, you're not,"), dict(k="third_party", t="you're speaking to her husband"),
+              dict(k="gives_time", t="tomorrow at eleven")]
+    led, tr = run_case(A, CASES["PUB-02"], script)
+    assert led["callbacks"] == [dict(date="2026-10-15", time="11:00")], agent_lines(tr)
