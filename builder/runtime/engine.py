@@ -218,7 +218,12 @@ def band_for(days_late):
         lo, hi = b.get("min", -10 ** 9), b.get("max", 10 ** 9)
         if lo <= days_late <= hi:
             return b
-    return S["bands"][-1]
+    rule = S.get("bands_outside") or dict()       # what the brief says for days_late in no band, if anything
+    if rule.get("band"):
+        for b in S["bands"]:
+            if b.get("name") == rule["band"]:
+                return b
+    return None
 
 
 def by_type(m, typ, default=None):
@@ -258,6 +263,11 @@ def product_facts(V, raw):
         floor = full
     dl = int(num(raw.get(S["products"].get("days_field", "days_late"))) or 0)
     b = band_for(dl)
+    if b is None:                                 # no band and no rule for it: no offer is made for this product
+        ev_ = (S.get("bands_outside") or dict()).get("event") or "service_error"
+        return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
+                    band="", deadline=iso(today), attempts=0, ladder=None, used=0, too_much=False, floor_offered=False,
+                    vague_asked=False, offer=None, agreed=None, status=ev_, reason="no_band", refused_offers=[])
     deadline = cal_deadline(today, b["deadline"])
     adj = b["deadline"].get("adjust", S.get("rules", dict()).get("deadline_adjust", "previous_business_day"))
     if adj != "none" and not is_business_day(deadline):
@@ -588,6 +598,8 @@ def stage_tp(V, s, k, t, dtxt):
                 return no_callback(V, s)
             say(V, L("tp_ask"))
             return talk(V, "tp", s)
+        if d is not None and hm is not None:
+            d = night_date(d, hm, dtxt + " " + t)
         ok = d is not None and hm is not None and callback_ok(V, d, hm)
         if ok:
             s["cb"] = [iso(d), hm]
@@ -664,17 +676,30 @@ def callback_ok(V, d, hm):
         elif k.startswith("within_days:"):
             for i in range(1, int(k.split(":")[1]) + 1):
                 allowed.append(today + datetime.timedelta(days=i))
-    if d not in allowed:
-        return False
-    if c.get("business_days_only") and not is_business_day(d):
-        return False
     mins = lambda x: int(x[:2]) * 60 + int(x[3:5])      # validated HH:MM values only (see spec_model)
     t, a_, b_ = mins(hm), mins(c.get("start", "00:00")), mins(c.get("end", "23:59"))
     if not (a_ <= t <= b_ if a_ <= b_ else (t >= a_ or t <= b_)):     # start > end: the window crosses midnight
         return False
-    if c.get("after_now", True) and d == today and t <= now.hour * 60 + now.minute:
+    # d is the calendar date of the call; the allowed days name the evening a night window starts on
+    wday = d - datetime.timedelta(days=1) if a_ > b_ and t <= b_ else d
+    if wday not in allowed:
+        return False
+    if c.get("business_days_only") and not is_business_day(wday):
+        return False
+    if c.get("after_now", True) and (d, t) <= (today, now.hour * 60 + now.minute):
         return False
     return True
+
+
+def night_date(d, hm, text):
+    """'tonight at one' in a window that crosses midnight is the next calendar date."""
+    c = S["callback"]
+    a_, b_ = int(c.get("start", "00:00")[:2]) * 60 + int(c.get("start", "00:00")[3:5]), \
+        int(c.get("end", "23:59")[:2]) * 60 + int(c.get("end", "23:59")[3:5])
+    t = int(hm[:2]) * 60 + int(hm[3:5])
+    if a_ > b_ and t <= b_ and re.search(r"\b(tonight|this evening|later tonight)\b", str(text).lower()):
+        return d + datetime.timedelta(days=1)
+    return d
 
 
 def start_identity(V, s):
@@ -925,10 +950,15 @@ def after_account(V, s):
     prods = [product_facts(V, r) for r in raws]
     s["products"] = prods
     s["ci"] = -1
+    outside = [p for p in prods if p.get("reason") == "no_band"]
     s["stage"] = "nego"
     lines = [L("disclose_intro")]
     for p in prods:
         lines.append(L("product_line", name=p["name"], amount=money(p["full"]), days=p["days_late"]))
+    for p in outside:                             # say it plainly instead of negotiating outside the policy
+        lines.append(L("no_band_line", name=p["name"]) or ("I can't arrange a payment for your " + p["name"] + " on this call."))
+    if not any(p["status"] == "open" for p in prods):
+        return finish(V, s, " ".join(x for x in lines if x))
     lines.append(ask_today_line(V, s))
     s["phase"] = "today"
     say(V, *lines)
@@ -982,6 +1012,11 @@ def make_offer(V, s, p, step_idx, pre=""):
         p["status"] = "refused"
         p["offer"] = None
         return advance(V, s, pre)
+    if step_idx > len(ladder) and not S.get("rules", dict()).get("ladder_repeat_last"):
+        p["used"] = step_idx              # the brief gives no step for this attempt: persuasion ends here
+        p["status"] = "refused"
+        p["offer"] = None
+        return advance(V, s, pre)
     st_ = ladder[min(step_idx, len(ladder)) - 1]
     amt = p["full"]
     if st_.get("amount") == "floor" or (st_.get("amount") == "full_or_floor" and p["too_much"]):
@@ -995,7 +1030,8 @@ def make_offer(V, s, p, step_idx, pre=""):
     if d > dl:
         d = dl
     offer = [round(amt, 2), iso(d)]
-    if offer in p["refused_offers"]:
+    repeat_ok = step_idx > len(ladder) and S.get("rules", dict()).get("ladder_repeat_last")   # the brief says so
+    if offer in p["refused_offers"] and not repeat_ok:
         if step_idx < p["attempts"]:
             return make_offer(V, s, p, step_idx + 1, pre)
         p["used"] = step_idx                 # rule: never repeat an offer the customer already refused
@@ -1348,7 +1384,8 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         if k in ("yes", "agrees", "pay_today") and target is None and not dtxt:
             by_deadline = S.get("rules", dict()).get("first_ask") == "deadline"
             for p in prods:
-                agree(p, p["full"], p["deadline"] if by_deadline else iso(today_of(V)))
+                if p["status"] == "open":
+                    agree(p, p["full"], p["deadline"] if by_deadline else iso(today_of(V)))
             return readback(V, s)
         if target is not None:
             pass

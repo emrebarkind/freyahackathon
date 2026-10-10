@@ -9,6 +9,7 @@
 Everything is written to traces/<slot>.log.
 """
 import argparse
+import copy
 import json
 import os
 import pathlib
@@ -24,6 +25,74 @@ sys.path.insert(0, str(KIT / "tools"))
 from builder.trace import Trace  # noqa: E402
 from builder import compile as comp  # noqa: E402
 from builder import selftest  # noqa: E402
+
+
+REPAIRS = 3              # repair rounds for the whole pipeline
+REPAIR_SECONDS = 15 * 60 # no repair round starts after this (the build limit is 30 minutes)
+
+
+class Budget:
+    def __init__(self, total, seconds):
+        self.total, self.used, self.t0, self.seconds = total, 0, time.time(), seconds
+
+    def take(self, trace, purpose):
+        if self.used >= self.total or time.time() - self.t0 > self.seconds:
+            trace.note(f"repair budget exhausted ({self.used}/{self.total} rounds, {int(time.time() - self.t0)} s): no {purpose}")
+            return False
+        self.used += 1
+        trace.note(f"repair round {self.used}/{self.total}: {purpose}")
+        return True
+
+
+def finalize(spec, openapi):
+    """Lossless normalisation + what the tool API file decides (response fields, success flags, record shape)."""
+    from builder import spec_model
+    spec_model.normalise(spec)
+    return comp.apply_defaults(spec, openapi)
+
+
+def local_checks(spec, openapi):
+    from builder import extract, spec_model
+    results = selftest.run_all(spec, openapi)
+    return dict(structural=spec_model.check(spec), api=extract.validate(spec, openapi), results=results,
+                failed=[n for n, ok, _ in results if not ok])
+
+
+def report_checks(trace, chk, label):
+    for e in chk["structural"]:
+        trace.note(f"{label} structural problem: {e}")
+    for name, ok, detail in chk["results"]:
+        trace.test(f"{label} {name}", ok, detail)
+    trace.note(f"{label} checks: structural {len(chk['structural'])}, tool API {len(chk['api'])}, "
+               f"self-test {sum(r[1] for r in chk['results'])}/{len(chk['results'])}")
+
+
+def repair_loop(spec, chk, openapi, docs, trace, budget):
+    """Repairs after the local checks, bounded by the shared budget. A candidate is accepted only if it passes every
+    local check again (structure, tool API, self-test) and is better without being worse anywhere."""
+    from builder import extract
+    while (chk["structural"] or chk["failed"]) and budget.take(trace, "repair after the local checks"):
+        problems = ["Structural problems: " + "; ".join(chk["structural"])] if chk["structural"] else []
+        problems += [f"- {n}: {d[:1500]}" for n, ok, d in chk["results"] if not ok]
+        try:
+            cand = finalize(extract.repair_behaviour(copy.deepcopy(spec), "\n".join(problems), docs, openapi, trace), openapi)
+        except Exception as e:
+            trace.note(f"repair failed ({type(e).__name__}: {e}); keeping the current spec")
+            continue
+        c2 = local_checks(cand, openapi)
+        report_checks(trace, c2, "candidate")
+        touched = extract.diff(spec, cand)
+        id_failed = any("identity" in n for n in chk["failed"])
+        score = lambda c: (len(c["structural"]), len(c["api"]), len(c["failed"]))
+        not_worse = all(x <= y for x, y in zip(score(c2), score(chk)))
+        if "identity.questions" in touched and not id_failed and not chk["structural"]:
+            trace.note("repair changed the identity questions although no identity scenario failed; rejected")
+        elif not_worse and score(c2) < score(chk):
+            spec, chk = cand, c2
+            trace.note("repaired spec accepted")
+        else:
+            trace.note("repaired spec not better; rejected")
+    return spec, chk
 
 
 def main():
@@ -44,6 +113,9 @@ def main():
     openapi = json.load(open(tool_api[0]))
     docs = [(pathlib.Path(b).name, pathlib.Path(b).read_text(errors="ignore")) for b in briefs]
 
+    # One budget for the whole pipeline: every repair round anywhere (validation repairs during extraction,
+    # repairs after the local checks) takes one unit, and no repair starts after REPAIR_SECONDS.
+    budget = Budget(REPAIRS, REPAIR_SECONDS)
     trace.step("1. spec extraction")
     if a.spec:
         spec = json.load(open(a.spec))
@@ -51,62 +123,30 @@ def main():
     else:
         from builder import extract
         try:
-            spec = extract.extract(docs, openapi, trace)
+            spec = extract.extract(docs, openapi, trace, budget)
         except Exception as e:                  # one more full attempt before giving up
             trace.note(f"extraction failed ({type(e).__name__}: {e}); trying once more")
-            spec = extract.extract(docs, openapi, trace)
-    comp.apply_defaults(spec, openapi)       # response field names / success flags come from the tool API file
+            spec = extract.extract(docs, openapi, trace, budget)
     from builder import spec_model
-    for u in spec_model.unsupported(spec):    # valid policy the engine cannot carry out as written: say so, do not change it
-        trace.note("UNSUPPORTED by the engine (policy kept as the brief states it): " + u)
-    errs = spec_model.check(spec)             # the engine only gets a structurally valid spec
-    if errs and not a.spec:
-        trace.note("structural problems before deploy:" + "".join("\n  - " + e for e in errs))
-        try:
-            from builder import extract
-            fixed = comp.apply_defaults(extract.repair_behaviour(spec, "Structural problems: " + "; ".join(errs), docs, openapi, trace), openapi)
-            if not spec_model.check(fixed) and len(extract.validate(fixed, openapi)) <= len(extract.validate(spec, openapi)):
-                spec, errs = fixed, []
-        except Exception as e:
-            trace.note(f"structural repair failed ({type(e).__name__}: {e})")
-    if errs:
-        trace.note("STOP: the spec is still malformed; not deploying:" + "".join("\n  - " + e for e in errs))
-        trace.end()
-        sys.exit("spec still malformed after repair (see the trace); nothing deployed")
+    spec = finalize(spec, openapi)
     out_dir = ROOT / "submission"
     out_dir.mkdir(exist_ok=True)
-    (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
     for asm in spec.get("assumptions", []):
         trace.note("assumption: " + str(asm))
 
-    trace.step("2. local self-test of the engine on synthetic customers")
-    results = selftest.run_all(spec, openapi)
-    for name, ok, detail in results:
-        trace.test("local " + name, ok, detail)
-    trace.note(f"local self-test: {sum(r[1] for r in results)}/{len(results)} passed")
-    failed = [r for r in results if not r[1]]
-    if failed and not a.spec:
-        trace.step("2b. one repair round driven by the failed self-test scenarios")
-        try:
-            from builder import extract
-            fixed = comp.apply_defaults(extract.repair_behaviour(
-                spec, "\n".join(f"- {n}: {d[:1500]}" for n, _, d in failed), docs, openapi, trace), openapi)
-            r2 = selftest.run_all(fixed, openapi)
-            n_err, n_err2 = len(extract.validate(spec, openapi)), len(extract.validate(fixed, openapi))
-            trace.note(f"repaired spec: self-test {sum(r[1] for r in r2)}/{len(r2)}, validation problems {n_err2} (before {n_err})")
-            touched = extract.diff(spec, fixed)
-            id_failed = any("identity" in n for n, _, _ in failed)
-            if "identity.questions" in touched and not id_failed:
-                trace.note("repair changed the identity questions although no identity scenario failed; rejected")
-            elif n_err2 <= n_err and sum(not r[1] for r in r2) < len(failed):
-                spec, results = fixed, r2
-                (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
-                for name, ok, detail in results:
-                    trace.test("local (after repair) " + name, ok, detail)
-            else:
-                trace.note("repair not better; keeping the first spec")
-        except Exception as e:
-            trace.note(f"repair round failed ({type(e).__name__}: {e}); keeping the first spec")
+    trace.step("2. local checks: structure, tool API, engine self-test on synthetic customers")
+    chk = local_checks(spec, openapi)
+    report_checks(trace, chk, "local")
+    if not a.spec:
+        spec, chk = repair_loop(spec, chk, openapi, docs, trace, budget)
+    for u in spec_model.unsupported(spec):    # valid policy the engine cannot carry out as written: say so, never change it
+        trace.note("UNSUPPORTED by the engine (policy kept as the brief states it): " + u)
+    (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
+    if chk["structural"]:                     # the engine only ever gets a structurally valid spec
+        trace.note("STOP: the spec is still malformed; not deploying:" + "".join("\n  - " + e for e in chk["structural"]))
+        trace.end()
+        sys.exit("spec still malformed after the repair budget (see the trace); nothing deployed")
+    trace.note(f"repair budget used: {budget.used}/{budget.total}")
 
     trace.step("3. compile workflow")
     wf = comp.compile_workflow(spec, openapi)

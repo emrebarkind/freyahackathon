@@ -183,6 +183,8 @@ def validate(spec, openapi):
         v = get(spec, path)
         if v is not None and v not in allowed:
             errs.append(f"{path} '{v}' invalid; allowed {list(allowed)}")
+    if (spec.get("rules") or {}).get("ladder_repeat_last") not in (None, True, False):
+        errs.append("rules.ladder_repeat_last must be true or false")
     for q in spec["identity"].get("questions", []):
         if q.get("format") and q.get("kind") == "date" and not all(x in q["format"] for x in ("%Y", "%m", "%d")):
             errs.append(f"identity question {q.get('field')}: format must be a strftime pattern with %Y %m %d")
@@ -275,7 +277,7 @@ REPAIR = """Your spec has these problems:
 Fix them and output the complete corrected spec JSON in a ```json block."""
 
 
-def extract(briefs, openapi, trace):
+def extract(briefs, openapi, trace, budget=None):
     base = prompt_for(briefs, openapi)
     texts = claude.ask_many([(base, SYSTEM, "read the brief and tool API into a spec (reading 1)"),
                              (base, SYSTEM, "read the brief and tool API into a spec (reading 2, independent)")], trace)
@@ -299,11 +301,13 @@ def extract(briefs, openapi, trace):
                 spec = claude.json_block(out, keys=SPEC_KEYS)
             except Exception as e:
                 trace.note(f"adjudication answer did not parse ({e}); keeping reading 1")
-    for attempt in range(3):
+    for attempt in range(10):                 # bounded by the shared repair budget
         spec_model.normalise(spec)
         errs = validate(spec, openapi)
         trace.note(f"validation round {attempt + 1}: {len(errs)} problem(s)" + ("".join("\n  - " + e for e in errs)))
-        if not errs:
+        if not errs or (budget is not None and not budget.take(trace, f"repair {len(errs)} validation problem(s)")):
+            break
+        if budget is None and attempt >= 2:
             break
         out = claude.ask(base + "\n\n<your_spec>\n" + json.dumps(spec, indent=1) + "\n</your_spec>\n\n" + REPAIR.format(errs="\n".join("- " + e for e in errs)),
                          SYSTEM, f"repair {len(errs)} validation problem(s) in the spec", trace)

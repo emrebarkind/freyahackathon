@@ -18,7 +18,8 @@ use the default shown and record it in `assumptions`.
  "callback": {                                     // when someone else answers and a callback is booked
    "days": ["today", "next_business_day"],         // allowed callback days. Items: "today", "next_business_day", "tomorrow",
                                                    // "within_business_days:N" (next N business days), "within_days:N" (next N days)
-   "start": "10:00", "end": "19:00",               // allowed time window, inclusive, 24h
+   "start": "10:00", "end": "19:00",               // allowed time window, inclusive, 24h HH:MM; a window that crosses
+                                                   // midnight has start > end (the days name the evening it starts on)
    "after_now": true,                              // the callback must be later than now
    "business_days_only": false,
    "max_asks": 2                                   // total asks for a time before giving up (ask once more after the first bad one = 2)
@@ -67,6 +68,8 @@ use the default shown and record it in `assumptions`.
     "attempts": 1,                                 // persuasion attempts allowed in this band
     "ladder": null}                                // only if this band has its own persuasion steps (same format as "ladder")
  ],
+ "bands_outside": null,                            // only if the brief says what happens to a days_late value that is in no
+                                                   // band: {"band": "<band name>"} or {"event": "<event key>"}; omit otherwise
  "ladder": [                                       // persuasion attempts in order; attempt k uses ladder[k-1]
    {"amount": "full" | "floor" | "full_or_floor" | "pct:N",  // full_or_floor: the floor if the customer already said the full
                                                    // amount is too much; pct:N = N percent of the amount owed
@@ -78,7 +81,8 @@ use the default shown and record it in `assumptions`.
                                                    // next_business_day, or none (only if the brief says promise dates need not be business days)
            "first_ask": "today",                   // the first payment question after disclosure: "today" (full amount today) or
                                                    // "deadline" (full amount by the deadline); a plain yes agrees to that
-           "too_much_floor": "attempt_1"},         // when the customer says the full amount is too much before any attempt:
+           "too_much_floor": "attempt_1",
+           "ladder_repeat_last": false},           // true only if the brief says the last step is repeated for further attempts         // when the customer says the full amount is too much before any attempt:
                                                    // "attempt_1" = the floor is attempt 1 (on attempt 1's date, uses the attempt);
                                                    // "asked_date" = the floor for the date just asked, using no attempt
  "after_promise": {"ask_anything_else": true},     // give the customer one more turn after a recorded promise
@@ -199,5 +203,6 @@ transfer_failed (the transfer did not go through), confirm_again (a second, plai
 did not catch that. Do you confirm, yes or no?"), cb_ask (asks a verified customer when to call back, if
 callback_requested is used), system_error (the bank's system does not respond), human_no_transfer (REQUIRED when
 events.transfer_human has no queue: what the agent says instead of transferring, using the brief's words),
-restructuring_no_transfer / support_no_transfer (optional, the same for those situations). below_floor_final (said when the
+restructuring_no_transfer / support_no_transfer (optional, the same for those situations). no_band_line (said for a product whose days late fall in no band when the brief gives no rule,
+{name}), below_floor_final (said when the
 customer insists on an amount below the floor after it was offered: "I'm sorry, I can't record less than {amount}.").

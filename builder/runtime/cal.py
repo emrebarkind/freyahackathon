@@ -223,7 +223,7 @@ def spoken_time(text):
     elif ap.startswith("a") and h == 12:
         h = 0
     elif not ap:
-        if re.search(r"afternoon|evening|tonight", tail) and h < 12:
+        if (re.search(r"afternoon|evening|tonight", tail) or re.search(r"\b(tonight|this evening)\b", t)) and h < 12:
             h += 12
         elif not re.search(r"morning", tail) and 1 <= h <= 7:
             h += 12

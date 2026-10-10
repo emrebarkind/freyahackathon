@@ -92,3 +92,89 @@ def test_engine_overnight_window_and_no_persuasion():
         b["attempts"] = 0
     led, tr = run_case(spec, E.CASES["PUB-01"], E.ids("PUB-01") + [dict(k="no")])
     assert led["outcome"] == "no_promise" and not any("Could you pay" in x for x in E.agent_lines(tr)), E.agent_lines(tr)
+
+
+def _engine_case(spec, case_id, script, now=None, mutate_case=None):
+    import test_engine_edge as E
+    from sim import run_case
+    case = copy.deepcopy(E.CASES[case_id])
+    if now:
+        case["variables"]["now"] = now
+    if mutate_case:
+        mutate_case(case)
+    return run_case(spec, case, script), E
+
+
+def test_band_gap_without_a_rule_makes_no_offer_and_is_not_the_last_band():
+    import test_engine_edge as E
+    spec = copy.deepcopy(E.A)
+    spec["bands"][1]["min"] = 20                                   # 8-19 days late: no band
+    (led, tr), _ = _engine_case(spec, "PUB-06", E.ids("PUB-06") + [dict(k="yes"), dict(k="yes")],
+                                mutate_case=lambda c: c["products"][0].update(days_late=12))
+    lines = E.agent_lines(tr)
+    assert led["promises"] == [] and led["outcome"] == spec["events"]["service_error"]["outcome"], lines
+    assert not any("Could you pay" in x or "Can you make" in x for x in lines), lines
+
+
+def test_band_gap_follows_the_brief_rule_when_there_is_one():
+    import test_engine_edge as E
+    spec = copy.deepcopy(E.A)
+    spec["bands"][1]["min"] = 20
+    spec["bands_outside"] = {"band": "early"}
+    assert spec_model.check(comp.apply_defaults(copy.deepcopy(spec), O)) == []
+    (led, tr), _ = _engine_case(spec, "PUB-06", E.ids("PUB-06") + [dict(k="yes"), dict(k="yes")],
+                                mutate_case=lambda c: c["products"][0].update(days_late=12))
+    assert len(led["promises"]) == 1, E.agent_lines(tr)
+    spec["bands_outside"] = {"event": "refused"}
+    (led, tr), _ = _engine_case(spec, "PUB-06", E.ids("PUB-06") + [dict(k="yes")], mutate_case=lambda c: c["products"][0].update(days_late=12))
+    assert led["promises"] == [] and (led["outcome"], led["reason"]) == ("no_promise", "refused"), E.agent_lines(tr)
+
+
+def test_short_ladder_repeats_the_last_step_only_when_the_brief_says_so():
+    import test_engine_edge as E
+    spec = copy.deepcopy(E.A)
+    spec["ladder"] = spec["ladder"][:1]                            # late band: 2 attempts, 1 step
+    (led, tr), _ = _engine_case(spec, "PUB-06", E.ids("PUB-06") + [dict(k="no"), dict(k="no"), dict(k="no")])
+    assert sum("Could you pay" in x for x in E.agent_lines(tr)) == 1, E.agent_lines(tr)
+    spec["rules"]["ladder_repeat_last"] = True
+    (led, tr), _ = _engine_case(spec, "PUB-06", E.ids("PUB-06") + [dict(k="no"), dict(k="no"), dict(k="no")])
+    assert sum("Could you pay" in x for x in E.agent_lines(tr)) == 2, E.agent_lines(tr)
+
+
+def test_night_window_hours_after_midnight_belong_to_the_previous_evening():
+    import test_engine_edge as E
+    spec = copy.deepcopy(E.A)
+    spec["callback"].update(start="20:00", end="02:00", days=["today"])
+    tp = [dict(k="third_party", t="her husband")]
+    (led, tr), _ = _engine_case(spec, "PUB-02", tp + [dict(k="gives_time", t="tonight at 1 am")], now="2026-10-14T21:00")
+    assert led["callbacks"] == [dict(date="2026-10-15", time="01:00")], E.agent_lines(tr)
+    (led, tr), _ = _engine_case(spec, "PUB-02", tp + [dict(k="gives_time", t="tonight at half past ten")], now="2026-10-14T21:00")
+    assert led["callbacks"] == [dict(date="2026-10-14", time="22:30")], E.agent_lines(tr)
+    (led, tr), _ = _engine_case(spec, "PUB-02", tp + [dict(k="gives_time", t="the 16th at 1 am"), dict(k="gives_time", t="the 16th at 1 am")],
+                                now="2026-10-14T21:00")
+    assert led["callbacks"] == [], E.agent_lines(tr)               # belongs to the 15th's window: not an allowed day
+    assert spec_model.unsupported(comp.apply_defaults(copy.deepcopy(spec), O)) == []
+
+
+def test_repair_budget_is_shared_and_bounded():
+    import builder.build as B
+    from builder import extract
+    from builder.trace import Trace
+    calls = []
+    bad = mutated(["callback", "end"], "7pm")
+
+    def always_bad(spec, problems, docs, openapi, trace):
+        calls.append(1)
+        return copy.deepcopy(bad)
+    orig = extract.repair_behaviour
+    extract.repair_behaviour = always_bad
+    try:
+        trace = Trace(str(ROOT / "traces" / "test-budget.trace.log"))
+        budget = B.Budget(3, 60)
+        budget.used = 1                                            # one round already spent during extraction
+        chk = B.local_checks(copy.deepcopy(bad), O)
+        spec, chk2 = B.repair_loop(copy.deepcopy(bad), chk, O, [], trace, budget)
+    finally:
+        extract.repair_behaviour = orig
+    assert len(calls) == 2 and budget.used == 3                    # only what was left of the shared budget
+    assert chk2["structural"]                                      # never accepted: still malformed, so no deploy

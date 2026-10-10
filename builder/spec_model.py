@@ -143,6 +143,18 @@ class Spec(Loose):
         return v
 
     @model_validator(mode="after")
+    def _outside(self):
+        rule = getattr(self, "bands_outside", None)
+        if rule:
+            if not isinstance(rule, dict) or not (rule.get("band") or rule.get("event")):
+                raise ValueError("bands_outside must be {\"band\": <band name>} or {\"event\": <event key>}")
+            if rule.get("band") and rule["band"] not in [b.name for b in self.bands]:
+                raise ValueError(f"bands_outside names band '{rule['band']}', which is not a band")
+            if rule.get("event") and (rule["event"] not in self.events or rule["event"].startswith("transfer_")):
+                raise ValueError(f"bands_outside event '{rule['event']}' must be a non-transfer event key")
+        return self
+
+    @model_validator(mode="after")
     def _bands(self):
         bs = sorted(self.bands, key=lambda b: b.min)
         for a, b in zip(bs, bs[1:]):
@@ -185,21 +197,21 @@ def unsupported(spec):
     out = []
     try:
         bs = sorted(spec.get("bands") or [], key=lambda b: b.get("min", 0))
+        rule = spec.get("bands_outside") or {}
+        what = (f"the brief's rule applies (band {rule['band']})" if rule.get("band") else
+                f"the brief's rule applies (event {rule['event']})" if rule.get("event") else
+                "the brief gives no rule: no offer is made for such a product and it closes as service_error")
         for a, b in zip(bs, bs[1:]):
             if b.get("min", 0) > a.get("max", 0) + 1:
-                out.append(f"days_late {a['max'] + 1}-{b['min'] - 1} fall in no band ({a.get('name')} / {b.get('name')}); "
-                           f"the engine would treat such a customer as the last band")
+                out.append(f"days_late {a['max'] + 1}-{b['min'] - 1} fall in no band ({a.get('name')} / {b.get('name')}); {what}")
         if bs and bs[0].get("min", 0) > 1:
-            out.append(f"days_late below {bs[0]['min']} fall in no band; the engine would treat them as the last band")
+            out.append(f"days_late below {bs[0]['min']} fall in no band; {what}")
         steps = len(spec.get("ladder") or [])
+        repeat = (spec.get("rules") or {}).get("ladder_repeat_last")
         for b in bs:
-            if not b.get("ladder") and 0 < steps < b.get("attempts", 0):
-                out.append(f"band {b.get('name')} allows {b['attempts']} attempts but the ladder has {steps} step(s); "
-                           f"later attempts would repeat the last step, which is never repeated, so persuasion stops early")
-        cb = spec.get("callback") or {}
-        if str(cb.get("start", "")) > str(cb.get("end", "~")):
-            out.append(f"callback window {cb.get('start')}-{cb.get('end')} crosses midnight; supported, but check that the "
-                       f"brief really says so (start and end may be swapped)")
+            if not b.get("ladder") and 0 < steps < b.get("attempts", 0) and not repeat:
+                out.append(f"band {b.get('name')} allows {b['attempts']} attempts but the ladder has {steps} step(s) and the "
+                           f"brief does not say to repeat the last one: persuasion stops after {steps} attempt(s)")
         if not (spec.get("callback") or {}).get("days", ["x"]):
             out.append("no callback day is allowed: every callback request closes as no_callback")
     except Exception as e:
