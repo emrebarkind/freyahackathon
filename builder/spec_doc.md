@@ -43,16 +43,19 @@ use the default shown and record it in `assumptions`.
    "amount_field": "past_due",                     // account field with the amount owed
    "days_field": "days_late",                      // account field with how many days late the product is
    "floor_field": {"<product type>": "<account field holding the minimum acceptable amount>"},
-   "floor_pct": null                               // only if the floor is a percentage of the amount owed instead
+   "floor_pct": null                               // only if the floor is a percentage of the amount owed instead (0 = any amount)
  },
  "bands": [                                        // lateness bands, by the account's days_late, inclusive bounds
    {"name": "early", "min": 1, "max": 7,
     "deadline": {"kind": "business_days_after", "n": 12},  // kinds: business_days_after (n-th business day after today),
-                                                   // calendar_days_after, end_of_month, end_of_next_month, last_business_day_of_month
+                                                   // calendar_days_after, end_of_month, end_of_next_month, last_business_day_of_month,
+                                                   // end_of_week, end_of_next_week (last business day), day_of_next_month (n-th day),
+                                                   // business_days_after_or_end_of_month (whichever is first)
     "attempts": 1}                                 // persuasion attempts allowed in this band
  ],
  "ladder": [                                       // persuasion attempts in order; attempt k uses ladder[k-1]
-   {"amount": "full" | "floor" | "full_or_floor",  // full_or_floor: the floor if the customer already said the full amount is too much
+   {"amount": "full" | "floor" | "full_or_floor" | "pct:N",  // full_or_floor: the floor if the customer already said the full
+                                                   // amount is too much; pct:N = N percent of the amount owed
     "date": "last_business_day_this_week" | "last_business_day_next_week" | "deadline" | "today" | "business_days_after:N"}
  ],
  "rules": {"refuse_deadline_is_refusal": true},

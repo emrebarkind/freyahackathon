@@ -97,12 +97,13 @@ def validate(spec, openapi):
             errs.append(f"identity question kind {q.get('kind')} invalid")
     if not spec["identity"].get("questions"):
         errs.append("identity.questions is empty")
-    kinds = {"business_days_after", "calendar_days_after", "end_of_month", "end_of_next_month", "last_business_day_of_month", "fixed_date"}
+    kinds = {"business_days_after", "calendar_days_after", "end_of_month", "end_of_next_month", "last_business_day_of_month", "fixed_date",
+             "end_of_week", "end_of_next_week", "day_of_next_month", "business_days_after_or_end_of_month"}
     for b in spec["bands"]:
         if b.get("deadline", {}).get("kind") not in kinds:
             errs.append(f"band {b.get('name')}: deadline kind invalid")
     for s in spec["ladder"]:
-        if s.get("amount") not in ("full", "floor", "full_or_floor"):
+        if s.get("amount") not in ("full", "floor", "full_or_floor") and not str(s.get("amount", "")).startswith("pct:"):
             errs.append(f"ladder amount {s.get('amount')} invalid")
     try:
         ptypes = openapi["paths"]["/get_account"]["post"]["responses"]["200"]["content"]["application/json"]["schema"]["properties"]["products"]["items"]["properties"]["type"].get("enum")

@@ -106,6 +106,16 @@ def deadline(today, rule):
         return x
     if kind == "fixed_date":
         return datetime.date.fromisoformat(rule["value"])
+    if kind == "end_of_week":           # last business day of the current week (next week's if today is it)
+        d = last_business_day_of_week(today, 0)
+        return d if d is not None and d >= today else last_business_day_of_week(today, 1)
+    if kind == "end_of_next_week":
+        return last_business_day_of_week(today, 1)
+    if kind == "day_of_next_month":     # the n-th calendar day of next month
+        first = end_of_month(today) + datetime.timedelta(days=1)
+        return first.replace(day=min(max(n, 1), 28))
+    if kind == "business_days_after_or_end_of_month":   # whichever comes first
+        return min(add_business_days(today, n), end_of_month(today))
     raise ValueError("unknown deadline kind " + str(kind))
 
 

@@ -144,7 +144,7 @@ def product_facts(V, raw):
     full = num(raw.get(S["products"].get("amount_field", "past_due"))) or 0.0
     ff = S["products"]["floor_field"].get(typ)
     floor = num(raw.get(ff)) if ff else None
-    if floor is None and S["products"].get("floor_pct"):
+    if floor is None and S["products"].get("floor_pct") is not None:
         floor = round(full * float(S["products"]["floor_pct"]) / 100.0, 2)
     if floor is None:
         floor = full
@@ -649,6 +649,8 @@ def make_offer(V, s, p, step_idx, pre=""):
     amt = p["full"]
     if st_.get("amount") == "floor" or (st_.get("amount") == "full_or_floor" and p["too_much"]):
         amt = p["floor"]
+    elif str(st_.get("amount", "")).startswith("pct:"):
+        amt = max(p["floor"], round(p["full"] * float(st_["amount"][4:]) / 100.0, 2))
     d = ladder_date(today, st_.get("date", "deadline"), p)
     dl = datetime.date.fromisoformat(p["deadline"])
     if d > dl:
