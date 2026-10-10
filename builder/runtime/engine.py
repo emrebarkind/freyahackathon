@@ -866,7 +866,18 @@ def normalize_answer(q, text):
     if not text:
         return ""
     if kind == "date":
-        return parse_birth_date(text, S["identity"].get("date_order", "dmy"))
+        order = S["identity"].get("date_order", "dmy")
+        d = digits_only(text)                       # eight digits in the brief's order: 21061985 (dmy) or 06211985 (mdy)
+        t_ = str(text).strip().lower()
+        one_by_one = bool(re.fullmatch(r"(\d\s*)+", t_)) or bool(re.fullmatch(
+            r"(oh|zero|one|two|three|four|five|six|seven|eight|nine)(\s+(oh|zero|one|two|three|four|five|six|seven|eight|nine))*", t_))
+        if len(d) == 8 and one_by_one:               # only when the answer is nothing but digits, never a written date
+            day, mon, yr = (d[0:2], d[2:4], d[4:8]) if order == "dmy" else (d[2:4], d[0:2], d[4:8])
+            try:
+                return datetime.date(int(yr), int(mon), int(day)).isoformat()
+            except ValueError:
+                return ""
+        return parse_birth_date(text, order)
     if kind == "digits":
         d = digits_only(text)
         n = int(q.get("length") or 0)

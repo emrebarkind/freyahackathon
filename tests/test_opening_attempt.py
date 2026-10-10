@@ -42,3 +42,14 @@ def test_without_the_rule_the_opening_is_not_counted():
     spec["bands"][0]["attempts"] = 1
     lines, _ = offers(spec, "PUB-01", days_late=5)
     assert len(lines) == 1, lines
+
+
+def test_eight_digit_birth_dates_in_the_briefs_order(monkeypatch):
+    from builder.runtime import engine
+    monkeypatch.setattr(engine, "S", {"identity": {"date_order": "dmy"}})   # restored after the test
+    assert engine.normalize_answer({"kind": "date"}, "21061985") == "1985-06-21"
+    assert engine.normalize_answer({"kind": "date"}, "2 1 0 6 1 9 8 5") == "1985-06-21"
+    assert engine.normalize_answer({"kind": "date"}, "31021985") == ""          # 31 February: not a date
+    assert engine.normalize_answer({"kind": "date"}, "1988-03-14") == "1988-03-14"   # written dates are not digit strings
+    monkeypatch.setattr(engine, "S", {"identity": {"date_order": "mdy"}})
+    assert engine.normalize_answer({"kind": "date"}, "06211985") == "1985-06-21"
