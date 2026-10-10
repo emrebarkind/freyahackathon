@@ -531,3 +531,46 @@ def test_read_back_items_start_with_capitals():
     rb = [x for x in agent_lines(tr) if "read that back" in x.lower() or "confirm" in x.lower()][0]
     import re as _re
     assert not _re.search(r"\. [a-z]", rb), rb
+
+
+def test_postcode_sent_with_the_space_the_tool_wants():
+    from builder import selftest
+    spec = json.load(open(ROOT / "submission" / "rehearsal-f.spec.json"))
+    spec["identity"]["questions"][0]["format"] = "space_before_last:3"
+    oa = json.load(open(ROOT / "rehearsal" / "brief-f.openapi.json"))
+    sent = []
+
+    class Bank(selftest.GenericBank):
+        def call(self, tool, a):
+            if tool == "verify_identity":
+                sent.append(a["q_answer"])
+            return super().call(tool, a)
+    acct = {spec["products"]["id_field"]: "A1", spec["products"]["type_field"]: "card", "last4": "1234",
+            spec["products"]["amount_field"]: 300.0, spec["products"]["days_field"]: 20, "min_due": 45.0, "monthly_repayment": 0}
+    bank = Bank(spec, {"postcode": "KM4 7RT", "birth_year": "1985"}, [acct])
+    turns = [dict(k="confirmed"), dict(k="answer", t="K M four, seven R T"), dict(k="answer", t="nineteen eighty-five"), dict(k="already_paid")]
+    led, tr = selftest.simulate(spec, dict(customer_id="c", first_name="Alex", last_name="Morgan", title="Mr", now="2026-10-14T11:00"), bank, turns, openapi=oa)
+    assert sent[0] == "KM4 7RT" and led["outcome"] == spec["events"]["paid"]["outcome"], (sent, tr)
+
+
+def test_floor_percentage_rounded_up_to_a_whole_unit():
+    from builder.runtime import engine
+    spec = copy.deepcopy(A)
+    spec["products"]["floor_field"] = {}
+    spec["products"]["floor_pct"] = 40
+    spec["products"]["floor_round"] = "up_unit"
+    engine.S = spec
+    p = engine.product_facts(dict(now="2026-10-14T11:00"), dict(product_id="x", type="credit_card", past_due=287.30, days_late=10))
+    assert p["floor"] == 115.0, p["floor"]
+
+
+def test_too_much_floor_for_the_asked_date_when_the_brief_says_so():
+    spec = copy.deepcopy(A)
+    spec["rules"]["too_much_floor"] = "asked_date"
+    led, tr = run_case(spec, CASES["PUB-06"], ids("PUB-06") + [dict(k="too_much"), dict(k="yes"), dict(k="yes")])
+    assert [(p["amount"], p["date"]) for p in led["promises"]] == [(637.5, "2026-10-14")], agent_lines(tr)
+
+
+def test_callback_times_with_minutes_and_am_pm():
+    from builder.runtime import cal as _c
+    assert _c.spoken_time("4:30pm") == "16:30" and _c.spoken_time("at 4.30 pm") == "16:30" and _c.spoken_time("3 o'clock") == "15:00"

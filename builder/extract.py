@@ -175,13 +175,17 @@ def validate(spec, openapi):
     for path, allowed in (("rules.deadline_adjust", ("previous_business_day", "next_business_day", "none")),
                           ("date_rules.next_weekday", ("following_week", "upcoming")),
                           ("identity.date_order", ("dmy", "mdy")),
-                          ("rules.first_ask", ("today", "deadline"))):
+                          ("rules.first_ask", ("today", "deadline")),
+                          ("rules.too_much_floor", ("attempt_1", "asked_date")),
+                          ("products.floor_round", ("up_unit", "nearest_unit"))):
         v = get(spec, path)
         if v is not None and v not in allowed:
             errs.append(f"{path} '{v}' invalid; allowed {list(allowed)}")
     for q in spec["identity"].get("questions", []):
-        if q.get("format") and not all(x in q["format"] for x in ("%Y", "%m", "%d")):
+        if q.get("format") and q.get("kind") == "date" and not all(x in q["format"] for x in ("%Y", "%m", "%d")):
             errs.append(f"identity question {q.get('field')}: format must be a strftime pattern with %Y %m %d")
+        if q.get("format") and q.get("kind") == "upper" and not re.fullmatch(r"space_before_last:\d+", str(q["format"])):
+            errs.append(f"identity question {q.get('field')}: an upper code format must be space_before_last:N")
     vprops = comp.response_props(openapi, "verify_identity")
     if vprops:
         for key, f in (spec["identity"].get("response") or {}).items():

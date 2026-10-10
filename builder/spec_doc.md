@@ -29,7 +29,9 @@ use the default shown and record it in `assumptions`.
       "kind": "date" | "digits" | "year" | "upper" | "text" | "email",  // date -> a date; digits -> digits only;
                                                    // upper -> letters+digits code (postcode, reference); text -> words (a name)
       "length": 4,                                 // for digits/upper: exact number of characters expected (omit otherwise)
-      "format": "%Y-%m-%d",                        // date only: how the verify tool wants the date (strftime), default %Y-%m-%d
+      "format": "%Y-%m-%d",                        // date: how the verify tool wants the date (strftime), default %Y-%m-%d;
+                                                   // upper: "space_before_last:N" if the tool wants one space before the last N
+                                                   // characters (e.g. a UK postcode "KM4 7RT" = space_before_last:3); omit = no spaces
       "ask": "<the spoken question>"}
    ],
    "max_wrong": 3,                                 // wrong answers in total that end the check
@@ -50,7 +52,8 @@ use the default shown and record it in `assumptions`.
    "floor_field": {"<product type>": "<account field holding the minimum acceptable amount>"},
    "floor_pct": null,                              // only if the floor is a percentage of the amount owed instead (0 = any amount)
    "floor_names": {"<product type>": "<what the brief calls the floor, e.g. minimum payment>"},
-   "amount_scale": 1                               // 100 only if the tool API gives amounts in cents/pence (minor units)
+   "amount_scale": 1,                              // 100 only if the tool API gives amounts in cents/pence (minor units)
+   "floor_round": null                             // with floor_pct only: "up_unit" (round up to a whole unit) or "nearest_unit"
    // If the account records have no product type, use the key "*" in names / floor_field / floor_names.
    // Optional, normally read from the tool API file: "list_field" (the array of products in the get_account
    // response), "id_field" (product id), "type_field" (product type).
@@ -73,8 +76,11 @@ use the default shown and record it in `assumptions`.
  "rules": {"refuse_deadline_is_refusal": true,
            "deadline_adjust": "previous_business_day",    // if a computed deadline is not a business day: previous_business_day,
                                                    // next_business_day, or none (only if the brief says promise dates need not be business days)
-           "first_ask": "today"},                  // the first payment question after disclosure: "today" (full amount today) or
+           "first_ask": "today",                   // the first payment question after disclosure: "today" (full amount today) or
                                                    // "deadline" (full amount by the deadline); a plain yes agrees to that
+           "too_much_floor": "attempt_1"},         // when the customer says the full amount is too much before any attempt:
+                                                   // "attempt_1" = the floor is attempt 1 (on attempt 1's date, uses the attempt);
+                                                   // "asked_date" = the floor for the date just asked, using no attempt
  "after_promise": {"ask_anything_else": true},     // give the customer one more turn after a recorded promise
  "notes": {"enabled": false},                      // true if the brief requires add_note for products that end without a promise
  "multi": {"clamp_single_date": true,              // one date for all products: a product whose deadline is earlier gets its own deadline
@@ -178,6 +184,8 @@ Meaning of the less obvious ones:
 - hardship_short: a short re-prompt after an unclear answer to the hardship offer, WITHOUT naming the team again ("Would you like that?").
 - hardship_declined: said when the customer declines the hardship offer; do not mention the team or the offer again.
 - below_floor_again: a short acknowledgement WITHOUT any amount (another offer may follow in the same turn).
+- paid_line / dispute_line / hardship_declined: never claim that something was noted or recorded (the note is written
+  later, and not at all if the call ends in a transfer); describe what happens next instead.
 - offer_short: a neutral re-prompt after a side question, WITHOUT the amount ("Would that work for you?").
 - offer_short_date: the date of the pending floor offer ({date}), e.g. "That would be on {date}."
 - go_on: said when the customer stopped mid-sentence ("Sorry, please go on.").

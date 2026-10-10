@@ -89,6 +89,45 @@ def embed_json(obj):
 
 
 ENGINE_UNUSED = ("assumptions", "tool_bodies", "intents", "system_prompt", "test_variables")
+_B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+LZW_DECODER = """def _lzw(a, s):
+    B = dict((c, i) for i, c in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"))
+    d = list(a)
+    k = [(B[s[i]] << 12) | (B[s[i + 1]] << 6) | B[s[i + 2]] for i in range(0, len(s), 3)]
+    w = d[k[0]]
+    o = [w]
+    for x in k[1:]:
+        e = d[x] if x < len(d) else w + w[0]
+        o.append(e)
+        d.append(w + e[0])
+        w = e
+    return "".join(o)
+"""
+
+
+def lzw_pack(src):
+    """LZW over characters, each code as 3 base64 characters (codes < 2**18). Returns (alphabet, packed)."""
+    alpha = "".join(sorted(set(src)))
+    d = dict((ch, i) for i, ch in enumerate(alpha))
+    w, out = "", []
+    for ch in src:
+        wc = w + ch
+        if wc in d:
+            w = wc
+            continue
+        out.append(d[w])
+        if len(d) < 2 ** 18:
+            d[wc] = len(d)
+        w = ch
+    if w:
+        out.append(d[w])
+    packed = "".join(_B64[(x >> 12) & 63] + _B64[(x >> 6) & 63] + _B64[x & 63] for x in out)
+    ns = dict()
+    exec(LZW_DECODER, ns)
+    assert ns["_lzw"](alpha, packed) == src
+    return alpha, packed
+
+
 CODE_LIMIT = 100_000      # platform limit 131072 bytes for code + call variables; leave room for the variables
 
 
@@ -110,13 +149,15 @@ def engine_source(spec):
     params = dict(workdays=spec["calendar"]["workdays"], holidays=spec["calendar"]["holidays"])
     body = minify(cal + "\n" + eng)
     used = {k: v for k, v in spec.items() if k not in ENGINE_UNUSED}
-    body = "import json\nP = " + embed_json(params) + "\nS = " + embed_json(used) + "\n" + body + "\n"
-    assert "{{" not in body and "}}" not in body
-    # Freya may exec the snippet with separate globals/locals; keep everything in one namespace.
-    # one physical line: the platform wraps the code in a function and indents every line
-    lit = one_line_literal(body)
+    head = "import json\nP = " + embed_json(params) + "\nS = " + embed_json(used) + "\n"
+    assert "{{" not in head + body and "}}" not in head + body
+    # The engine is LZW-compressed (no zlib in the sandbox) and unpacked by a few lines of plain Python.
+    # Freya may exec the snippet with separate globals/locals: everything runs in one namespace (_G).
+    # One physical line per statement: the platform wraps the code in a function and indents every line.
+    alpha, packed = lzw_pack(body)
     src = ("_G = dict()\n"
-           "_SRC = " + lit + "\n"
+           "exec(" + one_line_literal(LZW_DECODER) + ", _G)\n"
+           "_SRC = " + one_line_literal(head) + " + _G['_lzw'](" + one_line_literal(alpha) + ", " + one_line_literal(packed) + ")\n"
            "exec(_SRC, _G)\n"
            "_G['main'](vars)\n")
     assert "{{" not in src and "}}" not in src

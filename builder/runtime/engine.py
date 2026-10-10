@@ -248,6 +248,12 @@ def product_facts(V, raw):
     floor = num(raw.get(ff)) / scale if ff and num(raw.get(ff)) is not None else None
     if floor is None and S["products"].get("floor_pct") is not None:
         floor = round(full * float(S["products"]["floor_pct"]) / 100.0, 2)
+        fr = S["products"].get("floor_round")
+        if fr == "up_unit":
+            floor = float(int(floor) + (1 if floor - int(floor) > 1e-9 else 0))
+        elif fr == "nearest_unit":
+            floor = float(int(floor + 0.5))
+        floor = min(floor, full)
     if floor is None:
         floor = full
     dl = int(num(raw.get(S["products"].get("days_field", "days_late"))) or 0)
@@ -519,7 +525,7 @@ def stage_open(V, s, k, t):
     if k in ("robot", "scam", "purpose", "question"):
         s["asks"] = s.get("asks", 1) + 1
         line = dict(robot=L("robot"), scam=L("scam"), purpose=L("purpose_before_verify")).get(k, L("no_info"))
-        if s["asks"] > S["confirm"]["max_asks"] + 1:
+        if s["asks"] > S["confirm"]["max_asks"]:
             return close(V, s, "unclear")
         say(V, line, again)
         return talk(V, "open", s)
@@ -570,6 +576,12 @@ def stage_tp(V, s, k, t, dtxt):
                 s["cb_asked_day"] = True
                 say(V, L("tp_ask"))
                 return talk(V, "tp", s)
+        if d is None and hm is None and re.search(r"\bnext (week|month)\b|\b(at|on|over) the weekend\b|\bin (a|two|three|a few|few|a couple of) (weeks?|months?)\b", (dtxt + " " + t).lower()):
+            s["tp_tries"] = s.get("tp_tries", 0) + 1  # a period outside the callback days: an outside answer
+            if s["tp_tries"] >= S["callback"].get("max_asks", 2):
+                return no_callback(V, s)
+            say(V, L("tp_outside_window"))
+            return talk(V, "tp", s)
         if d is None and hm is None:                 # small talk, no day or time: ask again without using a try
             s["tp_empty"] = s.get("tp_empty", 0) + 1
             if s["tp_empty"] >= 5:
@@ -744,6 +756,11 @@ def stage_id(V, s, k, t):
 def format_answer(q, ans):
     """A date in the format the verify tool wants (identity.questions[].format, default YYYY-MM-DD)."""
     fmt = q.get("format")
+    m = re.fullmatch(r"space_before_last:(\d+)", str(fmt or ""))
+    if q.get("kind") == "upper" and m:
+        c = re.sub(r"\s+", "", ans)
+        n = int(m.group(1))
+        return c[:-n] + " " + c[-n:] if len(c) > n else c
     if q.get("kind") == "date" and fmt and re.fullmatch(r"\d{4}-\d\d-\d\d", ans):
         try:
             return datetime.date.fromisoformat(ans).strftime(fmt)
@@ -819,6 +836,8 @@ def normalize_answer(q, text):
             return m.group(1)
         if year_is_prefix(text):
             return "partial"           # "nineteen..." with the rest still to come
+        if re.fullmatch(r"\D*\b\d{2}\b\D*", text) and not re.search(r"nineteen|twenty|thousand", text.lower()):
+            return "partial"           # '85': the century is missing
         n = words_to_number(text)
         if n and 1900 <= n <= 2100:
             return str(int(n))
@@ -831,6 +850,9 @@ def normalize_answer(q, text):
         n = int(q.get("length") or 0)
         if n and 0 < len(code) < n:
             return "partial"
+        m = re.fullmatch(r"space_before_last:(\d+)", str(q.get("format") or ""))
+        if m and 0 < len(code) < int(m.group(1)) + 2:
+            return "partial"           # only the first part of a postcode
         return code
     if kind == "email":
         return spoken_email(text)
@@ -1047,6 +1069,8 @@ def apply_proposal(V, s, p, dtxt, a, scope_all=False):
     amount = None
     if a is not None:
         a = snap_amount(p, a)
+        if a + 0.005 < p["full"]:
+            p["too_much"] = True          # offering less than the full amount: the next attempt is the floor
         stt, val = check_amount(p, a)
         if stt == "below_floor":
             if p["floor_offered"]:
@@ -1089,7 +1113,7 @@ def apply_proposal(V, s, p, dtxt, a, scope_all=False):
                 else:
                     p["after_deadline_offered"] = True
                     p["offer"] = [amount if amount is not None else default_amount(p), iso(val)]
-                    return "ask", L("after_deadline", date=spoken(val))
+                    return "ask", L("after_deadline", date=spoken(val), amount=pay(p, p["offer"][0]))
         if vague:
             if not p["vague_asked"]:
                 p["vague_asked"] = True
@@ -1120,11 +1144,13 @@ def snap_amount(p, a):
         a = float(a)
     except Exception:
         return a
+    if abs(a - round(a)) > 1e-9:
+        return a                          # the customer said the pence: keep them
     targets = [p["offer"][0]] if p.get("offer") and p["offer"][0] else []
     targets += [p["floor"], p["full"]]
     for x in targets:
-        if x and abs(a - float(x)) < 1.0:
-            return float(x)
+        if x and 0 <= float(x) - a < 1.0:
+            return float(x)               # 'six hundred thirty-seven' for 637.50
     return a
 
 
@@ -1193,6 +1219,12 @@ def special(V, s, k, p, scope="none"):
         s["stage"] = "hardship"
         say(V, L("hardship"))
         talk(V, "hardship", s)
+        return True
+    if k == "restructure" and s.get("hardship_offered"):     # the hardship rule comes before restructuring
+        if p is not None and p["status"] == "open":
+            p["status"] = "hardship"
+            p["offer"] = None
+        advance(V, s, L("hardship_declined"))
         return True
     if k == "restructure":
         for q in s["products"]:
@@ -1395,6 +1427,14 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
                 return advance(V, s, L("offer_floor", amount=pay(p, p["floor"])))
             say(V, L("offer_floor", amount=pay(p, p["floor"])), pre)
             return talk(V, "nego", s)
+        if p["used"] == 0 and S.get("rules", dict()).get("too_much_floor") == "asked_date":
+            asked = p["offer"][1] if p.get("offer") and p["offer"][1] else (
+                p["deadline"] if S.get("rules", dict()).get("first_ask") == "deadline" else iso(today_of(V)))
+            p["offer"] = [p["floor"], asked]       # the floor for the date just asked, without using an attempt
+            p["floor_offered"] = True
+            p["floor_note_said"] = True
+            say(V, L("offer_floor_date", amount=pay(p, p["floor"]), date=spoken(asked)))
+            return talk(V, "nego", s)
         if p["used"] == 0:
             return make_offer(V, s, p, 1)          # attempt 1 = the floor on the attempt-1 date, said once with its note
         d = p["offer"][1] if p.get("offer") and p["offer"][1] else iso(ladder_date(today_of(V), ladder_of(p)[0].get("date", "deadline"), p))
@@ -1474,8 +1514,10 @@ def propose_all(V, s, dtxt, a, k):
 
 def stage_hardship(V, s, k, t, dtxt, a):
     p = cur(s) or (s["products"][0] if s["products"] else None)
-    if k in ("restructure",) and p is not None:
+    if k in ("restructure",) and p is not None and not s.get("hardship_offered"):
         return special(V, s, k, p) and None
+    if k == "restructure":
+        k = "no"                          # plan request after hardship: the support offer stands, no restructuring transfer
     if k in ("human",):
         k = "yes"
     if k in ("robot", "scam") and s.get("hardship_side", 0) < 3:
@@ -1967,9 +2009,14 @@ def stage_after(V, s, k, t):
         return talk(V, "after", s)
     if k == "change":
         return finish(V, s, L("promise_change"))
-    if k == "restructure":
+    if k == "restructure" and not s.get("hardship_offered"):
         return transfer(V, s, "restructuring", L("restructure_line"))
     if k == "human":
+        if not s.get("human_asked") and S.get("human", dict()).get("ask_first", True):
+            s["human_asked"] = True       # ask once whether we can help, as everywhere else
+            s["human_pending"] = True
+            say(V, L("human_ask_help"))
+            return talk(V, "after", s)
         return transfer(V, s, "human", L("transfer"))
     if k == "hardship":
         if not ev("transfer_support").get("queue") or s.get("hardship_offered"):

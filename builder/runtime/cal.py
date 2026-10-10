@@ -193,8 +193,8 @@ def spoken_time(text):
         cands.append((m.start(), 12, 0, "pm"))
     for m in re.finditer(r"\b(\d{1,2})[:.](\d{2})\s*(am|pm|a\.m\.|p\.m\.)?", t):
         cands.append((m.start(), int(m.group(1)), int(m.group(2)), m.group(3) or ""))
-    for m in re.finditer(r"\b(\d{1,2})\s*(am|pm|a\.m\.|p\.m\.|oclock)\b", t):
-        cands.append((m.start(), int(m.group(1)), 0, m.group(2)))
+    for m in re.finditer(r"(?<![:.\d])\b(\d{1,2})\s*(am|pm|a\.m\.|p\.m\.|oclock)\b", t):
+        cands.append((m.start(), int(m.group(1)), 0, "" if m.group(2) == "oclock" else m.group(2)))
     for m in re.finditer(r"\b(?:at|around|about|after|by|before|from|until|till)\s+(\d{1,2})\b(?!\s*(?:st|nd|rd|th|dollars?|days?|weeks?|[:.]\d))", t):
         cands.append((m.start(1), int(m.group(1)), 0, ""))
     for m in re.finditer(r"\b(half|quarter)\s+(past|to)\s+(" + W + r"|\d{1,2})\b", t):
