@@ -33,7 +33,7 @@ use the default shown and record it in `assumptions`.
    "max_wrong": 3,                                 // wrong answers in total that end the check
    "date_order": "dmy",                            // how a numeric-only date is read: "dmy" or "mdy"
    "hints": {"<hint value from the tool API>": "<what the agent says when that hint comes back>"},
-   "why_is_decline": true,                         // asking what the call is about instead of answering counts as declining
+   "purpose_is_decline": true,                     // asking what the call is about instead of answering counts as declining
    "question_is_decline": false,
    "response": {"ok": "ok", "verified": "verified", "all_verified": "all_verified",
                 "left": "wrong_answers_left", "hint": "hint"}   // field names in the verify tool's response
@@ -41,6 +41,7 @@ use the default shown and record it in `assumptions`.
  "products": {
    "names": {"<product type>": "<spoken name, may use {field} from the account record, e.g. credit card ending {card_last4}>"},
    "amount_field": "past_due",                     // account field with the amount owed
+   "days_field": "days_late",                      // account field with how many days late the product is
    "floor_field": {"<product type>": "<account field holding the minimum acceptable amount>"},
    "floor_pct": null                               // only if the floor is a percentage of the amount owed instead
  },

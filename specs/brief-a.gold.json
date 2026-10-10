@@ -51,7 +51,6 @@
   "hints": {
    "day_month_swapped": "Thank you. Could you please say the month of your birth as a word?"
   },
-  "why_is_decline": true,
   "question_is_decline": false,
   "response": {
    "ok": "ok",
@@ -59,7 +58,8 @@
    "all_verified": "all_verified",
    "left": "wrong_answers_left",
    "hint": "hint"
-  }
+  },
+  "purpose_is_decline": true
  },
  "products": {
   "names": {

@@ -76,7 +76,8 @@ KINDS = {
     "id": {
         "answer": "gives an answer to the security question (any date, number, digits or words), even partial",
         "refuses": "refuses or does not want to answer the security question",
-        "asks_why": "asks why you need this / what the call is about instead of answering",
+        "asks_why": "asks why you need this information or why you ask, without answering",
+        "purpose": "asks what the call is about or which account it concerns, without answering",
         "robot": "asks whether you are a robot or an AI",
         "scam": "asks whether this is a scam",
         "human": "asks to speak to a human",

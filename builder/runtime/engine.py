@@ -26,12 +26,16 @@ S = dict()   # injected spec
 
 
 # ----------------------------------------------------------------------------------------------- helpers
+CTX = dict()   # customer names, filled once per step from the call variables
+
+
 def L(key, **kw):
-    """Spec line with {placeholders} filled. Unknown keys are left as-is, never raise."""
+    """Spec line with {placeholders} filled (customer names always available). Never raises."""
     t = S.get("lines", dict()).get(key, "")
-    for k, v in kw.items():
+    for k, v in list(kw.items()) + list(CTX.items()):
         t = t.replace("{" + k + "}", str(v))
-    return t.strip()
+    t = re.sub(r"\{[a-z_0-9]+\}", "", t)       # never speak an unfilled placeholder
+    return re.sub(r"\s+", " ", t).strip()
 
 
 def money(x):
@@ -144,7 +148,7 @@ def product_facts(V, raw):
         floor = round(full * float(S["products"]["floor_pct"]) / 100.0, 2)
     if floor is None:
         floor = full
-    dl = int(num(raw.get("days_late")) or 0)
+    dl = int(num(raw.get(S["products"].get("days_field", "days_late"))) or 0)
     b = band_for(dl)
     deadline = cal_deadline(today, b["deadline"])
     return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
@@ -482,11 +486,12 @@ def start_identity(V, s):
 def stage_id(V, s, k, t):
     qs = S["identity"]["questions"]
     q = qs[s["qi"]]
-    if k in ("refuses", "purpose", "asks_why") or (k == "question" and S["identity"].get("question_is_decline")):
-        if k == "asks_why" and not S["identity"].get("why_is_decline", False) and not s.get("why_answered"):
-            s["why_answered"] = True
-            say(V, L("id_why"), q["ask"])
-            return talk(V, "id", s)
+    if k == "asks_why" and not s.get("why_answered"):
+        s["why_answered"] = True          # explaining why the questions are needed is not a refusal
+        say(V, L("id_why"), q["ask"])
+        return talk(V, "id", s)
+    purpose_declines = S["identity"].get("purpose_is_decline", S["identity"].get("why_is_decline", True))
+    if k in ("refuses", "asks_why") or (k == "purpose" and purpose_declines) or (k == "question" and S["identity"].get("question_is_decline")):
         s["declined"] = s.get("declined", 0) + 1
         if s["declined"] >= 2:
             return close(V, s, "id_declined", L("id_declined"))
@@ -1032,6 +1037,7 @@ def run(V):
 
 
 def main(V):
+    CTX.update(names(V))
     try:
         run(V)
     except Exception as e:  # never let the call die: apologise and close safely

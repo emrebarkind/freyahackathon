@@ -6,6 +6,7 @@ import copy
 import datetime
 import json
 import random
+import re
 
 from builder.runtime import cal, engine
 
@@ -145,7 +146,8 @@ def identity_values(spec):
 
 
 def make_product(spec, i, typ, days_late):
-    p = {"product_id": "p%d" % (i + 1), "type": typ, "days_late": days_late, "card_last4": "4821", "account_last4": "1234"}
+    p = {"product_id": "p%d" % (i + 1), "type": typ, spec["products"].get("days_field", "days_late"): days_late,
+         "card_last4": "4821", "account_last4": "1234", "last4": "1234"}
     full = 300.0 + 100 * i
     p[spec["products"].get("amount_field", "past_due")] = full
     ff = spec["products"].get("floor_field", {}).get(typ)
@@ -211,8 +213,10 @@ def run_all(spec, openapi):
                 led, tr = simulate(spec, V0, bank, turns)
                 got = dict(outcome=led["outcome"], reason=led["reason"] or "", promises=sorted(led["promises"]), notes=sorted(led["notes"]),
                            callbacks=sorted(led["callbacks"]), transfers=sorted(led["transfers"]))
-                ok = got == exp and led["calls"] and led["calls"][-1] == "close_call"
-                detail = "" if ok else f"got {got} expected {exp}; transcript: " + " | ".join(f"{w}: {t}" for w, t in tr)[:1500]
+                spoken = " ".join(t for w, t in tr if w == "agent")
+                leaked = [x for x in re.findall(r"\{[a-z_]+\}", spoken)]
+                ok = got == exp and led["calls"] and led["calls"][-1] == "close_call" and not leaked
+                detail = "" if ok else (f"unfilled placeholders {leaked}; " if leaked else "") + f"got {got} expected {exp}; transcript: " + " | ".join(f"{w}: {t}" for w, t in tr)[:1500]
                 out.append((name, bool(ok), detail))
             except Exception as e:
                 out.append((name, False, f"{type(e).__name__}: {e}"))

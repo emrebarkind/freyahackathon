@@ -1,0 +1,1212 @@
+{
+ "initial_node": "talk_open",
+ "system_prompt": "You are a bank's digital assistant on a phone call. Speak English.",
+ "nodes": {
+  "talk_open": {
+   "name": "talk_open",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "Hello, I am a digital assistant calling from Freya Bank, and we record this call. Am I speaking with {{title}} {{last_name}}?"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "open_kind",
+     "type": "string",
+     "enum_values": [
+      "confirmed",
+      "third_party",
+      "wrong_number",
+      "deceased",
+      "robot",
+      "scam",
+      "purpose",
+      "human",
+      "not_talk",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: confirmed = the person confirms they are the customer: yes, that's me, speaking, or says the customer's own name; third_party = someone else answered (a relative, partner, colleague, child) or says the customer is not available; wrong_number = says this number does not belong to the customer or they do not know the customer; deceased = says the customer has died / passed away; robot = asks whether you are a robot, a machine or an AI; scam = asks whether this call is a scam or fraud, or doubts that you are the bank; purpose = asks what the call is about or who is calling, without confirming; human = asks to speak to a real person / a human agent; not_talk = says they do not want to talk / are not interested / asks you to stop; unclear = anything else: hello, go ahead, who is this, unclear or no answer; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "open_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ],
+   "on_enter_first_entry_only": true
+  },
+  "talk_tp": {
+   "name": "talk_tp",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "tp_kind",
+     "type": "string",
+     "enum_values": [
+      "gives_time",
+      "no_time",
+      "customer_now",
+      "wrong_number",
+      "deceased",
+      "purpose",
+      "offers_pay",
+      "robot",
+      "scam",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: gives_time = gives a day and/or time when the customer can be reached; no_time = does not know when the customer can be reached, or will not say; customer_now = says the customer is coming to the phone or hands the phone over; wrong_number = says the number does not belong to the customer / does not know them; deceased = says the customer has died / passed away; purpose = asks what the call is about; offers_pay = offers to pay or to answer questions for the customer; robot = asks whether you are a robot or an AI; scam = asks whether this is a scam; unclear = anything else; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "tp_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    },
+    {
+     "name": "tp_text",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The day and time the customer can be reached, copied exactly as said in the latest message, e.g. 'tomorrow around eleven'. Empty if none."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "talk_id": {
+   "name": "talk_id",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "id_kind",
+     "type": "string",
+     "enum_values": [
+      "answer",
+      "refuses",
+      "asks_why",
+      "robot",
+      "scam",
+      "human",
+      "not_talk",
+      "wrong_person",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: answer = gives an answer to the security question (any date, number, digits or words), even partial; refuses = refuses or does not want to answer the security question; asks_why = asks why you need this / what the call is about instead of answering; robot = asks whether you are a robot or an AI; scam = asks whether this is a scam; human = asks to speak to a human; not_talk = says they do not want to talk; wrong_person = says they are not the customer after all; unclear = anything else; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "id_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    },
+    {
+     "name": "id_text",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The customer's answer to the security question in their latest message, copied exactly as said (keep every digit and word, e.g. 'the fourteenth of March 1988' or 'four four seven one'). Empty if none."
+    },
+    {
+     "name": "id_norm",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The same answer normalised: a date as YYYY-MM-DD (day before month when only numbers are said), a number or code as its digits or characters only, without spaces. Empty if no answer."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "talk_nego": {
+   "name": "talk_nego",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "nego_kind",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no",
+      "proposes",
+      "too_much",
+      "vague",
+      "already_paid",
+      "dispute",
+      "hardship",
+      "restructure",
+      "human",
+      "robot",
+      "scam",
+      "not_talk",
+      "question",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: yes = agrees / accepts what was just offered or asked (yes, ok, fine, that works, I confirm); no = says no / cannot / will not, without giving a date or an amount; proposes = names a day, a date or an amount they can pay; too_much = says the amount is too much / too high / cannot afford the full amount; vague = gives a vague time like next week, end of the month, when my salary comes, without an exact day; already_paid = says they already paid this amount; dispute = says the debt is not theirs, they never had this product, or it was closed or paid off in the past; hardship = mentions illness, a death in the family, or job loss; restructure = asks for a new payment plan, lower instalments, or restructuring; human = asks to speak to a human; robot = asks whether you are a robot or an AI; scam = asks whether this is a scam; not_talk = says they do not want to talk about this; question = asks another question; unclear = anything else; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "nego_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    },
+    {
+     "name": "nego_date",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The payment day or date the customer says in the latest message, copied exactly as said (e.g. 'this Friday', 'next Tuesday', 'the 23rd', '30 October', 'next week'). If they correct themselves, only the corrected value. Empty if no day is mentioned."
+    },
+    {
+     "name": "nego_amount",
+     "type": "float",
+     "min_confidence": 0.0,
+     "description": "An amount of money the customer offers or agrees to pay in the latest message, as a number (e.g. 'six hundred thirty-seven fifty' = 637.5). If they correct themselves, the corrected value. Empty if none."
+    },
+    {
+     "name": "nego_scope",
+     "type": "string",
+     "enum_values": [
+      "all",
+      "one",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "all = the customer's statement is about all of their products together (both, all three, everything); one = about one specific product; none = not stated."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "talk_hardship": {
+   "name": "talk_hardship",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "hardship_kind",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no",
+      "proposes",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: yes = accepts being connected / transferred; no = declines being connected / transferred; proposes = names a date or an amount they can pay themselves; unclear = anything else; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "hardship_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    },
+    {
+     "name": "hardship_date",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The payment day or date the customer says in the latest message, copied exactly as said (e.g. 'this Friday', 'next Tuesday', 'the 23rd', '30 October', 'next week'). If they correct themselves, only the corrected value. Empty if no day is mentioned."
+    },
+    {
+     "name": "hardship_amount",
+     "type": "float",
+     "min_confidence": 0.0,
+     "description": "An amount of money the customer offers or agrees to pay in the latest message, as a number (e.g. 'six hundred thirty-seven fifty' = 637.5). If they correct themselves, the corrected value. Empty if none."
+    },
+    {
+     "name": "hardship_scope",
+     "type": "string",
+     "enum_values": [
+      "all",
+      "one",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "all = the customer's statement is about all of their products together (both, all three, everything); one = about one specific product; none = not stated."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "talk_confirm": {
+   "name": "talk_confirm",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "confirm_kind",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no",
+      "proposes",
+      "restructure",
+      "human",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: yes = confirms the read-back (yes, correct, I confirm); no = does not confirm / refuses; proposes = changes the date or the amount; restructure = asks for a new payment plan or lower instalments; human = asks to speak to a human; unclear = anything else; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "confirm_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    },
+    {
+     "name": "confirm_date",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The payment day or date the customer says in the latest message, copied exactly as said (e.g. 'this Friday', 'next Tuesday', 'the 23rd', '30 October', 'next week'). If they correct themselves, only the corrected value. Empty if no day is mentioned."
+    },
+    {
+     "name": "confirm_amount",
+     "type": "float",
+     "min_confidence": 0.0,
+     "description": "An amount of money the customer offers or agrees to pay in the latest message, as a number (e.g. 'six hundred thirty-seven fifty' = 637.5). If they correct themselves, the corrected value. Empty if none."
+    },
+    {
+     "name": "confirm_scope",
+     "type": "string",
+     "enum_values": [
+      "all",
+      "one",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "all = the customer's statement is about all of their products together (both, all three, everything); one = about one specific product; none = not stated."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "talk_open_again": {
+   "name": "talk_open_again",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "open_kind",
+     "type": "string",
+     "enum_values": [
+      "confirmed",
+      "third_party",
+      "wrong_number",
+      "deceased",
+      "robot",
+      "scam",
+      "purpose",
+      "human",
+      "not_talk",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: confirmed = the person confirms they are the customer: yes, that's me, speaking, or says the customer's own name; third_party = someone else answered (a relative, partner, colleague, child) or says the customer is not available; wrong_number = says this number does not belong to the customer or they do not know the customer; deceased = says the customer has died / passed away; robot = asks whether you are a robot, a machine or an AI; scam = asks whether this call is a scam or fraud, or doubts that you are the bank; purpose = asks what the call is about or who is calling, without confirming; human = asks to speak to a real person / a human agent; not_talk = says they do not want to talk / are not interested / asks you to stop; unclear = anything else: hello, go ahead, who is this, unclear or no answer; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "open_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_verify": {
+   "name": "api_verify",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "verify_identity",
+      "handler": "__function__:api_call",
+      "description": "verify_identity",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/verify_identity"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "field": {
+           "type": "string",
+           "default": "{{q_field}}"
+          },
+          "answer": {
+           "type": "string",
+           "default": "{{q_answer}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     },
+     "pre_process_code": "try:\n    b = config.get('body')\n    if isinstance(b, dict):\n        for k in list(b.keys()):\n            if b[k] is None or b[k] == '' or (isinstance(b[k], str) and b[k].startswith('{' + '{')):\n                b.pop(k)\n        for k in list(b.keys()):\n            if k in []:\n                try:\n                    b[k] = float(b[k])\n                except Exception:\n                    pass\nexcept Exception:\n    pass\n"
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_account": {
+   "name": "api_account",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "get_account",
+      "handler": "__function__:api_call",
+      "description": "get_account",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/get_account"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     },
+     "pre_process_code": "try:\n    b = config.get('body')\n    if isinstance(b, dict):\n        for k in list(b.keys()):\n            if b[k] is None or b[k] == '' or (isinstance(b[k], str) and b[k].startswith('{' + '{')):\n                b.pop(k)\n        for k in list(b.keys()):\n            if k in []:\n                try:\n                    b[k] = float(b[k])\n                except Exception:\n                    pass\nexcept Exception:\n    pass\n"
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_promise": {
+   "name": "api_promise",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "create_promise",
+      "handler": "__function__:api_call",
+      "description": "create_promise",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/create_promise"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "product_id": {
+           "type": "string",
+           "default": "{{p_product}}"
+          },
+          "amount": {
+           "type": "string",
+           "default": "{{p_amount}}"
+          },
+          "date": {
+           "type": "string",
+           "default": "{{p_date}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     },
+     "pre_process_code": "try:\n    b = config.get('body')\n    if isinstance(b, dict):\n        for k in list(b.keys()):\n            if b[k] is None or b[k] == '' or (isinstance(b[k], str) and b[k].startswith('{' + '{')):\n                b.pop(k)\n        for k in list(b.keys()):\n            if k in ['amount']:\n                try:\n                    b[k] = float(b[k])\n                except Exception:\n                    pass\nexcept Exception:\n    pass\n"
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_note": {
+   "name": "api_note",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "add_note",
+      "handler": "__function__:api_call",
+      "description": "add_note",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/add_note"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "product_id": {
+           "type": "string",
+           "default": "{{n_product}}"
+          },
+          "reason": {
+           "type": "string",
+           "default": "{{n_reason}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     },
+     "pre_process_code": "try:\n    b = config.get('body')\n    if isinstance(b, dict):\n        for k in list(b.keys()):\n            if b[k] is None or b[k] == '' or (isinstance(b[k], str) and b[k].startswith('{' + '{')):\n                b.pop(k)\n        for k in list(b.keys()):\n            if k in []:\n                try:\n                    b[k] = float(b[k])\n                except Exception:\n                    pass\nexcept Exception:\n    pass\n"
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_callback": {
+   "name": "api_callback",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "schedule_callback",
+      "handler": "__function__:api_call",
+      "description": "schedule_callback",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/schedule_callback"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "date": {
+           "type": "string",
+           "default": "{{cb_date}}"
+          },
+          "time": {
+           "type": "string",
+           "default": "{{cb_time}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     },
+     "pre_process_code": "try:\n    b = config.get('body')\n    if isinstance(b, dict):\n        for k in list(b.keys()):\n            if b[k] is None or b[k] == '' or (isinstance(b[k], str) and b[k].startswith('{' + '{')):\n                b.pop(k)\n        for k in list(b.keys()):\n            if k in []:\n                try:\n                    b[k] = float(b[k])\n                except Exception:\n                    pass\nexcept Exception:\n    pass\n"
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_transfer": {
+   "name": "api_transfer",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "transfer_to_agent",
+      "handler": "__function__:api_call",
+      "description": "transfer_to_agent",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/transfer_to_agent"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "queue": {
+           "type": "string",
+           "default": "{{t_queue}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     },
+     "pre_process_code": "try:\n    b = config.get('body')\n    if isinstance(b, dict):\n        for k in list(b.keys()):\n            if b[k] is None or b[k] == '' or (isinstance(b[k], str) and b[k].startswith('{' + '{')):\n                b.pop(k)\n        for k in list(b.keys()):\n            if k in []:\n                try:\n                    b[k] = float(b[k])\n                except Exception:\n                    pass\nexcept Exception:\n    pass\n"
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_close": {
+   "name": "api_close",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "end",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "close_call",
+      "handler": "__function__:api_call",
+      "description": "close_call",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/close_call"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "outcome": {
+           "type": "string",
+           "default": "{{c_outcome}}"
+          },
+          "reason": {
+           "type": "string",
+           "default": "{{c_reason}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     },
+     "pre_process_code": "try:\n    b = config.get('body')\n    if isinstance(b, dict):\n        for k in list(b.keys()):\n            if b[k] is None or b[k] == '' or (isinstance(b[k], str) and b[k].startswith('{' + '{')):\n                b.pop(k)\n        for k in list(b.keys()):\n            if k in []:\n                try:\n                    b[k] = float(b[k])\n                except Exception:\n                    pass\nexcept Exception:\n    pass\n"
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "end",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "step": {
+   "name": "step",
+   "node_type": "code",
+   "passthrough": true,
+   "passthrough_default_transition": "api_close",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "function": {
+      "name": "code_exec",
+      "handler": "__function__:code_exec",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "code": {
+         "type": "string",
+         "default": "_G = dict()\n_SRC = 'import json\\nP = json.loads(bytes.fromhex(\\'7b22776f726b64617973223a205b302c20312c20322c20332c20345d2c2022686f6c6964617973223a205b22323032362d31302d3236222c2022323032362d31312d3131222c2022323032362d31312d3236222c2022323032362d31322d3235222c2022323032372d30312d3031225d7d\\').decode())\\nS = json.loads(bytes.fromhex(\\'7b2263757272656e63795f776f7264223a2022646f6c6c617273222c202263616c656e646172223a207b22776f726b64617973223a205b302c20312c20322c20332c20345d2c2022686f6c6964617973223a205b22323032362d31302d3236222c2022323032362d31312d3131222c2022323032362d31312d3236222c2022323032362d31322d3235222c2022323032372d30312d3031225d7d2c2022646174655f72756c6573223a207b226e6578745f7765656b646179223a2022666f6c6c6f77696e675f7765656b227d2c2022636f6e6669726d223a207b226d61785f61736b73223a20327d2c202263616c6c6261636b223a207b2264617973223a205b22746f646179222c20226e6578745f627573696e6573735f646179225d2c20227374617274223a202231303a3030222c2022656e64223a202231393a3030222c202261667465725f6e6f77223a20747275652c2022627573696e6573735f646179735f6f6e6c79223a2066616c73652c20226d61785f61736b73223a20327d2c20226964656e74697479223a207b227175657374696f6e73223a205b7b226669656c64223a2022646174655f6f665f6269727468222c20226b696e64223a202264617465222c202261736b223a2022436f756c6420796f7520706c656173652074656c6c206d6520796f75722064617465206f662062697274683f227d2c207b226669656c64223a202270686f6e655f6c61737434222c20226b696e64223a2022646967697473222c20226c656e677468223a20342c202261736b223a2022436f756c6420796f7520706c656173652074656c6c206d6520746865206c61737420666f757220646967697473206f66207468652070686f6e65206e756d6265722077652068617665206f6e2066696c6520666f7220796f753f227d5d2c20226d61785f77726f6e67223a20332c2022646174655f6f72646572223a2022646d79222c202268696e7473223a207b226461795f6d6f6e74685f73776170706564223a2022436f756c6420796f7520706c656173652073617920796f75722064617465206f6620626972746820616761696e2c207769746820746865206d6f6e7468206173206120776f72643f227d2c20227768795f69735f6465636c696e65223a20747275652c20227175657374696f6e5f69735f6465636c696e65223a2066616c73652c2022726573706f6e7365223a207b226f6b223a20226f6b222c20227665726966696564223a20227665726966696564222c2022616c6c5f7665726966696564223a2022616c6c5f7665726966696564222c20226c656674223a202277726f6e675f616e73776572735f6c656674222c202268696e74223a202268696e74227d7d2c202270726f6475637473223a207b226e616d6573223a207b226372656469745f63617264223a2022637265646974206361726420656e64696e67207b636172645f6c617374347d222c2022706572736f6e616c5f6c6f616e223a2022706572736f6e616c206c6f616e222c20226361725f6c6f616e223a2022636172206c6f616e227d2c2022616d6f756e745f6669656c64223a2022706173745f647565222c2022666c6f6f725f6669656c64223a207b226372656469745f63617264223a20226d696e696d756d5f7061796d656e74222c2022706572736f6e616c5f6c6f616e223a2022696e7374616c6d656e745f616d6f756e74222c20226361725f6c6f616e223a2022696e7374616c6d656e745f616d6f756e74227d2c2022666c6f6f725f706374223a206e756c6c7d2c202262616e6473223a205b7b226e616d65223a20226561726c79222c20226d696e223a20312c20226d6178223a20372c2022646561646c696e65223a207b226b696e64223a2022627573696e6573735f646179735f6166746572222c20226e223a2031327d2c2022617474656d707473223a20317d2c207b226e616d65223a20226c617465222c20226d696e223a20382c20226d6178223a2034352c2022646561646c696e65223a207b226b696e64223a2022627573696e6573735f646179735f6166746572222c20226e223a20377d2c2022617474656d707473223a20327d5d2c20226c6164646572223a205b7b22616d6f756e74223a202266756c6c5f6f725f666c6f6f72222c202264617465223a20226c6173745f627573696e6573735f6461795f746869735f7765656b227d2c207b22616d6f756e74223a2022666c6f6f72222c202264617465223a2022646561646c696e65227d5d2c202272756c6573223a207b227265667573655f646561646c696e655f69735f7265667573616c223a20747275657d2c20226e6f746573223a207b22656e61626c6564223a2066616c73657d2c20226d756c7469223a207b22636c616d705f73696e676c655f64617465223a20747275652c2022636f6e74696e75655f61667465725f70616964223a20747275652c2022636f6e74696e75655f61667465725f64697370757465223a20747275657d2c202268756d616e223a207b2261736b5f6669727374223a20747275657d2c20226d61785f6e6f745f74616c6b223a20322c20226576656e7473223a207b2270726f6d697365223a207b226f7574636f6d65223a202270726f6d697365222c2022726561736f6e223a2022227d2c202270616964223a207b226f7574636f6d65223a202270616964222c2022726561736f6e223a2022222c20226e6f7465223a202270616964227d2c20227472616e736665725f72657374727563747572696e67223a207b226f7574636f6d65223a20227472616e73666572726564222c2022726561736f6e223a202272657374727563747572696e67222c20227175657565223a202272657374727563747572696e67227d2c20227472616e736665725f68756d616e223a207b226f7574636f6d65223a20227472616e73666572726564222c2022726561736f6e223a202268756d616e222c20227175657565223a202267656e6572616c227d2c20227472616e736665725f737570706f7274223a207b226f7574636f6d65223a20227472616e73666572726564222c2022726561736f6e223a2022737570706f7274222c20227175657565223a2022737570706f7274227d2c202272656675736564223a207b226f7574636f6d65223a20226e6f5f70726f6d697365222c2022726561736f6e223a202272656675736564222c20226e6f7465223a202272656675736564227d2c20226861726473686970223a207b226f7574636f6d65223a20226e6f5f70726f6d697365222c2022726561736f6e223a20226861726473686970222c20226e6f7465223a20226861726473686970227d2c202264697370757465223a207b226f7574636f6d65223a20226e6f5f70726f6d697365222c2022726561736f6e223a202264697370757465222c20226e6f7465223a202264697370757465227d2c2022736572766963655f6572726f72223a207b226f7574636f6d65223a20226e6f5f70726f6d697365222c2022726561736f6e223a2022736572766963655f6572726f72222c20226e6f7465223a2022736572766963655f6572726f72227d2c202269645f6661696c6564223a207b226f7574636f6d65223a20226e6f745f7665726966696564222c2022726561736f6e223a20226661696c6564227d2c202269645f6465636c696e6564223a207b226f7574636f6d65223a20226e6f745f7665726966696564222c2022726561736f6e223a20226465636c696e6564227d2c202263616c6c6261636b223a207b226f7574636f6d65223a20226e6f745f72656163686564222c2022726561736f6e223a202263616c6c6261636b227d2c20226e6f5f63616c6c6261636b223a207b226f7574636f6d65223a20226e6f745f72656163686564222c2022726561736f6e223a20226e6f5f63616c6c6261636b227d2c202277726f6e675f6e756d626572223a207b226f7574636f6d65223a20226e6f745f72656163686564222c2022726561736f6e223a202277726f6e675f6e756d626572227d2c20226465636561736564223a207b226f7574636f6d65223a20226e6f745f72656163686564222c2022726561736f6e223a20226465636561736564227d2c2022756e636c656172223a207b226f7574636f6d65223a20226e6f745f72656163686564222c2022726561736f6e223a2022756e636c656172227d7d2c2022746f6f6c5f626f64696573223a207b227665726966795f6964656e74697479223a207b226669656c64223a2022715f6669656c64222c2022616e73776572223a2022715f616e73776572227d2c20226765745f6163636f756e74223a207b7d2c20226372656174655f70726f6d697365223a207b2270726f647563745f6964223a2022705f70726f64756374222c2022616d6f756e74223a2022705f616d6f756e74222c202264617465223a2022705f64617465227d2c20226164645f6e6f7465223a207b2270726f647563745f6964223a20226e5f70726f64756374222c2022726561736f6e223a20226e5f726561736f6e227d2c20227363686564756c655f63616c6c6261636b223a207b2264617465223a202263625f64617465222c202274696d65223a202263625f74696d65227d2c20227472616e736665725f746f5f6167656e74223a207b227175657565223a2022745f7175657565227d2c2022636c6f73655f63616c6c223a207b226f7574636f6d65223a2022635f6f7574636f6d65222c2022726561736f6e223a2022635f726561736f6e227d7d2c20226c696e6573223a207b226f70656e696e67223a202248656c6c6f2c204920616d2061206469676974616c20617373697374616e742063616c6c696e672066726f6d2046726579612042616e6b2c20616e64207765207265636f726420746869732063616c6c2e222c2022636f6e6669726d5f61736b223a2022416d204920737065616b696e672077697468207b7469746c657d207b6c6173745f6e616d657d3f222c2022726f626f74223a20224920616d2046726579612042616e6b2773206469676974616c20617373697374616e742e222c20227363616d223a2022596f752063616e2076657269667920746869732063616c6c2062792070686f6e696e672046726579612042616e6b277320637573746f6d65722073657276696365206e756d6265722e222c2022707572706f73655f6265666f72655f766572696679223a2022492063616e206f6e6c79206578706c61696e20776879204920616d2063616c6c696e67206f6e63652049206b6e6f77204920616d20737065616b696e6720776974682074686520726967687420706572736f6e2e222c20226e6f5f696e666f223a202249276d20736f7272792c204920646f206e6f742068617665207468617420696e666f726d6174696f6e2e222c20226e6f745f74616c6b5f6f6e6365223a20224920756e6465727374616e642e20546869732077696c6c206f6e6c792074616b65206120666577206d696e757465732e222c202274705f61736b223a20225768656e20776f756c64206265206120676f6f642074696d6520746f207265616368207b7469746c657d207b6c6173745f6e616d657d3f222c202274705f61736b5f74696d65223a2022417420776861742074696d6520636f756c642049207265616368207468656d3f222c202274705f6f7574736964655f77696e646f77223a2022492063616e206f6e6c792063616c6c206261636b20746f646179206f72206f6e20746865206e65787420627573696e657373206461792c206265747765656e2031303a303020616e642031393a30302e20497320746865726520616e6f746865722074696d65207468617420776f726b733f222c202274705f6e6f5f696e666f223a202249276d20736f7272792c20492063616e206f6e6c7920737065616b2077697468207b7469746c657d207b6c6173745f6e616d657d2e222c202274705f626f6f6b6564223a20225468616e6b20796f752e20492077696c6c2063616c6c206261636b206f6e207b646174657d206174207b74696d657d2e222c202277726f6e675f6e756d626572223a202249276d20736f72727920666f722074686520696e636f6e76656e69656e63652e222c2022636f6e646f6c656e6365223a20224920616d20736f72727920666f7220796f7572206c6f73732e222c202269645f696e74726f223a20224265666f726520776520636f6e74696e75652c2049206e65656420746f2061736b20796f752074776f207365637572697479207175657374696f6e732e222c202269645f776879223a20225468657365207175657374696f6e732070726f7465637420796f7572206163636f756e742e222c202269645f6578706c61696e223a2022546865207365637572697479207175657374696f6e732070726f7465637420796f7572206163636f756e742c20736f20746861742049206f6e6c7920737065616b207769746820796f752e20436f756c6420796f7520616e73776572207468656d2c20706c656173653f222c202269645f6465636c696e6564223a20224920756e6465727374616e642e20576974686f757420746865736520616e737765727320492063616e6e6f7420636f6e74696e75652e222c202269645f726570656174223a2022536f7272792c204920646964206e6f7420636174636820746861742e20436f756c6420796f752073617920697420616761696e2c20706c656173653f222c202269645f636f6e74696e7565223a20225468616e6b20796f752e222c202269645f77726f6e67223a20225468617420646f6573206e6f74206d61746368206f7572207265636f7264732e20436f756c6420796f752074727920616761696e2c20706c656173653f222c202269645f6661696c6564223a202249276d20736f7272792c204920636f756c64206e6f742076657269667920796f7572206964656e746974792e20506c6561736520757365207468652046726579612042616e6b206d6f62696c6520617070206f722076697369742061206272616e63682e222c2022646973636c6f73655f696e74726f223a20225468616e6b20796f752c207b7469746c657d207b6c6173745f6e616d657d2e204920616d2063616c6c696e672066726f6d2074686520636f6c6c656374696f6e73207465616d2061626f75742061206c617465207061796d656e742e222c202270726f647563745f6c696e65223a2022596f7572207b6e616d657d20686173207b616d6f756e747d2070617374206475652c20616e64206974206973207b646179737d2064617973206c6174652e222c202261736b5f746f646179223a202243616e20796f75206d616b652074686973207061796d656e7420746f6461793f222c202261736b5f746f6461795f6d756c7469223a202243616e20796f75206d616b65207468657365207061796d656e747320746f6461793f222c20226e6578745f70726f64756374223a20224e6f77206c65742773206c6f6f6b20617420796f7572207b6e616d657d2e222c20226f66666572223a2022436f756c6420796f7520706179207b616d6f756e747d206f6e207b646174657d3f222c20226f666665725f666c6f6f725f64617465223a2022436f756c6420796f7520706179207b616d6f756e747d206f6e207b646174657d3f205468652072657374207374617973206f7665726475652e222c20226f666665725f666c6f6f72223a20224920756e6465727374616e642e20436f756c6420796f7520706179207b616d6f756e747d20696e73746561643f205468652072657374207374617973206f7665726475652e222c202262656c6f775f666c6f6f72223a202249276d20736f7272792c20492063616e6e6f74207265636f7264207468617420616d6f756e742e20546865206c6f7765737420616d6f756e7420492063616e20616363657074206973207b616d6f756e747d2e20436f756c6420796f752070617920746861743f222c202262656c6f775f666c6f6f725f616761696e223a202249276d20736f7272792c20746865206c6f7765737420616d6f756e7420492063616e20616363657074206973207b616d6f756e747d2e222c2022646174655f70617374223a20225468617420646174652068617320616c7265616479207061737365642e20436f756c6420796f752063686f6f736520746f646179206f722061206c6174657220646174653f222c20226e6f745f627573696e6573735f646179223a20225468617420646179206973206e6f74206120627573696e657373206461792e20436f756c6420796f7520706179206f6e207b646174657d20696e73746561643f222c202261667465725f646561646c696e65223a2022546865206c6174657374206461746520492063616e207265636f7264206973207b646174657d2e20436f756c6420796f7520706179206f6e207b646174657d3f222c202276616775655f61736b223a202257686963682065786163742064617920776f756c6420746861742062653f222c202270726f706f73655f646561646c696e65223a2022436f756c6420796f7520706179207b616d6f756e747d206f6e207b646174657d3f222c202261736b5f646174655f666f725f616d6f756e74223a20224f6e2077686963682064617920636f756c6420796f7520706179207b616d6f756e747d3f222c20227265706561745f6f66666572223a20224a75737420746f207265706561742c20636f756c6420796f7520706179207b616d6f756e747d206f6e207b646174657d3f222c2022726561646261636b5f696e74726f223a20224c6574206d6520726561642074686174206261636b20746f20796f752e222c2022726561646261636b5f6974656d223a2022596f7572207b6e616d657d3a207b616d6f756e747d206f6e207b646174657d2e222c2022636c616d7065645f6e6f7465223a2022466f7220796f7572207b6e616d657d2c20746865206c6174657374206461746520492063616e20757365206973207b646174657d2e222c2022636f6e6669726d5f71223a2022446f20796f7520636f6e6669726d3f222c20227265636f72646564223a20225468616e6b20796f752c20796f75722070726f6d697365206973207265636f726465642e222c2022736d735f6c696e65223a2022596f752077696c6c207265636569766520612074657874206d65737361676520636f6e6669726d696e6720746869732070726f6d6973652e222c20227265636f72645f6661696c6564223a202249276d20736f7272792c204920636f756c64206e6f74207265636f726420796f75722070726f6d6973652e222c2022706169645f6c696e65223a20225468616e6b20796f752e205061796d656e74732063616e2074616b65206f6e6520627573696e6573732064617920746f206170706561722e222c2022646973707574655f6c696e65223a20224920756e6465727374616e642e205468616e6b20796f7520666f72206c657474696e67206d65206b6e6f772e222c20226861726473686970223a202249276d20736f72727920746f206865617220746861742e20576f756c6420796f75206c696b65206d6520746f20636f6e6e65637420796f752077697468206f757220637573746f6d657220737570706f7274207465616d3f222c202268617264736869705f6465636c696e6564223a20224920756e6465727374616e642e222c202272657374727563747572655f6c696e65223a2022492077696c6c20636f6e6e65637420796f752077697468206120636f6c6c65616775652077686f2063616e2068656c70207769746820746861742e222c202268756d616e5f61736b5f68656c70223a2022497320746865726520616e797468696e6720492063616e2068656c7020796f7520776974682066697273743f222c20227472616e73666572223a20224920616d207472616e7366657272696e6720796f75206e6f772e20506c6561736520686f6c642e222c2022676f6f64627965223a20225468616e6b20796f7520666f7220796f75722074696d652e20476f6f646279652e227d2c2022617373756d7074696f6e73223a205b2254686520627269656620646f6573206e6f74206e616d6520612063757272656e63792c20736f2063757272656e63795f776f72642075736573207468652064656661756c742027646f6c6c617273272e222c2022576f726b6461797320617265204d6f6e64617920746f204672696461792c205b302c312c322c332c345d202873656374696f6e2037292e20486f6c6964617973206172652074686520666976652046726579612042616e6b20646174657320696e2073656374696f6e20372e222c202252756c652032323a20276e657874203c7765656b6461793e27206d65616e732074686174207765656b64617920696e2074686520666f6c6c6f77696e672063616c656e646172207765656b2c20736f20646174655f72756c65732e6e6578745f7765656b646179203d20666f6c6c6f77696e675f7765656b2e222c202252756c6520333a20696620636f6e6669726d6174696f6e206973207374696c6c20756e636c65617220616674657220746865207365636f6e642061736b2c207468652063616c6c20636c6f736573206173206e6f745f726561636865642f756e636c6561722c20736f20636f6e6669726d2e6d61785f61736b73203d20322e222c202252756c657320362d373a2063616c6c6261636b20697320746f646179206f7220746865206e65787420627573696e657373206461792c2031303a30302d31393a303020696e636c75736976652c206c61746572207468616e206e6f772e204f6e65206d6f72652061736b2061667465722061206261642074696d652c20736f2063616c6c6261636b2e6d61785f61736b73203d20322e2054686520627269656620646f6573206e6f7420726571756972652027746f6461792720746f206265206120627573696e657373206461792c20736f20627573696e6573735f646179735f6f6e6c79203d2066616c73652e222c202252756c652031207361797320746f2073746174652074686174207468652063616c6c206973207265636f726465642e20546865207370656320666f726d61742072657175697265732061637469766520766f6963652c20736f20746865206f70656e696e67207361797320277765207265636f726420746869732063616c6c272e222c20224964656e74697479206f72646572202872756c65203131293a20646174655f6f665f6269727468202873656e7420617320595959592d4d4d2d4444292c207468656e2070686f6e655f6c6173743420283420646967697473292e20546865206669656c642076616c75657320636f6d652066726f6d20746865207665726966795f6964656e7469747920656e756d2e204e756d657269632d6f6e6c79206461746573206172652072656164206461792d6d6f6e74682d796561722028646d79292e222c202252756c652031323a2074687265652077726f6e6720616e737765727320696e20746f74616c20656e642074686520636865636b2c20736f206d61785f77726f6e67203d20332e2052756c652031333a2061206461795f6d6f6e74685f737761707065642068696e742061736b7320666f7220746865206d6f6e7468206173206120776f726420616e6420646f6573206e6f7420636f756e7420617320612077726f6e6720616e737765722e205468652068696e74206c696e652061736b7320666f72207468652077686f6c652064617465206f6620626972746820616761696e2c207769746820746865206d6f6e7468206173206120776f72642c2062656361757365207468652072657472792069732061206e6577207665726966795f6964656e746974792063616c6c2074686174206e6565647320612066756c6c20595959592d4d4d2d444420646174652e222c202252756c652031353a2061736b696e672077686174207468652063616c6c2069732061626f757420636f756e7473206173206465636c696e696e6720287768795f69735f6465636c696e65203d2074727565292e204f74686572207175657374696f6e732c207375636820617320726f626f74206f72207363616d207175657374696f6e732c2061726520616e73776572656420616e6420646f206e6f7420636f756e74206173206465636c696e696e6720287175657374696f6e5f69735f6465636c696e65203d2066616c7365292e222c202252756c652031373a2070726f64756374206e616d6573206172652027637265646974206361726420656e64696e67207b636172645f6c617374347d272c2027706572736f6e616c206c6f616e2720616e642027636172206c6f616e272e2052756c652032353a2074686520666c6f6f72206973206d696e696d756d5f7061796d656e7420666f722063726564697420636172647320616e6420696e7374616c6d656e745f616d6f756e7420666f72206c6f616e732e2054686520616d6f756e74206f77656420697320706173745f6475652e222c202242616e647320636f6d652066726f6d2072756c652031383a206561726c7920697320312d372064617973206c6174652c207769746820746865203132746820627573696e6573732064617920617320646561646c696e6520616e64203120617474656d70742e204c61746520697320382d34352064617973206c6174652c2077697468207468652037746820627573696e6573732064617920617320646561646c696e6520616e64203220617474656d7074732e222c20224c61646465722066726f6d2072756c652033303a20617474656d70742031206973207468652066756c6c20616d6f756e742c206f722074686520666c6f6f722069662074686520637573746f6d657220616c72656164792073616964207468652066756c6c20616d6f756e7420697320746f6f206d7563682c206f6e20746865206c61737420627573696e65737320646179206f662074686973207765656b2e20496620746f6461792069732074686174206461792c2074686520656e67696e65207573657320746865206c61737420627573696e65737320646179206f66206e657874207765656b2e20417474656d7074203220286c6174652062616e64206f6e6c79292069732074686520666c6f6f72206f6e2074686520646561646c696e652e222c202252756c65732032332c20323620616e642032373a207265667573696e672074686520646561646c696e652c207265667573696e6720746865206f66666572656420666c6f6f722c206f72207265667573696e672074686520666c6f6f7220616674657220612062656c6f772d666c6f6f7220616d6f756e74206973206120666c6174207265667573616c2c20736f207265667573655f646561646c696e655f69735f7265667573616c203d20747275652e222c20225468652062726965662073617973202742726965662041206e657665722075736573206164645f6e6f7465272c20736f206e6f7465732e656e61626c6564203d2066616c73652e20546865206e6f74652076616c75657320696e206576656e7473206172652074616b656e2066726f6d20746865206164645f6e6f746520726561736f6e20656e756d20666f7220636f6d706c6574656e657373206f6e6c792e222c20224272696566204120636f76657273206f6e6c79206f6e652070726f647563742c20736f20746865206d756c74692073657474696e6773206b6565702074686569722064656661756c74732e222c202252756c652034323a20746865206167656e742061736b73206f6e636520776865746865722069742063616e2068656c70206265666f7265207472616e7366657272696e6720746f20612068756d616e202861736b5f6669727374203d2074727565292e205468652067656e6572616c207175657565206973207573656420666f722068756d616e207472616e73666572732e222c202252756c652034353a20736179696e6720747769636520274920646f6e27742077616e7420746f2074616c6b2720656e6473207468652063616c6c20286d61785f6e6f745f74616c6b203d2032292e20416674657220766572696669636174696f6e20697420636c6f736573206173206e6f5f70726f6d6973652f726566757365642c206265666f726520766572696669636174696f6e206173206e6f745f76657269666965642f6465636c696e65642e222c202252756c65203332202868617264736869702920636f6d6573206265666f72652072756c657320333020616e642034312e2054686520737570706f7274207472616e7366657220757365732071756575652027737570706f72742720616e6420636c6f736573206173207472616e736665727265642f737570706f72742e2049662074686520637573746f6d6572206465636c696e65732c20697420636c6f736573206173206e6f5f70726f6d6973652f68617264736869702e222c202252756c652033393a207468652070616964206f7574636f6d6520686173206e6f20726561736f6e2c20616e64207468652070726f6d697365206f7574636f6d6520686173206e6f20726561736f6e2e2049662061207472616e7366657220666f6c6c6f77732061207265636f726465642070726f6d6973652c207468652063616c6c20636c6f736573206173207472616e7366657272656420776974682074686174207472616e73666572277320726561736f6e202873656374696f6e203132292e222c202252756c652033373a206966206372656174655f70726f6d697365206661696c732c20746865206167656e742072657472696573206f6e63652e204966206974206661696c7320616761696e2c207468652063616c6c20636c6f736573206173206e6f5f70726f6d6973652f736572766963655f6572726f722e222c202252756c652033363a2069662074686520637573746f6d65722061736b7320746f206368616e67652061207265636f726465642070726f6d6973652c20746865206167656e742074656c6c73207468656d20746865792063616e206368616e676520697420696e20746865206d6f62696c65206170702e204e6f207365706172617465206c696e65206b65792065786973747320666f7220746869732e222c20225072657363726962656420776f7264696e6720697320757365642065786163746c793a2027416d204920737065616b696e672077697468207b7469746c657d207b6c6173745f6e616d657d3f272c20274920616d20736f72727920666f7220796f7572206c6f73732e272c202743616e20796f75206d616b652074686973207061796d656e7420746f6461793f272c2027446f20796f7520636f6e6669726d3f2720616e642027596f752077696c6c207265636569766520612074657874206d65737361676520636f6e6669726d696e6720746869732070726f6d6973652e27222c2022546f6f6c20626f6479206669656c64206e616d657320636f6d652066726f6d20746865204f70656e4150492066696c653a206669656c642f616e737765722c2070726f647563745f69642f616d6f756e742f646174652c2070726f647563745f69642f726561736f6e2c20646174652f74696d652c2071756575652c206f7574636f6d652f726561736f6e2e225d7d\\').decode())\\n\"\"\"Calendar arithmetic that runs INSIDE the phone agent (Freya code nodes / hooks).\\n\\nConstraints of the Freya sandbox: only `json`, `re`, `datetime` are known to import; the source must not\\ncontain the two-character brace sequences used by Freya templating. Every brief-specific value comes from P,\\na dict the compiler injects (hex-encoded JSON). Keep this file self-contained and free of other imports.\\n\"\"\"\\nimport datetime\\nimport json\\nimport re\\n\\n# Injected by the compiler. Defaults keep the module importable for local tests.\\n\\n\\nWEEKDAYS = [\"monday\", \"tuesday\", \"wednesday\", \"thursday\", \"friday\", \"saturday\", \"sunday\"]\\nMONTHS = [\"january\", \"february\", \"march\", \"april\", \"may\", \"june\", \"july\", \"august\",\\n          \"september\", \"october\", \"november\", \"december\"]\\n\\n\\ndef parse_now(now):\\n    s = str(now or \"\").strip().replace(\" \", \"T\")\\n    try:\\n        return datetime.datetime.fromisoformat(s[:16])\\n    except Exception:\\n        return datetime.datetime.fromisoformat(s[:10] + \"T00:00\")\\n\\n\\ndef iso(d):\\n    return d.isoformat()\\n\\n\\ndef is_business_day(d):\\n    return d.weekday() in P[\"workdays\"] and iso(d) not in P[\"holidays\"]\\n\\n\\ndef next_business_day(d, include_self=True):\\n    if not include_self:\\n        d = d + datetime.timedelta(days=1)\\n    while not is_business_day(d):\\n        d = d + datetime.timedelta(days=1)\\n    return d\\n\\n\\ndef add_business_days(d, n):\\n    \"\"\"The n-th business day after d (d itself not counted). n=0 returns d.\"\"\"\\n    k = 0\\n    while k < n:\\n        d = d + datetime.timedelta(days=1)\\n        if is_business_day(d):\\n            k += 1\\n    return d\\n\\n\\ndef add_calendar_days(d, n):\\n    return d + datetime.timedelta(days=n)\\n\\n\\ndef end_of_month(d):\\n    nxt = (d.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)\\n    return nxt - datetime.timedelta(days=1)\\n\\n\\ndef week_bounds(d, offset_weeks=0):\\n    monday = d - datetime.timedelta(days=d.weekday()) + datetime.timedelta(weeks=offset_weeks)\\n    return monday, monday + datetime.timedelta(days=6)\\n\\n\\ndef last_business_day_of_week(d, offset_weeks=0):\\n    monday, sunday = week_bounds(d, offset_weeks)\\n    x = sunday\\n    while x >= monday:\\n        if is_business_day(x):\\n            return x\\n        x = x - datetime.timedelta(days=1)\\n    return None\\n\\n\\ndef weekday_in_week(today, weekday, which):\\n    \"\"\"which=\\'this\\' -> that weekday in the current Mon-Sun week; \\'next\\' -> in the following week.\"\"\"\\n    monday, _ = week_bounds(today, 1 if which == \"next\" else 0)\\n    return monday + datetime.timedelta(days=weekday)\\n\\n\\ndef upcoming_weekday(today, weekday, include_today=False):\\n    delta = (weekday - today.weekday()) % 7\\n    if delta == 0 and not include_today:\\n        delta = 7\\n    return today + datetime.timedelta(days=delta)\\n\\n\\ndef deadline(today, rule):\\n    \"\"\"rule: dict(kind=..., n=...). kinds: business_days_after, calendar_days_after, end_of_month,\\n    end_of_next_month, last_business_day_of_month, fixed_date (value=YYYY-MM-DD).\"\"\"\\n    kind, n = rule.get(\"kind\"), int(rule.get(\"n\") or 0)\\n    if kind == \"business_days_after\":\\n        return add_business_days(today, n)\\n    if kind == \"calendar_days_after\":\\n        return add_calendar_days(today, n)\\n    if kind == \"end_of_month\":\\n        return end_of_month(today)\\n    if kind == \"end_of_next_month\":\\n        return end_of_month(end_of_month(today) + datetime.timedelta(days=1))\\n    if kind == \"last_business_day_of_month\":\\n        x = end_of_month(today)\\n        while not is_business_day(x):\\n            x = x - datetime.timedelta(days=1)\\n        return x\\n    if kind == \"fixed_date\":\\n        return datetime.date.fromisoformat(rule[\"value\"])\\n    raise ValueError(\"unknown deadline kind \" + str(kind))\\n\\n\\n# ---------------------------------------------------------------- spoken-language parsing\\nNUM_WORDS = {\\n    \"zero\": 0, \"oh\": 0, \"o\": 0, \"one\": 1, \"two\": 2, \"three\": 3, \"four\": 4, \"five\": 5, \"six\": 6, \"seven\": 7,\\n    \"eight\": 8, \"nine\": 9, \"ten\": 10, \"eleven\": 11, \"twelve\": 12, \"thirteen\": 13, \"fourteen\": 14,\\n    \"fifteen\": 15, \"sixteen\": 16, \"seventeen\": 17, \"eighteen\": 18, \"nineteen\": 19, \"twenty\": 20,\\n    \"thirty\": 30, \"forty\": 40, \"fifty\": 50, \"sixty\": 60, \"seventy\": 70, \"eighty\": 80, \"ninety\": 90,\\n}\\nORD_WORDS = {\\n    \"first\": 1, \"second\": 2, \"third\": 3, \"fourth\": 4, \"fifth\": 5, \"sixth\": 6, \"seventh\": 7, \"eighth\": 8,\\n    \"ninth\": 9, \"tenth\": 10, \"eleventh\": 11, \"twelfth\": 12, \"thirteenth\": 13, \"fourteenth\": 14,\\n    \"fifteenth\": 15, \"sixteenth\": 16, \"seventeenth\": 17, \"eighteenth\": 18, \"nineteenth\": 19,\\n    \"twentieth\": 20, \"thirtieth\": 30,\\n}\\n\\n\\ndef words_to_number(text):\\n    \"\"\"\\'four hundred and fifty-five point five\\' -> 455.5 ; \\'six three three oh\\' -> 6330 (digit run).\\n    Returns None when nothing numeric is found.\"\"\"\\n    t = str(text or \"\").lower().replace(\"-\", \" \").replace(\",\", \"\")\\n    m = re.search(r\"\\\\d+(?:\\\\.\\\\d+)?\", t)\\n    if m and not re.search(r\"[a-z]\", t.replace(\"point\", \"\").replace(\"and\", \"\").replace(\"dollars\", \"\").replace(\"euros\", \"\").replace(\"pounds\", \"\")):\\n        return float(m.group())\\n    toks = [w for w in re.findall(r\"[a-z]+|\\\\d+(?:\\\\.\\\\d+)?\", t) if w not in (\"and\", \"a\", \"dollars\", \"dollar\", \"euros\", \"euro\", \"pounds\", \"pound\", \"cents\", \"lira\")]\\n    if not toks:\\n        return None\\n    # pure digit run spoken one by one: \"six six three zero\"\\n    if all(w in NUM_WORDS and NUM_WORDS[w] < 10 or re.fullmatch(r\"\\\\d\", w) for w in toks) and len(toks) >= 2:\\n        return float(\"\".join(str(NUM_WORDS.get(w, w)) for w in toks))\\n    total, cur, frac, in_frac, seen = 0.0, 0.0, \"\", False, False\\n    for w in toks:\\n        if w == \"point\":\\n            in_frac = True\\n            continue\\n        if in_frac:\\n            if w in NUM_WORDS and NUM_WORDS[w] < 10:\\n                frac += str(NUM_WORDS[w]); continue\\n            if re.fullmatch(r\"\\\\d+\", w):\\n                frac += w; continue\\n            v = NUM_WORDS.get(w)\\n            if v is not None:\\n                frac += str(v); continue\\n            continue\\n        if re.fullmatch(r\"\\\\d+(?:\\\\.\\\\d+)?\", w):\\n            cur += float(w); seen = True\\n        elif w in NUM_WORDS:\\n            cur += NUM_WORDS[w]; seen = True\\n        elif w == \"hundred\":\\n            cur = (cur or 1) * 100; seen = True\\n        elif w == \"thousand\":\\n            total += (cur or 1) * 1000; cur = 0; seen = True\\n    if not seen:\\n        return None\\n    val = total + cur\\n    if frac:\\n        val += float(\"0.\" + frac)\\n    return val\\n\\n\\ndef parse_spoken_date(text, today, rules=None):\\n    \"\"\"Best-effort: returns a datetime.date or None. Handles ISO, \\'today\\', \\'tomorrow\\',\\n    \\'(this|next) <weekday>\\', bare weekday (next occurrence), \\'<day> <month>\\' / \\'<month> <day>\\' with\\n    digits or ordinal words, and \\'the 23rd\\'. `rules` may set next_weekday=\\'following_week\\' (default).\"\"\"\\n    rules = rules or {}\\n    t = str(text or \"\").lower().strip()\\n    m = re.search(r\"(\\\\d{4})-(\\\\d{2})-(\\\\d{2})\", t)\\n    if m:\\n        return datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))\\n    if \"day after tomorrow\" in t:\\n        return today + datetime.timedelta(days=2)\\n    if \"tomorrow\" in t:\\n        return today + datetime.timedelta(days=1)\\n    if re.search(r\"\\\\btoday\\\\b|\\\\bnow\\\\b|right away\", t):\\n        return today\\n    month = None\\n    for i, mn in enumerate(MONTHS):\\n        if re.search(r\"\\\\b\" + mn[:3] + r\"[a-z]*\\\\b\", t):\\n            month = i + 1\\n    day = None\\n    m = re.search(r\"\\\\b(\\\\d{1,2})(?:st|nd|rd|th)?\\\\b\", t)\\n    if m and 1 <= int(m.group(1)) <= 31:\\n        day = int(m.group(1))\\n    else:\\n        tt = t.replace(\"-\", \" \")\\n        for w, v in sorted(ORD_WORDS.items(), key=lambda kv: -len(kv[0])):\\n            mm = re.search(r\"\\\\b(twenty|thirty)\\\\s+\" + w + r\"\\\\b\", tt)\\n            if mm:\\n                day = NUM_WORDS[mm.group(1)] + v\\n                break\\n            if re.search(r\"\\\\b\" + w + r\"\\\\b\", tt):\\n                day = v\\n                break\\n    for i, wd in enumerate(WEEKDAYS):\\n        if re.search(r\"\\\\b\" + wd + r\"\\\\b\", t):\\n            if re.search(r\"\\\\bnext\\\\s+\" + wd, t) and rules.get(\"next_weekday\", \"following_week\") == \"following_week\":\\n                return weekday_in_week(today, i, \"next\")\\n            if re.search(r\"\\\\bthis\\\\s+\" + wd, t):\\n                return weekday_in_week(today, i, \"this\")\\n            if day is not None:\\n                break  # \"Monday the 26th\" -> use the day number below\\n            return upcoming_weekday(today, i, include_today=False)\\n    if day is not None:\\n        y = today.year\\n        mth = month or today.month\\n        try:\\n            d = datetime.date(y, mth, day)\\n        except ValueError:\\n            return None\\n        if month is None and d < today:\\n            mth = mth % 12 + 1\\n            y = y + (1 if mth == 1 else 0)\\n            try:\\n                d = datetime.date(y, mth, day)\\n            except ValueError:\\n                return None\\n        elif d < today - datetime.timedelta(days=180):\\n            d = datetime.date(y + 1, mth, day)\\n        return d\\n    return None\\n\\n\\ndef _tokens(text):\\n    t = str(text or \"\").lower()\\n    t = re.sub(r\"(\\\\d)(st|nd|rd|th)\\\\b\", r\"\\\\1\", t)\\n    t = re.sub(r\"[-,./]\", \" \", t)\\n    return [w for w in t.split() if w not in (\"the\", \"of\", \"and\", \"a\", \"um\", \"uh\", \"er\", \"its\", \"it\\'s\", \"is\", \"my\")]\\n\\n\\nUNITS = dict(zero=0, oh=0, o=0, one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9)\\nTEENS = dict(ten=10, eleven=11, twelve=12, thirteen=13, fourteen=14, fifteen=15, sixteen=16, seventeen=17,\\n             eighteen=18, nineteen=19)\\nTENS = dict(twenty=20, thirty=30, forty=40, fifty=50, sixty=60, seventy=70, eighty=80, ninety=90)\\n\\n\\ndef digit_groups(tokens):\\n    \"\"\"Spoken digit string -> digits, keeping leading zeros: \\'oh three five eight\\' -> \\'0358\\',\\n    \\'forty four seventy one\\' -> \\'4471\\', \\'double seven two one\\' -> \\'7721\\'.\"\"\"\\n    out, i = \"\", 0\\n    while i < len(tokens):\\n        w = tokens[i]\\n        if re.fullmatch(r\"\\\\d+\", w):\\n            out += w\\n        elif w in (\"double\", \"triple\") and i + 1 < len(tokens) and tokens[i + 1] in UNITS:\\n            out += str(UNITS[tokens[i + 1]]) * (2 if w == \"double\" else 3)\\n            i += 1\\n        elif w in UNITS:\\n            out += str(UNITS[w])\\n        elif w in TEENS:\\n            out += str(TEENS[w])\\n        elif w in TENS:\\n            if i + 1 < len(tokens) and tokens[i + 1] in UNITS and UNITS[tokens[i + 1]] > 0 and tokens[i + 1] not in (\"oh\", \"o\"):\\n                out += str(TENS[w] + UNITS[tokens[i + 1]])\\n                i += 1\\n            else:\\n                out += str(TENS[w])\\n        elif w == \"hundred\" and out:\\n            out += \"00\"\\n        i += 1\\n    return out\\n\\n\\ndef cardinal(tokens):\\n    \"\"\"\\'four thousand four hundred seventy one\\' -> 4471 ; None if no number words.\"\"\"\\n    total, cur, seen = 0, 0, False\\n    for w in tokens:\\n        if re.fullmatch(r\"\\\\d+\", w):\\n            cur += int(w); seen = True\\n        elif w in UNITS:\\n            cur += UNITS[w]; seen = True\\n        elif w in TEENS:\\n            cur += TEENS[w]; seen = True\\n        elif w in TENS:\\n            cur += TENS[w]; seen = True\\n        elif w == \"hundred\":\\n            cur = (cur or 1) * 100; seen = True\\n        elif w == \"thousand\":\\n            total += (cur or 1) * 1000; cur = 0; seen = True\\n    return total + cur if seen else None\\n\\n\\ndef digits_only(text):\\n    toks = _tokens(text)\\n    if any(w in (\"hundred\", \"thousand\") for w in toks):\\n        n = cardinal(toks)\\n        return str(n) if n is not None else \"\"\\n    return digit_groups(toks)\\n\\n\\ndef spoken_year(tokens):\\n    \"\"\"Year from the tokens left after month/day are removed.\"\"\"\\n    for w in tokens:\\n        if re.fullmatch(r\"(19|20)\\\\d\\\\d\", w):\\n            return int(w)\\n    toks = [w for w in tokens if w in UNITS or w in TEENS or w in TENS or w in (\"hundred\", \"thousand\") or re.fullmatch(r\"\\\\d{1,2}\", w)]\\n    if not toks:\\n        return None\\n    if \"thousand\" in toks:\\n        n = cardinal(toks)\\n        return n if n and 1900 <= n <= 2100 else None\\n    if toks[0] in (\"nineteen\", \"twenty\") and len(toks) >= 2:\\n        rest = digit_groups(toks[1:])\\n        if rest.isdigit() and len(rest) <= 2:\\n            return (1900 if toks[0] == \"nineteen\" else 2000) + int(rest)\\n    g = digit_groups(toks)\\n    if len(g) == 4 and g[:2] in (\"19\", \"20\"):\\n        return int(g)\\n    if len(g) == 2:\\n        y = int(g)\\n        return 1900 + y if y > 30 else 2000 + y\\n    return None\\n\\n\\ndef spoken_day(tokens):\\n    \"\"\"(day, tokens_without_day)\"\"\"\\n    for i, w in enumerate(tokens):\\n        if w in (\"twenty\", \"thirty\") and i + 1 < len(tokens) and tokens[i + 1] in ORD_WORDS and ORD_WORDS[tokens[i + 1]] < 10:\\n            return TENS[w] + ORD_WORDS[tokens[i + 1]], tokens[:i] + tokens[i + 2:]\\n    for i, w in enumerate(tokens):\\n        if w in ORD_WORDS:\\n            return ORD_WORDS[w], tokens[:i] + tokens[i + 1:]\\n    for i, w in enumerate(tokens):\\n        if re.fullmatch(r\"\\\\d{1,2}\", w) and 1 <= int(w) <= 31:\\n            return int(w), tokens[:i] + tokens[i + 1:]\\n    for i, w in enumerate(tokens):   # \"January eight 1991\", \"the eight of May\"\\n        if w in UNITS and UNITS[w] > 0:\\n            return UNITS[w], tokens[:i] + tokens[i + 1:]\\n        if w in TEENS and i + 1 < len(tokens) and tokens[i + 1] in TENS:\\n            continue\\n        if w in TEENS:\\n            return TEENS[w], tokens[:i] + tokens[i + 1:]\\n    return None, tokens\\n\\n\\ndef parse_birth_date(text, order=\"dmy\"):\\n    \"\"\"Spoken or numeric birth date -> \\'YYYY-MM-DD\\' or \\'\\'. Numeric-only dates use `order` (dmy or mdy).\"\"\"\\n    raw = str(text or \"\").lower()\\n    m = re.search(r\"(\\\\d{4})-(\\\\d{1,2})-(\\\\d{1,2})\", raw)\\n    if m:\\n        return \"%04d-%02d-%02d\" % (int(m.group(1)), int(m.group(2)), int(m.group(3)))\\n    toks = _tokens(raw)\\n    month, mi = None, None\\n    for i, w in enumerate(toks):\\n        for j, mn in enumerate(MONTHS):\\n            if len(w) >= 3 and mn.startswith(w[:3]) and (w == mn or w == mn[:3] or w == mn[:4] or mn.startswith(w)):\\n                month, mi = j + 1, i\\n                break\\n        if month:\\n            break\\n    if month:\\n        rest = toks[:mi] + toks[mi + 1:]\\n        # a 4-digit year or a spoken year usually comes after the day; take the day first\\n        year_tok = [w for w in rest if re.fullmatch(r\"(19|20)\\\\d\\\\d\", w)]\\n        if year_tok:\\n            rest2 = [w for w in rest if w != year_tok[0]]\\n            day, _ = spoken_day(rest2)\\n            year = int(year_tok[0])\\n        else:\\n            day, left = spoken_day(rest)\\n            year = spoken_year(left)\\n        if day and year and 1 <= day <= 31:\\n            return \"%04d-%02d-%02d\" % (year, month, day)\\n        return \"\"\\n    nums = re.findall(r\"\\\\d+\", raw)\\n    if len(nums) >= 3:\\n        a, b, c = int(nums[0]), int(nums[1]), int(nums[2])\\n        if len(nums[0]) == 4:\\n            return \"%04d-%02d-%02d\" % (a, b, c)\\n        if c < 100:\\n            c += 1900 if c > 30 else 2000\\n        d, mth = (a, b) if order == \"dmy\" else (b, a)\\n        if 1 <= mth <= 12 and 1 <= d <= 31:\\n            return \"%04d-%02d-%02d\" % (c, mth, d)\\n    return \"\"\\n\\n\\ndef speak_date(d):\\n    return d.strftime(\"%A \") + str(d.day) + d.strftime(\" %B\")\\n\\n\\ndef speak_amount(x):\\n    x = round(float(x), 2)\\n    return (\"%d\" % x) if x == int(x) else (\"%.2f\" % x)\\n\\n\\ndef calendar_text(today, days=21):\\n    rows = []\\n    for i in range(days):\\n        d = today + datetime.timedelta(days=i)\\n        tag = \"business day\" if is_business_day(d) else (\"holiday\" if iso(d) in P[\"holidays\"] else \"weekend\")\\n        rows.append(iso(d) + \" \" + d.strftime(\"%A\") + \" (\" + tag + \")\")\\n    return \"\\\\n\".join(rows)\\n\\n\\ndef dumps(x):\\n    return json.dumps(x, ensure_ascii=False)\\n\\n\"\"\"Call state machine that runs INSIDE the phone agent, in the `step` code node, after every customer turn\\nand after every bank call.\\n\\nContract with the workflow (built by builder/compile.py):\\n  in : V (the Freya `vars` dict). Customer input arrives in u_kind / u_text / u_date / u_amount / u_scope,\\n       extracted by the talk node that just ran. Bank results arrive as flattened keys\\n       \\'<api node>_response.data.<field>\\' (e.g. \\'api_verify_response.data.verified\\').\\n  out: V[\\'say\\'] (spoken verbatim by the next node), V[\\'next\\'] (node key to route to),\\n       slot variables baked into the next bank call (q_field, q_answer, p_product, ...).\\nEverything brief-specific lives in S (the spec), injected by the compiler. The weak agent model never\\ndecides anything here; it only classifies what the customer said.\\n\\nSandbox rules: imports limited to json/re/datetime; the source must never contain a double brace pair.\\n\"\"\"\\nimport datetime\\nimport json\\nimport re\\n\\n\\n\\n\\n\\n# ----------------------------------------------------------------------------------------------- helpers\\ndef L(key, **kw):\\n    \"\"\"Spec line with {placeholders} filled. Unknown keys are left as-is, never raise.\"\"\"\\n    t = S.get(\"lines\", dict()).get(key, \"\")\\n    for k, v in kw.items():\\n        t = t.replace(\"{\" + k + \"}\", str(v))\\n    return t.strip()\\n\\n\\ndef money(x):\\n    s = speak_amount(x)\\n    w = S.get(\"currency_word\", \"\")\\n    return (s + \" \" + w).strip()\\n\\n\\ndef say(V, *parts):\\n    pre = V.pop(\"_prefix\", \"\") if \"_prefix\" in V else \"\"\\n    V[\"say\"] = \" \".join(p.strip() for p in (pre,) + parts if p and p.strip())\\n\\n\\ndef jget(V, key, default=None):\\n    v = V.get(key)\\n    if v is None or v == \"\":\\n        return default\\n    if isinstance(v, str):\\n        try:\\n            return json.loads(v)\\n        except Exception:\\n            return v\\n    return v\\n\\n\\ndef st(V):\\n    return jget(V, \"_state\", None) or dict()\\n\\n\\ndef put(V, state):\\n    V[\"_state\"] = json.dumps(state)\\n\\n\\ndef truthy(x):\\n    return str(x).strip().lower() in (\"true\", \"1\", \"yes\")\\n\\n\\ndef resp(V, node, field):\\n    v = V.get(node + \"_response.data.\" + field)\\n    if v is None:\\n        d = V.get(node + \"_response.data\")\\n        if isinstance(d, dict):\\n            v = d.get(field)\\n    return v\\n\\n\\ndef num(x):\\n    try:\\n        if x is None or x == \"\":\\n            return None\\n        return float(x)\\n    except Exception:\\n        return None\\n\\n\\ndef today_of(V):\\n    return parse_now(V.get(\"now\")).date()\\n\\n\\ndef ev(name):\\n    \"\"\"Event -> dict(outcome, reason, queue, note).\"\"\"\\n    return S.get(\"events\", dict()).get(name, dict())\\n\\n\\n# ----------------------------------------------------------------------------------------------- products\\ndef read_products(V):\\n    out, i = [], 0\\n    while True:\\n        base = \"api_account_response.data.products.\" + str(i) + \".\"\\n        pid = V.get(base + \"product_id\")\\n        if pid is None or pid == \"\":\\n            break\\n        p = dict()\\n        for k in list(V.keys()):\\n            if k.startswith(base):\\n                p[k[len(base):]] = V[k]\\n        out.append(p)\\n        i += 1\\n    if not out:\\n        raw = V.get(\"api_account_response.data.products\")\\n        if isinstance(raw, str):\\n            try:\\n                raw = json.loads(raw)\\n            except Exception:\\n                raw = None\\n        if isinstance(raw, list):\\n            out = [x for x in raw if isinstance(x, dict)]\\n    return out\\n\\n\\ndef band_for(days_late):\\n    for b in S[\"bands\"]:\\n        lo, hi = b.get(\"min\", -10 ** 9), b.get(\"max\", 10 ** 9)\\n        if lo <= days_late <= hi:\\n            return b\\n    return S[\"bands\"][-1]\\n\\n\\ndef product_facts(V, raw):\\n    today = today_of(V)\\n    typ = str(raw.get(\"type\", \"\"))\\n    names = S[\"products\"][\"names\"]\\n    name = names.get(typ, typ.replace(\"_\", \" \"))\\n    for k, v in raw.items():\\n        name = name.replace(\"{\" + k + \"}\", str(v))\\n    full = num(raw.get(S[\"products\"].get(\"amount_field\", \"past_due\"))) or 0.0\\n    ff = S[\"products\"][\"floor_field\"].get(typ)\\n    floor = num(raw.get(ff)) if ff else None\\n    if floor is None and S[\"products\"].get(\"floor_pct\"):\\n        floor = round(full * float(S[\"products\"][\"floor_pct\"]) / 100.0, 2)\\n    if floor is None:\\n        floor = full\\n    dl = int(num(raw.get(S[\"products\"].get(\"days_field\", \"days_late\"))) or 0)\\n    b = band_for(dl)\\n    deadline = cal_deadline(today, b[\"deadline\"])\\n    return dict(id=str(raw.get(\"product_id\")), type=typ, name=name, full=full, floor=floor, days_late=dl,\\n                band=b.get(\"name\", \"\"), deadline=iso(deadline), attempts=int(b.get(\"attempts\", 1)),\\n                used=0, too_much=False, floor_offered=False, vague_asked=False, offer=None,\\n                agreed=None, status=\"open\", reason=\"\", refused_offers=[], raw=raw)\\n\\n\\ndef cal_deadline(today, rule):\\n    return deadline(today, rule)\\n\\n\\n# ----------------------------------------------------------------------------------------------- dates\\ndef ladder_date(today, which, p):\\n    if which == \"today\":\\n        return today\\n    if which == \"deadline\":\\n        return datetime.date.fromisoformat(p[\"deadline\"])\\n    if which == \"last_business_day_this_week\":\\n        d = last_business_day_of_week(today, 0)\\n        if d is None or d <= today:\\n            d = last_business_day_of_week(today, 1)\\n        return d\\n    if which == \"last_business_day_next_week\":\\n        return last_business_day_of_week(today, 1)\\n    if which.startswith(\"business_days_after:\"):\\n        return add_business_days(today, int(which.split(\":\")[1]))\\n    return datetime.date.fromisoformat(p[\"deadline\"])\\n\\n\\ndef check_date(V, p, d):\\n    \"\"\"-> (status, date). status: ok | past | after_deadline | not_business (date = proposal to offer).\"\"\"\\n    today = today_of(V)\\n    dl = datetime.date.fromisoformat(p[\"deadline\"])\\n    if d < today:\\n        return \"past\", None\\n    if d > dl:\\n        return \"after_deadline\", dl\\n    if not is_business_day(d):\\n        nb = next_business_day(d)\\n        if nb > dl:\\n            return \"after_deadline\", dl\\n        return \"not_business\", nb\\n    return \"ok\", d\\n\\n\\ndef check_amount(p, a):\\n    if a is None:\\n        return \"none\", None\\n    a = round(float(a), 2)\\n    if a > p[\"full\"] + 0.005:\\n        return \"ok\", p[\"full\"]\\n    if a + 0.005 < p[\"floor\"]:\\n        return \"below_floor\", p[\"floor\"]\\n    return \"ok\", a\\n\\n\\ndef spoken(d):\\n    if isinstance(d, str):\\n        d = datetime.date.fromisoformat(d)\\n    return speak_date(d)\\n\\n\\n# ----------------------------------------------------------------------------------------------- input\\ndef take_input(V, stage):\\n    \"\"\"Extracted values of the talk node that just ran (variables are named per stage: <stage>_kind ...).\"\"\"\\n    g = lambda f: V.get(stage + \"_\" + f)\\n    k = str(g(\"kind\") or \"none\").strip().lower()\\n    t = str(g(\"text\") or \"\").strip()\\n    dt = str(g(\"date\") or \"\").strip()\\n    a = num(g(\"amount\"))\\n    sc = str(g(\"scope\") or \"none\").strip().lower()\\n    side = str(g(\"side\") or \"none\").strip().lower()\\n    if (stage + \"_side\") in V:\\n        V[stage + \"_side\"] = \"none\"\\n    if side != k and side in (\"robot\", \"scam\") and not (stage in (\"open\", \"tp\") and k == \"unclear\"):\\n        V[\"_prefix\"] = L(side)\\n    elif side == \"question\" and k not in (\"question\", \"purpose\", \"asks_why\", \"unclear\", \"none\") and stage not in (\"open\", \"tp\", \"id\"):\\n        V[\"_prefix\"] = L(\"no_info\")\\n    V[\"_norm\"] = str(g(\"norm\") or \"\").strip()\\n    for f in (\"text\", \"date\", \"norm\"):\\n        if (stage + \"_\" + f) in V:\\n            V[stage + \"_\" + f] = \"\"\\n    if (stage + \"_amount\") in V:\\n        V[stage + \"_amount\"] = 0\\n    if (stage + \"_kind\") in V:\\n        V[stage + \"_kind\"] = \"none\"\\n    if (stage + \"_scope\") in V:\\n        V[stage + \"_scope\"] = \"none\"\\n    if a == 0:\\n        a = None\\n    return k, t, dt, a, sc\\n\\n\\ndef go(V, node):\\n    V[\"next\"] = node\\n\\n\\ndef talk(V, stage, s):\\n    s[\"await\"] = \"talk\"\\n    s[\"stage\"] = stage\\n    put(V, s)\\n    go(V, \"talk_open_again\" if stage == \"open\" else \"talk_\" + stage)\\n\\n\\ndef call(V, s, api, **slots):\\n    for k in list(V.keys()):            # stale results of an earlier call to the same node\\n        if k.startswith(api + \"_response.data\"):\\n            V[k] = \"\"\\n    for k, v in slots.items():\\n        V[k] = v\\n    s[\"await\"] = api\\n    put(V, s)\\n    go(V, api)\\n\\n\\n# ----------------------------------------------------------------------------------------------- closing\\ndef close(V, s, event, pre=\"\"):\\n    e = ev(event)\\n    s[\"close_event\"] = event\\n    V[\"c_outcome\"] = e.get(\"outcome\", \"\")\\n    V[\"c_reason\"] = e.get(\"reason\", \"\") or \"\"\\n    s[\"stage\"] = \"closing\"\\n    say(V, pre, L(\"goodbye\"))\\n    s[\"await\"] = \"api_close\"\\n    put(V, s)\\n    go(V, \"api_close\")\\n\\n\\ndef finish(V, s, pre=\"\"):\\n    \"\"\"End of a verified call: notes (if the brief uses them), then the outcome from the product states.\"\"\"\\n    prods = s.get(\"products\", [])\\n    if S.get(\"notes\", dict()).get(\"enabled\") and not s.get(\"transferred\"):\\n        for p in prods:\\n            if p[\"status\"] in (\"refused\", \"hardship\", \"dispute\", \"paid\", \"service_error\") and not p.get(\"noted\"):\\n                p[\"noted\"] = True\\n                s[\"pre\"] = pre\\n                note_reason = ev(p[\"status\"]).get(\"note\") or p[\"status\"]\\n                return call(V, s, \"api_note\", n_product=p[\"id\"], n_reason=note_reason)\\n    pre = s.pop(\"pre\", pre) if \"pre\" in s and not pre else pre\\n    if s.get(\"transferred\"):\\n        return close(V, s, \"transfer_\" + s[\"transferred\"], pre)\\n    if any(p[\"status\"] == \"recorded\" for p in prods):\\n        return close(V, s, \"promise\", pre)\\n    reasons = [p[\"status\"] for p in prods]\\n    if reasons and all(r == \"paid\" for r in reasons):\\n        return close(V, s, \"paid\", pre)\\n    for r in reasons:\\n        if r != \"paid\" and r in S.get(\"events\", dict()):\\n            return close(V, s, r, pre)\\n    return close(V, s, \"refused\", pre)\\n\\n\\n# ----------------------------------------------------------------------------------------------- stages\\ndef stage_init(V, s):\\n    s.update(stage=\"open\", asks=1, questions=0, not_talk=0)\\n    say(V, L(\"opening\"), L(\"confirm_ask\", **names(V)))\\n    talk(V, \"open\", s)\\n\\n\\ndef names(V):\\n    return dict(title=V.get(\"title\", \"\"), first_name=V.get(\"first_name\", \"\"), last_name=V.get(\"last_name\", \"\"))\\n\\n\\ndef common_intents(V, s, k, again, verified):\\n    \"\"\"Robot / scam / human / no-talk handled the same in every stage. Returns True if handled.\"\"\"\\n    if k == \"robot\":\\n        say(V, L(\"robot\"), again)\\n        talk(V, s[\"stage\"], s)\\n        return True\\n    if k == \"scam\":\\n        say(V, L(\"scam\"), again)\\n        talk(V, s[\"stage\"], s)\\n        return True\\n    if k == \"human\":\\n        if not s.get(\"human_asked\") and S.get(\"human\", dict()).get(\"ask_first\", True):\\n            s[\"human_asked\"] = True\\n            say(V, L(\"human_ask_help\"))\\n            talk(V, s[\"stage\"], s)\\n            return True\\n        s[\"transferred\"] = \"human\"\\n        s[\"say_after_transfer\"] = L(\"transfer\")\\n        call(V, s, \"api_transfer\", t_queue=ev(\"transfer_human\").get(\"queue\", \"general\"))\\n        return True\\n    if k in (\"not_talk\", \"refuse_talk\"):\\n        s[\"not_talk\"] = s.get(\"not_talk\", 0) + 1\\n        if s[\"not_talk\"] >= S.get(\"max_not_talk\", 2):\\n            if verified:\\n                for p in s.get(\"products\", []):\\n                    if p[\"status\"] in (\"open\", \"agreed\"):\\n                        p[\"status\"] = \"refused\"\\n                finish(V, s)\\n            else:\\n                close(V, s, \"id_declined\")\\n            return True\\n        say(V, L(\"not_talk_once\"), again)\\n        talk(V, s[\"stage\"], s)\\n        return True\\n    return False\\n\\n\\ndef stage_open(V, s, k, t):\\n    again = L(\"confirm_ask\", **names(V))\\n    if k == \"confirmed\":\\n        return start_identity(V, s)\\n    if k == \"third_party\":\\n        s[\"stage\"] = \"tp\"\\n        s[\"tp_tries\"] = 0\\n        say(V, L(\"tp_ask\"))\\n        return talk(V, \"tp\", s)\\n    if k == \"wrong_number\":\\n        return close(V, s, \"wrong_number\", L(\"wrong_number\"))\\n    if k == \"deceased\":\\n        return close(V, s, \"deceased\", L(\"condolence\"))\\n    if k in (\"robot\", \"scam\", \"purpose\", \"question\"):\\n        s[\"asks\"] = s.get(\"asks\", 1) + 1\\n        line = dict(robot=L(\"robot\"), scam=L(\"scam\"), purpose=L(\"purpose_before_verify\")).get(k, L(\"no_info\"))\\n        if s[\"asks\"] > S[\"confirm\"][\"max_asks\"] + 1:\\n            return close(V, s, \"unclear\")\\n        say(V, line, again)\\n        return talk(V, \"open\", s)\\n    if common_intents(V, s, k, again, False):\\n        return\\n    # unclear / hello / anything else\\n    if s.get(\"asks\", 1) >= S[\"confirm\"][\"max_asks\"]:\\n        return close(V, s, \"unclear\")\\n    s[\"asks\"] = s.get(\"asks\", 1) + 1\\n    say(V, again)\\n    return talk(V, \"open\", s)\\n\\n\\ndef stage_tp(V, s, k, t, dtxt):\\n    today = today_of(V)\\n    if k == \"wrong_number\":\\n        return close(V, s, \"wrong_number\", L(\"wrong_number\"))\\n    if k == \"deceased\":\\n        return close(V, s, \"deceased\", L(\"condolence\"))\\n    if k == \"customer_now\":   # the customer came to the phone\\n        s[\"asks\"] = 1\\n        say(V, L(\"confirm_ask\", **names(V)))\\n        return talk(V, \"open\", s)\\n    if k in (\"purpose\", \"offers_pay\", \"question\", \"robot\", \"scam\"):\\n        line = L(\"robot\") if k == \"robot\" else (L(\"scam\") if k == \"scam\" else L(\"tp_no_info\"))\\n        say(V, line, L(\"tp_ask\"))\\n        return talk(V, \"tp\", s)\\n    if k in (\"gives_time\", \"unclear\", \"none\") and (dtxt or t):\\n        d, hm = parse_callback(dtxt + \" \" + t, today, V)\\n        ok = d is not None and hm is not None and callback_ok(V, d, hm)\\n        if ok:\\n            s[\"cb\"] = [iso(d), hm]\\n            s[\"pre\"] = L(\"tp_booked\", date=spoken(d), time=hm)\\n            return call(V, s, \"api_callback\", cb_date=iso(d), cb_time=hm)\\n        s[\"tp_tries\"] = s.get(\"tp_tries\", 0) + 1\\n        if s[\"tp_tries\"] >= S[\"callback\"].get(\"max_asks\", 2):\\n            return close(V, s, \"no_callback\")\\n        if d is not None and hm is None:\\n            say(V, L(\"tp_ask_time\"))\\n        else:\\n            say(V, L(\"tp_outside_window\"))\\n        return talk(V, \"tp\", s)\\n    if k in (\"no_time\", \"declines\"):\\n        return close(V, s, \"no_callback\")\\n    say(V, L(\"tp_ask\"))\\n    return talk(V, \"tp\", s)\\n\\n\\ndef parse_callback(text, today, V):\\n    t = text.lower()\\n    d = parse_spoken_date(t, today, S.get(\"date_rules\"))\\n    if d is None and re.search(r\"\\\\b(this )?(morning|afternoon|evening|later|tonight)\\\\b\", t):\\n        d = today\\n    hm = None\\n    m = re.search(r\"\\\\b(\\\\d{1,2})(?::|\\\\.)(\\\\d{2})\\\\s*(am|pm|a\\\\.m\\\\.|p\\\\.m\\\\.)?\", t)\\n    if m:\\n        h, mi, ap = int(m.group(1)), int(m.group(2)), (m.group(3) or \"\")\\n    else:\\n        m = re.search(r\"\\\\b(\\\\d{1,2})\\\\s*(am|pm|a\\\\.m\\\\.|p\\\\.m\\\\.|o\\'clock|oclock)\", t)\\n        if m:\\n            h, mi, ap = int(m.group(1)), 0, m.group(2)\\n        else:\\n            m = re.search(r\"\\\\b(?:at|around|about)\\\\s+([a-z]+)(?:\\\\s+(thirty|fifteen|forty five))?\", t)\\n            if m and m.group(1) in NUM_WORDS:\\n                h = NUM_WORDS[m.group(1)]\\n                mi = dict(thirty=30, fifteen=15).get(m.group(2) or \"\", 0)\\n                ap = \"\"\\n            else:\\n                return d, None\\n    if ap.startswith(\"p\") and h < 12:\\n        h += 12\\n    if not ap and h < 8 and (\"afternoon\" in t or \"evening\" in t or h <= 7):\\n        h += 12\\n    if \"noon\" in t and not m:\\n        h, mi = 12, 0\\n    if h > 23 or mi > 59:\\n        return d, None\\n    return d, \"%02d:%02d\" % (h, mi)\\n\\n\\ndef callback_ok(V, d, hm):\\n    c = S[\"callback\"]\\n    now = parse_now(V.get(\"now\"))\\n    today = now.date()\\n    allowed = []\\n    for k in c.get(\"days\", [\"today\", \"next_business_day\"]):\\n        if k == \"today\":\\n            allowed.append(today)\\n        elif k == \"next_business_day\":\\n            allowed.append(next_business_day(today, include_self=False))\\n        elif k == \"tomorrow\":\\n            allowed.append(today + datetime.timedelta(days=1))\\n        elif k.startswith(\"within_business_days:\"):\\n            n = int(k.split(\":\")[1])\\n            x = today\\n            for _ in range(n):\\n                x = next_business_day(x, include_self=False)\\n                allowed.append(x)\\n    if d not in allowed:\\n        return False\\n    if c.get(\"business_days_only\") and not is_business_day(d):\\n        return False\\n    if not (c.get(\"start\", \"00:00\") <= hm <= c.get(\"end\", \"23:59\")):\\n        return False\\n    if c.get(\"after_now\", True) and d == today and hm <= now.strftime(\"%H:%M\"):\\n        return False\\n    return True\\n\\n\\ndef start_identity(V, s):\\n    s.update(stage=\"id\", qi=0, wrong=0, declined=0, partial=\"\", id_explained=False)\\n    q = S[\"identity\"][\"questions\"][0]\\n    say(V, L(\"id_intro\"), q[\"ask\"])\\n    return talk(V, \"id\", s)\\n\\n\\ndef stage_id(V, s, k, t):\\n    qs = S[\"identity\"][\"questions\"]\\n    q = qs[s[\"qi\"]]\\n    if k == \"asks_why\" and not s.get(\"why_answered\"):\\n        s[\"why_answered\"] = True          # explaining why the questions are needed is not a refusal\\n        say(V, L(\"id_why\"), q[\"ask\"])\\n        return talk(V, \"id\", s)\\n    purpose_declines = S[\"identity\"].get(\"purpose_is_decline\", S[\"identity\"].get(\"why_is_decline\", True))\\n    if k in (\"refuses\", \"asks_why\") or (k == \"purpose\" and purpose_declines) or (k == \"question\" and S[\"identity\"].get(\"question_is_decline\")):\\n        s[\"declined\"] = s.get(\"declined\", 0) + 1\\n        if s[\"declined\"] >= 2:\\n            return close(V, s, \"id_declined\", L(\"id_declined\"))\\n        say(V, L(\"id_explain\"), q[\"ask\"])\\n        return talk(V, \"id\", s)\\n    if k in (\"robot\", \"scam\", \"human\", \"not_talk\"):\\n        if common_intents(V, s, k, q[\"ask\"], False):\\n            return\\n    if k == \"wrong_person\":\\n        return close(V, s, \"wrong_number\", L(\"wrong_number\"))\\n    combined = (s.get(\"partial\", \"\") + \" \" + t).strip()\\n    ans = normalize_answer(q, combined if q.get(\"kind\") in (\"digits\", \"date\", \"year\") else t)\\n    if not ans and q.get(\"kind\") in (\"date\", \"year\") and t and not s.get(\"partial\"):\\n        ans = \"partial\"            # e.g. \"the fourteenth of March...\" with the year still to come\\n    if ans == \"partial\":\\n        s[\"partial\"] = (s.get(\"partial\", \"\") + \" \" + t).strip()\\n        say(V, L(\"id_continue\"))\\n        return talk(V, \"id\", s)\\n    s[\"partial\"] = \"\"\\n    if not ans:\\n        ans = norm_fallback(q, V.get(\"_norm\", \"\"))\\n    if not ans:\\n        s[\"repeats\"] = s.get(\"repeats\", 0) + 1\\n        say(V, L(\"id_repeat\"), q[\"ask\"] if s[\"repeats\"] < 2 else (L(\"id_format_hint\") or q[\"ask\"]))\\n        return talk(V, \"id\", s)\\n    s[\"repeats\"] = 0\\n    s[\"last_answer\"] = ans\\n    return call(V, s, \"api_verify\", q_field=q[\"field\"], q_answer=ans)\\n\\n\\ndef norm_fallback(q, norm):\\n    \"\"\"The extractor\\'s own normalisation, used only when our parser found nothing.\"\"\"\\n    norm = str(norm or \"\").strip()\\n    if not norm:\\n        return \"\"\\n    kind = q.get(\"kind\", \"text\")\\n    if kind == \"date\":\\n        return norm if re.fullmatch(r\"(19|20)\\\\d\\\\d-\\\\d\\\\d-\\\\d\\\\d\", norm) else \"\"\\n    if kind == \"digits\":\\n        d = re.sub(r\"\\\\D\", \"\", norm)\\n        n = int(q.get(\"length\") or 0)\\n        return d if d and (not n or len(d) == n) else \"\"\\n    if kind == \"year\":\\n        return norm if re.fullmatch(r\"(19|20)\\\\d\\\\d\", norm) else \"\"\\n    if kind == \"upper\":\\n        return re.sub(r\"[^A-Za-z0-9]\", \"\", norm).upper()\\n    return norm\\n\\n\\ndef normalize_answer(q, text):\\n    kind = q.get(\"kind\", \"text\")\\n    if not text:\\n        return \"\"\\n    if kind == \"date\":\\n        return parse_birth_date(text, S[\"identity\"].get(\"date_order\", \"dmy\"))\\n    if kind == \"digits\":\\n        d = digits_only(text)\\n        n = int(q.get(\"length\") or 0)\\n        if n and 0 < len(d) < n:\\n            return \"partial\"\\n        if n and len(d) > n:\\n            d = d[-n:]\\n        return d\\n    if kind == \"year\":\\n        m = re.search(r\"\\\\b(19\\\\d\\\\d|20\\\\d\\\\d)\\\\b\", text)\\n        if m:\\n            return m.group(1)\\n        n = words_to_number(text)\\n        if n and 1900 <= n <= 2100:\\n            return str(int(n))\\n        b = parse_birth_date(\"1 january \" + text)\\n        return b[:4] if b else \"\"\\n    if kind == \"upper\":\\n        return re.sub(r\"[^A-Za-z0-9]\", \"\", text).upper()\\n    return text.strip()\\n\\n\\ndef after_verify(V, s):\\n    node = \"api_verify\"\\n    qs = S[\"identity\"][\"questions\"]\\n    R = S[\"identity\"].get(\"response\", dict())\\n    ok = resp(V, node, R.get(\"ok\", \"ok\"))\\n    verified = resp(V, node, R.get(\"verified\", \"verified\"))\\n    allv = resp(V, node, R.get(\"all_verified\", \"all_verified\"))\\n    left = resp(V, node, R.get(\"left\", \"wrong_answers_left\"))\\n    hint = resp(V, node, R.get(\"hint\", \"hint\"))\\n    V[\"api_verify_response.data.hint\"] = \"\"\\n    q = qs[s[\"qi\"]]\\n    if ok is not None and not truthy(ok) and not truthy(verified):\\n        err = str(resp(V, node, \"error\") or \"\").lower()\\n        if \"locked\" in err or \"ended\" in err or \"too many\" in err:\\n            return close(V, s, \"id_failed\", L(\"id_failed\"))\\n        say(V, L(\"id_repeat\"), q[\"ask\"])\\n        return talk(V, \"id\", s)\\n    if truthy(allv) or (truthy(verified) and s[\"qi\"] + 1 >= len(qs)):\\n        return call(V, s, \"api_account\")\\n    if truthy(verified):\\n        s[\"qi\"] += 1\\n        say(V, qs[s[\"qi\"]][\"ask\"])\\n        return talk(V, \"id\", s)\\n    if hint and str(hint) in S[\"identity\"].get(\"hints\", dict()):\\n        say(V, S[\"identity\"][\"hints\"][str(hint)])\\n        return talk(V, \"id\", s)\\n    s[\"wrong\"] = s.get(\"wrong\", 0) + 1\\n    lv = num(left)\\n    if (lv is not None and lv <= 0) or s[\"wrong\"] >= S[\"identity\"].get(\"max_wrong\", 3):\\n        return close(V, s, \"id_failed\", L(\"id_failed\"))\\n    say(V, L(\"id_wrong\"), q[\"ask\"])\\n    return talk(V, \"id\", s)\\n\\n\\ndef after_account(V, s):\\n    raws = read_products(V)\\n    if not raws:\\n        n = s.get(\"acct_tries\", 0) + 1\\n        s[\"acct_tries\"] = n\\n        if n < 2:\\n            return call(V, s, \"api_account\")\\n        return close(V, s, \"service_error\", L(\"no_info\"))\\n    prods = [product_facts(V, r) for r in raws]\\n    s[\"products\"] = prods\\n    s[\"ci\"] = -1\\n    s[\"stage\"] = \"nego\"\\n    lines = [L(\"disclose_intro\")]\\n    for p in prods:\\n        lines.append(L(\"product_line\", name=p[\"name\"], amount=money(p[\"full\"]), days=p[\"days_late\"]))\\n    if len(prods) > 1:\\n        lines.append(L(\"ask_today_multi\"))\\n    else:\\n        lines.append(L(\"ask_today\"))\\n    s[\"phase\"] = \"today\"\\n    say(V, *lines)\\n    return talk(V, \"nego\", s)\\n\\n\\ndef cur(s):\\n    ci = s.get(\"ci\", -1)\\n    if 0 <= ci < len(s[\"products\"]):\\n        return s[\"products\"][ci]\\n    return None\\n\\n\\ndef next_open(s):\\n    for i, p in enumerate(s[\"products\"]):\\n        if p[\"status\"] == \"open\":\\n            return i\\n    return None\\n\\n\\ndef make_offer(V, s, p, step_idx, pre=\"\"):\\n    \"\"\"Persuasion attempt number step_idx (1-based).\"\"\"\\n    today = today_of(V)\\n    ladder = S[\"ladder\"]\\n    st_ = ladder[min(step_idx, len(ladder)) - 1]\\n    amt = p[\"full\"]\\n    if st_.get(\"amount\") == \"floor\" or (st_.get(\"amount\") == \"full_or_floor\" and p[\"too_much\"]):\\n        amt = p[\"floor\"]\\n    d = ladder_date(today, st_.get(\"date\", \"deadline\"), p)\\n    dl = datetime.date.fromisoformat(p[\"deadline\"])\\n    if d > dl:\\n        d = dl\\n    offer = [round(amt, 2), iso(d)]\\n    if offer in p[\"refused_offers\"] and step_idx < p[\"attempts\"]:\\n        return make_offer(V, s, p, step_idx + 1, pre)\\n    p[\"used\"] = step_idx\\n    p[\"offer\"] = offer\\n    line = L(\"offer_floor_date\" if amt == p[\"floor\"] and amt < p[\"full\"] else \"offer\",\\n             name=p[\"name\"], amount=money(amt), date=spoken(d))\\n    say(V, pre, line)\\n    return talk(V, \"nego\", s)\\n\\n\\ndef refusal(V, s, p, pre=\"\"):\\n    \"\"\"A flat refusal / non-answer on product p: consume one persuasion attempt or give up.\"\"\"\\n    if p.get(\"offer\"):\\n        p[\"refused_offers\"].append(p[\"offer\"])\\n    if p[\"used\"] < p[\"attempts\"]:\\n        return make_offer(V, s, p, p[\"used\"] + 1, pre)\\n    p[\"status\"] = \"refused\"\\n    p[\"offer\"] = None\\n    return advance(V, s, pre)\\n\\n\\ndef advance(V, s, pre=\"\"):\\n    \"\"\"Move to the next open product, or to the read-back, or finish.\"\"\"\\n    i = next_open(s)\\n    if i is not None:\\n        s[\"ci\"] = i\\n        p = s[\"products\"][i]\\n        intro = L(\"next_product\", name=p[\"name\"], amount=money(p[\"full\"])) if len(s[\"products\"]) > 1 else \"\"\\n        return make_offer(V, s, p, 1, (pre + \" \" + intro).strip())\\n    agreed = [p for p in s[\"products\"] if p[\"status\"] == \"agreed\"]\\n    if agreed:\\n        return readback(V, s, pre)\\n    return finish(V, s, pre)\\n\\n\\ndef readback(V, s, pre=\"\"):\\n    agreed = [p for p in s[\"products\"] if p[\"status\"] == \"agreed\"]\\n    parts = []\\n    for p in agreed:\\n        extra = L(\"clamped_note\", date=spoken(p[\"agreed\"][1])) if p.get(\"clamped\") else \"\"\\n        parts.append((L(\"readback_item\", name=p[\"name\"], amount=money(p[\"agreed\"][0]), date=spoken(p[\"agreed\"][1])) + \" \" + extra).strip())\\n    s[\"stage\"] = \"confirm\"\\n    say(V, pre, L(\"readback_intro\"), \" \".join(parts), L(\"confirm_q\"))\\n    return talk(V, \"confirm\", s)\\n\\n\\ndef agree(p, amount, date, clamped=False):\\n    p[\"agreed\"] = [round(float(amount), 2), date]\\n    p[\"status\"] = \"agreed\"\\n    p[\"offer\"] = None\\n    p[\"clamped\"] = clamped\\n\\n\\ndef apply_proposal(V, s, p, dtxt, a, scope_all=False):\\n    \"\"\"Customer proposed a date and/or an amount for p. Returns (handled, pre_line).\"\"\"\\n    today = today_of(V)\\n    amount = None\\n    if a is not None:\\n        stt, val = check_amount(p, a)\\n        if stt == \"below_floor\":\\n            if p[\"floor_offered\"]:\\n                return \"refuse\", \"\"\\n            p[\"floor_offered\"] = True\\n            p[\"too_much\"] = True\\n            d0 = p[\"offer\"][1] if p.get(\"offer\") else None\\n            p[\"offer\"] = [p[\"floor\"], d0]\\n            return \"ask\", L(\"below_floor\", amount=money(p[\"floor\"]), name=p[\"name\"])\\n        amount = val\\n    date = None\\n    if dtxt:\\n        d = parse_spoken_date(dtxt, today, S.get(\"date_rules\"))\\n        if d is None:\\n            vague = True\\n        else:\\n            vague = False\\n            stt, val = check_date(V, p, d)\\n            if stt == \"ok\":\\n                date = iso(val)\\n            elif stt == \"past\":\\n                return \"ask\", L(\"date_past\")\\n            elif stt == \"not_business\":\\n                p[\"offer\"] = [amount if amount is not None else default_amount(p), iso(val)]\\n                return \"ask\", L(\"not_business_day\", date=spoken(val))\\n            elif stt == \"after_deadline\":\\n                if scope_all and S.get(\"multi\", dict()).get(\"clamp_single_date\", True) and len(s[\"products\"]) > 1:\\n                    date = iso(val)\\n                    p[\"clamped\"] = True\\n                else:\\n                    p[\"after_deadline_offered\"] = True\\n                    p[\"offer\"] = [amount if amount is not None else default_amount(p), iso(val)]\\n                    return \"ask\", L(\"after_deadline\", date=spoken(val))\\n        if vague:\\n            if not p[\"vague_asked\"]:\\n                p[\"vague_asked\"] = True\\n                return \"ask\", L(\"vague_ask\")\\n            dl = datetime.date.fromisoformat(p[\"deadline\"])\\n            p[\"offer\"] = [amount if amount is not None else default_amount(p), iso(dl)]\\n            return \"ask\", L(\"propose_deadline\", date=spoken(dl), amount=money(p[\"offer\"][0]))\\n    if amount is not None and date is not None:\\n        agree(p, amount, date, p.get(\"clamped\", False))\\n        return \"agreed\", \"\"\\n    if date is not None:\\n        agree(p, p[\"offer\"][0] if p.get(\"offer\") and p[\"offer\"][0] else default_amount(p), date, p.get(\"clamped\", False))\\n        return \"agreed\", \"\"\\n    if amount is not None:\\n        if p.get(\"offer\") and p[\"offer\"][1]:\\n            agree(p, amount, p[\"offer\"][1])\\n            return \"agreed\", \"\"\\n        p[\"offer\"] = [amount, None]\\n        return \"ask\", L(\"ask_date_for_amount\", amount=money(amount))\\n    return \"none\", \"\"\\n\\n\\ndef default_amount(p):\\n    return p[\"floor\"] if p[\"too_much\"] and p[\"floor_offered\"] else p[\"full\"]\\n\\n\\ndef special(V, s, k, p):\\n    \"\"\"Paid / dispute / hardship / restructure on product p (or the call). Returns True if handled.\"\"\"\\n    multi = len(s[\"products\"]) > 1\\n    if k == \"already_paid\":\\n        if multi and S.get(\"multi\", dict()).get(\"continue_after_paid\", True):\\n            p[\"status\"] = \"paid\"\\n            return advance(V, s, L(\"paid_line\")) or True\\n        p[\"status\"] = \"paid\"\\n        for q in s[\"products\"]:\\n            if q[\"status\"] == \"open\":\\n                q[\"status\"] = \"paid\"\\n        finish(V, s, L(\"paid_line\"))\\n        return True\\n    if k == \"dispute\":\\n        p[\"status\"] = \"dispute\"\\n        if multi and S.get(\"multi\", dict()).get(\"continue_after_dispute\", True):\\n            advance(V, s, L(\"dispute_line\"))\\n            return True\\n        for q in s[\"products\"]:\\n            if q[\"status\"] == \"open\":\\n                q[\"status\"] = \"dispute\"\\n        finish(V, s, L(\"dispute_line\"))\\n        return True\\n    if k == \"hardship\":\\n        s[\"stage\"] = \"hardship\"\\n        s[\"hardship_offered\"] = True\\n        say(V, L(\"hardship\"))\\n        talk(V, \"hardship\", s)\\n        return True\\n    if k == \"restructure\":\\n        s[\"transferred\"] = \"restructuring\"\\n        for q in s[\"products\"]:\\n            if q[\"status\"] == \"agreed\":\\n                q[\"status\"] = \"open\"\\n        s[\"say_after_transfer\"] = L(\"restructure_line\")\\n        call(V, s, \"api_transfer\", t_queue=ev(\"transfer_restructuring\").get(\"queue\", \"restructuring\"))\\n        return True\\n    return False\\n\\n\\ndef stage_nego(V, s, k, t, dtxt, a, scope):\\n    prods = s[\"products\"]\\n    multi = len(prods) > 1\\n    if s.get(\"phase\") == \"today\":\\n        s[\"phase\"] = \"items\"\\n        if k in (\"yes\", \"agrees\", \"pay_today\"):\\n            for p in prods:\\n                agree(p, p[\"full\"], iso(today_of(V)))\\n            return readback(V, s)\\n        if k in (\"proposes\", \"gives_date\", \"gives_amount\", \"too_much\", \"vague\") or dtxt or a is not None:\\n            s[\"ci\"] = next_open(s)\\n            if multi and (scope == \"all\" or (dtxt and a is None and scope != \"one\")):\\n                return propose_all(V, s, dtxt, a, k)\\n        elif k in (\"no\", \"refuses\", \"cannot\", \"none\", \"unclear\"):\\n            s[\"ci\"] = next_open(s)\\n            p = cur(s)\\n            intro = L(\"next_product\", name=p[\"name\"], amount=money(p[\"full\"])) if multi else \"\"\\n            return make_offer(V, s, p, 1, intro)\\n        else:\\n            s[\"ci\"] = next_open(s)\\n    p = cur(s)\\n    if p is None:\\n        s[\"ci\"] = next_open(s)\\n        p = cur(s)\\n        if p is None:\\n            return advance(V, s)\\n    again = L(\"repeat_offer\", name=p[\"name\"], amount=money(p[\"offer\"][0]), date=spoken(p[\"offer\"][1])) if p.get(\"offer\") and p[\"offer\"][1] else L(\"ask_today\")\\n    if special(V, s, k, p):\\n        return\\n    if common_intents(V, s, k, again, True):\\n        return\\n    if k in (\"question\", \"purpose\"):\\n        say(V, L(\"no_info\"), again)\\n        return talk(V, \"nego\", s)\\n    if multi and scope == \"all\" and (dtxt or a is not None or k in (\"yes\", \"agrees\")):\\n        return propose_all(V, s, dtxt, a, k)\\n    if k == \"too_much\":\\n        if p[\"floor_offered\"]:\\n            return refusal(V, s, p)\\n        p[\"too_much\"] = True\\n        p[\"floor_offered\"] = True\\n        d0 = p[\"offer\"][1] if p.get(\"offer\") else None\\n        p[\"offer\"] = [p[\"floor\"], d0]\\n        line = L(\"offer_floor\", amount=money(p[\"floor\"]), name=p[\"name\"])\\n        if dtxt or a is not None:\\n            res, pre = apply_proposal(V, s, p, dtxt, None)\\n            if res == \"agreed\":\\n                p[\"agreed\"][0] = p[\"floor\"]\\n                return advance(V, s)\\n        say(V, line)\\n        return talk(V, \"nego\", s)\\n    if dtxt or a is not None or k in (\"proposes\", \"gives_date\", \"gives_amount\", \"vague\"):\\n        res, pre = apply_proposal(V, s, p, dtxt if dtxt else (t if k == \"vague\" else \"\"), a)\\n        if res == \"agreed\":\\n            return advance(V, s)\\n        if res == \"ask\":\\n            say(V, pre)\\n            return talk(V, \"nego\", s)\\n        if res == \"refuse\":\\n            return refusal(V, s, p, L(\"below_floor_again\"))\\n    if k in (\"yes\", \"agrees\", \"pay_today\"):\\n        if p.get(\"offer\") and p[\"offer\"][1]:\\n            agree(p, p[\"offer\"][0], p[\"offer\"][1])\\n            return advance(V, s)\\n        if p.get(\"offer\") and not p[\"offer\"][1]:\\n            agree(p, p[\"offer\"][0], iso(today_of(V)))\\n            return advance(V, s)\\n        agree(p, default_amount(p), iso(today_of(V)))\\n        return advance(V, s)\\n    if k in (\"no\", \"refuses\", \"cannot\", \"none\", \"unclear\"):\\n        if p.get(\"after_deadline_offered\") and S.get(\"rules\", dict()).get(\"refuse_deadline_is_refusal\", True):\\n            p[\"after_deadline_offered\"] = False\\n        return refusal(V, s, p)\\n    say(V, again)\\n    return talk(V, \"nego\", s)\\n\\n\\ndef propose_all(V, s, dtxt, a, k):\\n    \"\"\"One date (and maybe amount) for every open product.\"\"\"\\n    pre_lines = []\\n    for p in s[\"products\"]:\\n        if p[\"status\"] != \"open\":\\n            continue\\n        if k in (\"yes\", \"agrees\") and not dtxt and a is None and p.get(\"offer\"):\\n            agree(p, p[\"offer\"][0], p[\"offer\"][1])\\n            continue\\n        res, pre = apply_proposal(V, s, p, dtxt, a if len(s[\"products\"]) == 1 else None, scope_all=True)\\n        if res != \"agreed\":\\n            s[\"ci\"] = s[\"products\"].index(p)\\n            say(V, pre)\\n            return talk(V, \"nego\", s)\\n    return advance(V, s)\\n\\n\\ndef stage_hardship(V, s, k, t, dtxt, a):\\n    p = cur(s) or (s[\"products\"][0] if s[\"products\"] else None)\\n    if k in (\"yes\", \"agrees\"):\\n        s[\"transferred\"] = \"support\"\\n        s[\"say_after_transfer\"] = L(\"transfer\")\\n        V[\"say\"] = L(\"transfer\")\\n        return call(V, s, \"api_transfer\", t_queue=ev(\"transfer_support\").get(\"queue\", \"support\"))\\n    if (dtxt or a is not None) and p is not None:\\n        s[\"stage\"] = \"nego\"\\n        res, pre = apply_proposal(V, s, p, dtxt, a)\\n        if res == \"agreed\":\\n            return advance(V, s)\\n        say(V, pre)\\n        return talk(V, \"nego\", s)\\n    for q in s[\"products\"]:\\n        if q[\"status\"] in (\"open\",):\\n            q[\"status\"] = \"hardship\"\\n    return finish(V, s, L(\"hardship_declined\"))\\n\\n\\ndef stage_confirm(V, s, k, t, dtxt, a, scope):\\n    agreed = [p for p in s[\"products\"] if p[\"status\"] == \"agreed\"]\\n    if k in (\"yes\", \"agrees\", \"confirm\"):\\n        s[\"rec_queue\"] = [p[\"id\"] for p in agreed]\\n        return record_next(V, s)\\n    if dtxt or a is not None:\\n        target = agreed[0] if len(agreed) == 1 else None\\n        if target is None:\\n            for p in agreed:\\n                p[\"status\"] = \"open\"\\n            return propose_all(V, s, dtxt, a, \"proposes\")\\n        target[\"status\"] = \"open\"\\n        target[\"offer\"] = [target[\"agreed\"][0], target[\"agreed\"][1]]\\n        res, pre = apply_proposal(V, s, target, dtxt, a)\\n        if res == \"agreed\":\\n            return readback(V, s)\\n        s[\"stage\"] = \"nego\"\\n        s[\"ci\"] = s[\"products\"].index(target)\\n        say(V, pre)\\n        return talk(V, \"nego\", s)\\n    if special(V, s, k, agreed[0] if agreed else s[\"products\"][0]):\\n        return\\n    if common_intents(V, s, k, L(\"confirm_q\"), True):\\n        return\\n    if k in (\"no\", \"refuses\"):\\n        for p in agreed:\\n            p[\"status\"] = \"open\"\\n            p[\"refused_offers\"].append(list(p[\"agreed\"]))\\n        s[\"stage\"] = \"nego\"\\n        s[\"ci\"] = next_open(s)\\n        return refusal(V, s, cur(s))\\n    say(V, L(\"confirm_q\"))\\n    return talk(V, \"confirm\", s)\\n\\n\\ndef record_next(V, s):\\n    q = s.get(\"rec_queue\", [])\\n    if not q:\\n        rec = [p for p in s[\"products\"] if p[\"status\"] == \"recorded\"]\\n        failed = [p for p in s[\"products\"] if p[\"status\"] == \"service_error\"]\\n        lines = []\\n        if rec:\\n            lines.append(L(\"recorded\"))\\n            lines.append(L(\"sms_line\"))\\n        if failed:\\n            lines.append(L(\"record_failed\"))\\n        return finish(V, s, \" \".join(lines))\\n    pid = q[0]\\n    p = [x for x in s[\"products\"] if x[\"id\"] == pid][0]\\n    s[\"rec_try\"] = s.get(\"rec_try\", 0)\\n    return call(V, s, \"api_promise\", p_product=p[\"id\"], p_amount=p[\"agreed\"][0], p_date=p[\"agreed\"][1])\\n\\n\\ndef after_promise(V, s):\\n    q = s.get(\"rec_queue\", [])\\n    pid = q[0]\\n    p = [x for x in s[\"products\"] if x[\"id\"] == pid][0]\\n    ok = resp(V, \"api_promise\", \"ok\")\\n    V[\"api_promise_response.data.ok\"] = \"\"\\n    if truthy(ok):\\n        p[\"status\"] = \"recorded\"\\n        q.pop(0)\\n        s[\"rec_try\"] = 0\\n        return record_next(V, s)\\n    s[\"rec_try\"] = s.get(\"rec_try\", 0) + 1\\n    if s[\"rec_try\"] < 2:\\n        return call(V, s, \"api_promise\", p_product=p[\"id\"], p_amount=p[\"agreed\"][0], p_date=p[\"agreed\"][1])\\n    p[\"status\"] = \"service_error\"\\n    q.pop(0)\\n    s[\"rec_try\"] = 0\\n    return record_next(V, s)\\n\\n\\n# ----------------------------------------------------------------------------------------------- entry\\ndef run(V):\\n    s = st(V)\\n    aw = s.get(\"await\", \"\")\\n    if not s:   # the initial talk_open node already spoke the opening and the first identity ask\\n        s = dict(stage=\"open\", asks=1, questions=0, not_talk=0)\\n    if aw == \"api_verify\":\\n        return after_verify(V, s)\\n    if aw == \"api_account\":\\n        return after_account(V, s)\\n    if aw == \"api_promise\":\\n        return after_promise(V, s)\\n    if aw == \"api_note\":\\n        return finish(V, s)\\n    if aw == \"api_callback\":\\n        return close(V, s, \"callback\", s.pop(\"pre\", \"\"))\\n    if aw == \"api_transfer\":\\n        return close(V, s, \"transfer_\" + s.get(\"transferred\", \"human\"), s.get(\"say_after_transfer\", \"\"))\\n    if aw == \"api_close\":\\n        go(V, \"end\")\\n        return\\n    stage = s.get(\"stage\", \"open\")\\n    k, t, dtxt, a, scope = take_input(V, stage)\\n    if stage == \"open\":\\n        return stage_open(V, s, k, t)\\n    if stage == \"tp\":\\n        return stage_tp(V, s, k, t, dtxt)\\n    if stage == \"id\":\\n        return stage_id(V, s, k, t)\\n    if stage == \"nego\":\\n        return stage_nego(V, s, k, t, dtxt, a, scope)\\n    if stage == \"hardship\":\\n        return stage_hardship(V, s, k, t, dtxt, a)\\n    if stage == \"confirm\":\\n        return stage_confirm(V, s, k, t, dtxt, a, scope)\\n    go(V, \"end\")\\n\\n\\ndef main(V):\\n    try:\\n        run(V)\\n    except Exception as e:  # never let the call die: apologise and close safely\\n        V[\"engine_error\"] = (type(e).__name__ + \": \" + str(e))[:300]\\n        s = st(V)\\n        if s.get(\"stage\") == \"closing\":\\n            go(V, \"end\")\\n            return\\n        if s.get(\"products\"):\\n            try:\\n                return finish(V, s, L(\"no_info\"))\\n            except Exception:\\n                pass\\n        V[\"c_outcome\"] = S.get(\"events\", dict()).get(\"refused\", dict()).get(\"outcome\", \"\")\\n        V[\"c_reason\"] = S.get(\"events\", dict()).get(\"refused\", dict()).get(\"reason\", \"\")\\n        say(V, L(\"goodbye\"))\\n        V[\"_state\"] = json.dumps(dict(stage=\"closing\"))\\n        go(V, \"api_close\")\\n\\n'\nexec(_SRC, _G)\n_G['main'](vars)\n"
+        },
+        "timeout_ms": {
+         "type": "number",
+         "default": 20000
+        }
+       }
+      }
+     }
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "talk_tp",
+     "description": "engine routes to talk_tp",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_tp"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "talk_id",
+     "description": "engine routes to talk_id",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_id"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "talk_nego",
+     "description": "engine routes to talk_nego",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_nego"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "talk_hardship",
+     "description": "engine routes to talk_hardship",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_hardship"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "talk_confirm",
+     "description": "engine routes to talk_confirm",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_confirm"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "talk_open_again",
+     "description": "engine routes to talk_open_again",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_open_again"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_verify",
+     "description": "engine routes to api_verify",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_verify"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_account",
+     "description": "engine routes to api_account",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_account"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_promise",
+     "description": "engine routes to api_promise",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_promise"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_note",
+     "description": "engine routes to api_note",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_note"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_callback",
+     "description": "engine routes to api_callback",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_callback"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_transfer",
+     "description": "engine routes to api_transfer",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_transfer"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_close",
+     "description": "engine routes to api_close",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_close"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_close",
+     "description": "fallback",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "end": {
+   "name": "end",
+   "node_type": "end_call",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "transitions": [],
+   "terminal": {
+    "type": "function",
+    "function": {
+     "name": "call_closed",
+     "handler": "__function__:end_call",
+     "parameters": {
+      "type": "object",
+      "properties": {
+       "message_mode": {
+        "type": "string",
+        "default": "none"
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "global_nodes": {},
+ "test_variables": {
+  "customer_id": "c_test",
+  "first_name": "Daniel",
+  "last_name": "Reyes",
+  "title": "Mr",
+  "now": "2026-10-14T11:00"
+ }
+}
