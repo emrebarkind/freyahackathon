@@ -2,3 +2,84 @@
 [    0.0s] NOTE briefs=['eval/packages/p2/brief.md'] tool_api=eval/packages/p2/openapi.json slot=rehearsal-p2
 [    0.0s] STEP 1. spec extraction
 [    0.6s] NOTE extraction mode B
+[   86.7s] MODEL CALL #1 model=claude-opus-5-5 seconds=86.0 cost_usd=0.219 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  125.5s] MODEL CALL #2 model=claude-opus-5-5 seconds=38.9 cost_usd=0.282 purpose: audit the high-risk fields of the reading against the source documents
+[  125.5s] NOTE audit: **Audit result: no changes needed.** Every high-risk field matches the materials, and where the memo changes the policy, the memo's version is the one used.
+[  125.5s] 
+[  125.5s] - calendar: OK -- "30 November 2026 … 25 December 2026, 28 December 2026, 1 January 2027 and 4 January 2027. 24 December 2026 is a normal business day" + memo B "Friday 11 December 2026 is added as a non-business day" -- workdays are Mon–Fri. All six non-business dates are listed, and 24 Dec is correctly left out.
+[  125.5s] - date_rules: OK -- the materials say nothing about "next Friday", so the default is used and recorded in assumptions.
+[  125.5s] - confirm: OK -- "If the answer is still unclear after a second ask, close as `no_contact` / `unclear`" → max_asks 2.
+[  125.5s] - callback: OK -- "today or one of the next two business days … must be later than `now`" + memo D "between 09:00 and 18:30, both included" + memo B "no callback may be booked on it". The days, the 09:00–18:30 window, after_now and business_days_only all match. Rule 5's "ask once for another time" gives max_asks 2.
+[  125.5s] - identity.questions: OK -- "first the date of birth, then the postcode"; "07031984" → %d%m%Y; "a single space before its last three characters" → space_before_last:3. The fields date_of_birth and postcode match the API enum. Leaving out a length for postcodes is right, because UK postcodes vary in length.
+[  125.5s] - identity.max_wrong: OK -- "Two wrong answers in total, across both questions, end the check", which the memo keeps ("The two-wrong-answers limit in rule 9 also stands"). So max_wrong is 2 and max_wrong_per_question is null.
+[  125.5s] - identity.hints: OK -- the verify response has no hint field (only ok, error, verified, wrong_answers_left, all_verified), so hints is empty.
+[  125.5s] - identity (rest): OK -- "An unreadable value is rejected with ok=false and is not counted as a wrong answer" is handled by ok=false, so reject_values can stay empty. date_order dmy matches the bank's day-month-year format. Rule 10, "explain once why we ask. A second refusal closes as `id_fail` / `declined_id`", is carried by id_why and the id_declined event.
+[  125.5s] - products.amount_field: OK -- "State each product with its `arrears_amount` and `days_in_arrears`".
+[  125.5s] - products.floor_field: OK -- it is {} because the floor is a percentage. "The `monthly_payment` field is not the floor and is never quoted."
+[  125.5s] - products.floor_pct: OK -- "30% of `arrears_amount`, rounded up to the next whole pound. A result that is already a whole number of pounds stays as it is", which the memo confirms ("rule 17 stands"). So floor_pct is 30 and floor_round is up_unit.
+[  125.5s] - products (rest): OK -- the API says "in pounds" (amount_scale 1) and "amount in pence … 87.50 pounds is 8750" (promise_scale 100). The names, list_field, id_field and type_field match the API.
+[  125.5s] - bands: OK -- memo A "early band now covers 1 to 14 … mid band 15 to 30. The late band is unchanged. Deadlines and persuasion attempts per band are unchanged". So early is 1–14, the 8th business day after today, 1 attempt. Mid is 15–30, today plu
+[  125.5s] NOTE audit changed: nothing
+[  125.5s] NOTE validation round 1: 1 problem(s)
+[  125.5s]   - identity.response.hint 'hint' is not a field of the verify_identity response (fields: ['all_verified', 'error', 'ok', 'verified', 'wrong_answers_left'])
+[  125.5s] NOTE repair round 1/3: repair 1 validation problem(s)
+[  173.2s] MODEL CALL #3 model=claude-opus-5-5 seconds=47.7 cost_usd=0.329 purpose: repair 1 validation problem(s) in the spec
+[  173.2s] NOTE validation round 2: 0 problem(s)
+[  173.2s] NOTE assumption: The memo (19 Oct 2026, effective 2 Nov 2026) overrides policy v3.2 wherever they differ, as both the memo and Morag's email say. The memo also overrides the old dialler code list.
+[  173.2s] NOTE assumption: Memo A: the early band is now 1-14 days and the mid band 15-30 days. The late band (31-60) is unchanged. Each band keeps its deadline and number of attempts (early 1, mid 2, late 3).
+[  173.2s] NOTE assumption: Memo B: Friday 11 Dec 2026 is a non-business day and is added to the holidays. It is skipped when counting business days, and no promise or callback may fall on it.
+[  173.2s] NOTE assumption: Rule 11: 24 Dec 2026 is a normal business day, so it is not in the holidays list.
+[  173.2s] NOTE assumption: Memo C: the reason code 'refused' is retired. 'declined' is used as both the close_call reason and the add_note reason, and the tool API enums agree.
+[  173.2s] NOTE assumption: Memo D: the callback window is 09:00-18:30 inclusive, replacing 09:00-20:00. A callback can be today or on one of the next two business days, must be later than now, and must fall on a business day.
+[  173.2s] NOTE assumption: The memo keeps the 30% floor (rule 17) and the limit of two wrong identity answers in total (rule 9).
+[  173.2s] NOTE assumption: Floor = 30% of arrears_amount, rounded up to the next whole pound. A result that is already a whole number of pounds is not rounded further. Examples: £100.00 gives £30; £101.00 gives £30.30, which becomes £31. monthly_payment is never used or quoted.
+[  173.2s] NOTE assumption: If the rounded-up floor would be more than arrears_amount (only possible for very small debts), the floor is capped at the full arrears_amount, because rule 18 only accepts amounts between the floor and arrears_amount.
+[  173.2s] NOTE assumption: get_account gives amounts in pounds (amount_scale 1). create_promise takes whole pence (promise_scale 100, so £87.50 is sent as 8750).
+[  173.2s] NOTE assumption: Rule 20 counts the opening ask (full amount today) as attempt 1, so opening_is_attempt is true. The early band's one attempt is the opening ask alone. The mid band adds step 2, and the late band adds steps 2 and 3.
+[  173.2s] NOTE assumption: With two products, a flat no to 'pay both in full today' counts as step 1 for each product (rule 23).
+[  173.2s] NOTE assumption: Ladder step 2 is the full amount on the 5th business day after today, or on the deadline if that is earlier. The engine is assumed to clamp offer dates to the product's deadline.
+[  173.2s] NOTE assumption: Rule 21: if the customer says the full amount is too much, the next step offers the floor on that step's date and uses an attempt. This is modelled as too_much_floor 'attempt_1' with ladder step 2 set to full_or_floor.
+[  173.2s] NOTE assumption: Mid-band deadline = today + 14 calendar days, moved back to the previous business day if it falls on a weekend or holiday (rule 14). Late-band deadline = the last business day of the current month, or of the next month if today is already that day.
+[  173.2s] NOTE assumption: A promise date must be today or later, on a business day, and no later than the product's deadline. For a non-business day the agent offers the next business day, or the deadline if that is earlier. For a date after the deadline it offers the deadline (rule 15).
+[  173.2s] NOTE assumption: Date of birth is sent as DDMMYYYY (%d%m%Y). Postcode is sent in capitals with one space before the last three characters. Postcode length is left unset because UK postcodes vary in length.
+[  173.2s] NOTE assumption: The verify_identity response has no hint field (its fields are ok, error, verified, wrong_answers_left and all_verified), so response.hint is empty and hints is empty. An unreadable answer comes back as ok=false and is not counted as wrong.
+[  173.2s] NOTE assumption: Hardship: the agent says one sentence of sympathy and tells the customer they are being passed to the care team. The call transfers to queue care_team and closes as handoff/care. No note is written, because rule 29 forbids notes on any transfer. transfer_support maps to the same care_team transfer.
+[  173.2s] NOTE assumption: Restructure and human transfers write no notes. Promises already recorded stay. The call closes as handoff with that transfer's reason.
+[  173.2s] NOTE assumption: The no_ptp reason is the note reason of the first product, in get_account order, that was not noted 'paid'.
+[  173.2s] NOTE assumption: The payment-link SMS was dropped and is out of scope, so sms_line is empty.
+[  173.2s] NOTE assumption: The brief does not say how 'next Friday' is read, so the default 'following_week' is used.
+[  173.2s] NOTE assumption: The brief does not say how a numeric-only date is read. 'dmy' is used, which matches the bank's day-month-year format.
+[  173.2s] NOTE assumption: The brief does not cover changing a recorded promise, so the agent says it cannot be changed on this call.
+[  173.2s] NOTE assumption: The brief does not define 'I don't want to talk', so the default max_not_talk of 2 is used.
+[  173.2s] NOTE assumption: The brief does not say what happens to a product outside 1-60 days in arrears, so bands_outside is null.
+[  173.2s] NOTE assumption: Asking what the call is about instead of answering a security question counts as declining (the default). Rule 10 allows one explanation, and a second refusal closes as id_fail/declined_id.
+[  173.2s] NOTE assumption: The brief gives no name for the floor, so it is spoken as 'minimum amount'.
+[  173.2s] NOTE assumption: The policy's 'the call is recorded' is spoken in active voice: 'We record this call.'
+[  173.2s] STEP 2. local checks: structure, tool API, engine self-test on synthetic customers
+[  173.9s] TEST PASS local happy path, pays in full today
+[  173.9s] TEST PASS local someone else answers, books a callback
+[  173.9s] TEST PASS local wrong number
+[  173.9s] TEST PASS local identity fails
+[  173.9s] TEST PASS local identity answered the way people speak
+[  173.9s] TEST PASS local already paid
+[  173.9s] TEST PASS local dispute
+[  173.9s] TEST PASS local hardship, accepts support
+[  173.9s] TEST PASS local restructuring request
+[  173.9s] TEST PASS local flat refusals
+[  173.9s] TEST PASS local the bank fails to record the promise twice
+[  173.9s] TEST PASS local the callback booking fails once, then works
+[  173.9s] TEST PASS local several products, all paid today
+[  173.9s] NOTE local checks: structural 0, tool API 0, self-test 13/13
+[  173.9s] NOTE repair budget used: 1/3
+[  173.9s] STEP 3. compile workflow
+[  173.9s] NOTE workflow: 25 nodes, 16 engine-run calls, 191381 bytes
+[  173.9s] STEP 4. validate, save, publish
+[  174.6s] TEST PASS platform dry-run validation
+[  175.9s] NOTE FREYA workflow_id=325139dd-1843-4fdd-8053-80393cdc53a2 agent_id=3a2d08a5-2c33-4668-a168-4b24b1ed1d70 version=1
+[  175.9s] STEP 5. chat smoke test on Freya
+[  183.3s] TEST PASS chat the engine runs on the platform (asks the first security question) -- Hello? / Before we go on, I need to ask you two security questions. What is your date of birth?
+[  183.3s] TEST PASS chat no unfilled placeholder spoken
+[  183.3s] TEST PASS chat nothing about the debt before verification
+[  183.3s] STEP 6. export
+[  184.5s] NOTE exported submission/rehearsal-p2.workflow.json
+[  184.5s] END 2026-10-10T21:56:23+0000 total_seconds=184.5 model_calls=3 model_cost_usd=0.83
