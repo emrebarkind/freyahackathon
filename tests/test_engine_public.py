@@ -20,9 +20,10 @@ SCRIPTS = {
     "PUB-01": [C, dict(k="answer", t="14 March 1988"), dict(k="answer", t="4471"), dict(k="yes", t="yes I can pay today"), dict(k="yes")],
     "PUB-02": [dict(k="third_party", t="this is her husband"), dict(k="purpose", t="what is this about? I can pay"),
                dict(k="gives_time", t="tomorrow morning around eleven", d="tomorrow")],
+    "PUB-01-pieces": [C, dict(k="answer", t="the fourteenth of March"), dict(k="answer", t="nineteen eighty-eight"), dict(k="answer", t="44"), dict(k="answer", t="71"), dict(k="yes"), dict(k="yes")],
     "PUB-03": [C, dict(k="answer", t="12 July 1991"), dict(k="answer", t="21 August 1992"), dict(k="answer", t="21 July 1990")],
-    "PUB-04": [C, dict(k="answer", t="30 January 1984"), dict(k="answer", t="2219"), dict(k="proposes", d="6 November", t="my salary arrives on 6 November"),
-               dict(k="robot", t="am I talking to a robot?"), dict(k="yes"), dict(k="yes")],
+    "PUB-04": [C, dict(k="answer", t="30 January 1984"), dict(k="answer", t="2219"), dict(k="proposes", d="6 November", t="my salary arrives on 6 November. Are you a robot?", side="robot"),
+               dict(k="yes"), dict(k="yes")],
     "PUB-05": [C, dict(k="answer", t="9 September 1990"), dict(k="answer", t="8846"), dict(k="hardship", t="I lost my job last month, can I get a discount?"),
                dict(k="no", t="no, I don't want to be transferred")],
     "PUB-06": [C, dict(k="answer", t="17 May 1986"), dict(k="answer", t="1502"), dict(k="too_much", t="the full amount is too much right now"),
@@ -44,13 +45,14 @@ SCRIPTS = {
 
 
 def check(cid, spec, verbose=False):
-    led, tr = run_case(spec, CASES[cid], SCRIPTS[cid], verbose=verbose)
-    return score_ledger(CASES[cid], led), tr
+    case = CASES[cid.split("-pieces")[0]]
+    led, tr = run_case(spec, case, SCRIPTS[cid], verbose=verbose)
+    return score_ledger(case, led), tr
 
 
 def test_brief_a_cases():
     bad = {}
-    for cid in [c for c in SCRIPTS if CASES[c]["brief"] == "A"]:
+    for cid in [c for c in SCRIPTS if CASES[c.split("-pieces")[0]]["brief"] == "A"]:
         r, tr = check(cid, SPEC_A)
         if not r["pass"]:
             bad[cid] = (r["failed"], tr)
@@ -61,7 +63,7 @@ def test_brief_b_cases():
     if SPEC_B is None:
         return
     bad = {}
-    for cid in [c for c in SCRIPTS if CASES[c]["brief"] == "B"]:
+    for cid in [c for c in SCRIPTS if CASES[c.split("-pieces")[0]]["brief"] == "B"]:
         r, tr = check(cid, SPEC_B)
         if not r["pass"]:
             bad[cid] = (r["failed"], tr)
@@ -70,7 +72,8 @@ def test_brief_b_cases():
 
 if __name__ == "__main__":
     for cid in sys.argv[1:] or SCRIPTS:
-        spec = SPEC_A if CASES[cid]["brief"] == "A" else (SPEC_B or SPEC_A)
-        print("==", cid, CASES[cid]["title"])
+        case = CASES[cid.split("-pieces")[0]]
+        spec = SPEC_A if case["brief"] == "A" else (SPEC_B or SPEC_A)
+        print("==", cid, case["title"])
         r, _ = check(cid, spec, verbose=True)
         print("  ->", "PASS" if r["pass"] else "FAIL " + str(r["failed"]))

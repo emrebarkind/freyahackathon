@@ -41,7 +41,8 @@ def money(x):
 
 
 def say(V, *parts):
-    V["say"] = " ".join(p.strip() for p in parts if p and p.strip())
+    pre = V.pop("_prefix", "") if "_prefix" in V else ""
+    V["say"] = " ".join(p.strip() for p in (pre,) + parts if p and p.strip())
 
 
 def jget(V, key, default=None):
@@ -216,6 +217,13 @@ def take_input(V, stage):
     dt = str(g("date") or "").strip()
     a = num(g("amount"))
     sc = str(g("scope") or "none").strip().lower()
+    side = str(g("side") or "none").strip().lower()
+    if (stage + "_side") in V:
+        V[stage + "_side"] = "none"
+    if side != k and side in ("robot", "scam") and not (stage in ("open", "tp") and k == "unclear"):
+        V["_prefix"] = L(side)
+    elif side == "question" and k not in ("question", "purpose", "asks_why", "unclear", "none") and stage not in ("open", "tp", "id"):
+        V["_prefix"] = L("no_info")
     for f in ("text", "date"):
         if (stage + "_" + f) in V:
             V[stage + "_" + f] = ""
@@ -488,7 +496,10 @@ def stage_id(V, s, k, t):
             return
     if k == "wrong_person":
         return close(V, s, "wrong_number", L("wrong_number"))
-    ans = normalize_answer(q, (s.get("partial", "") + " " + t).strip() if q.get("kind") == "digits" else t)
+    combined = (s.get("partial", "") + " " + t).strip()
+    ans = normalize_answer(q, combined if q.get("kind") in ("digits", "date", "year") else t)
+    if not ans and q.get("kind") in ("date", "year") and t and not s.get("partial"):
+        ans = "partial"            # e.g. "the fourteenth of March..." with the year still to come
     if ans == "partial":
         s["partial"] = (s.get("partial", "") + " " + t).strip()
         say(V, L("id_continue"))

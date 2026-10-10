@@ -122,7 +122,11 @@ def extraction(stage, spec):
     kinds = KINDS[stage]
     desc = ("Classify ONLY the customer's latest message. Values: " +
             "; ".join(f"{k} = {v}" for k, v in kinds.items()) + "; none = nothing new was said.")
-    schema = [{"name": stage + "_kind", "type": "string", "enum_values": list(kinds) + ["none"], "description": desc, "min_confidence": 0.0}]
+    schema = [{"name": stage + "_kind", "type": "string", "enum_values": list(kinds) + ["none"], "description": desc, "min_confidence": 0.0},
+              {"name": stage + "_side", "type": "string", "enum_values": ["robot", "scam", "question", "none"], "min_confidence": 0.0,
+               "description": "Does the customer's latest message ALSO contain a side question, besides its main point? "
+                              "robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; "
+                              "question = asks another question you should answer; none = no side question."}]
     if stage == "id":
         schema.append({"name": stage + "_text", "type": "string", "min_confidence": 0.0,
                        "description": "The customer's answer to the security question in their latest message, copied exactly as said "
