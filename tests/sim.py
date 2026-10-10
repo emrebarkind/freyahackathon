@@ -105,6 +105,8 @@ def feed(V, stage, u):
     V.update({stage + "_kind": u.get("k", "none"), stage + "_text": u.get("t", ""), stage + "_date": u.get("d", ""),
               stage + "_amount": u.get("a", ""), stage + "_side": u.get("side", "none"),
               stage + "_for": u.get("f", "none"), stage + "_cut": u.get("cut", "no")})
+    if stage == "id":
+        V["id_norm"] = u.get("norm", "")
 
 
 def run_case(spec, case, script, verbose=False, openapi=None):

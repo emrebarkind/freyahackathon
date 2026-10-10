@@ -473,3 +473,13 @@ def test_cut_off_no_at_the_opening_is_heard_out():
               dict(k="gives_time", t="tomorrow at eleven")]
     led, tr = run_case(A, CASES["PUB-02"], script)
     assert led["callbacks"] == [dict(date="2026-10-15", time="11:00")], agent_lines(tr)
+
+
+def test_extractor_year_not_said_is_not_sent():
+    case = copy.deepcopy(CASES["PUB-01"])
+    case["identity"] = dict(date_of_birth="1991-07-12", phone_last4="4410")
+    script = [C, dict(k="answer", t="Why do you need that? 12 July", norm="2024-07-12"), dict(k="answer", t="1991"),
+              dict(k="answer", t="4410"), dict(k="yes"), dict(k="yes")]
+    led, tr = run_case(A, case, script)
+    sent = [c["args"]["answer"] for c in led["calls"] if c["tool"] == "verify_identity"]
+    assert "2024-07-12" not in sent and len(led["promises"]) == 1, (sent, agent_lines(tr))

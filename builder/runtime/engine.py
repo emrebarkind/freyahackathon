@@ -704,6 +704,8 @@ def stage_id(V, s, k, t):
             ans = nf0
     if ans in ("", "partial"):
         nf = norm_fallback(q, V.get("_norm", ""))          # 2. the extractor's normalised value
+        if nf and kind in ("date", "year") and not has_year(t + " " + s.get("partial", "")):
+            nf = ""                                        # the extractor filled in a year nobody said
         if nf:
             ans = nf
     if ans in ("", "partial") and s.get("partial") and kind in ("digits", "date", "year"):
@@ -743,6 +745,15 @@ def format_answer(q, ans):
         except Exception:
             return ans
     return ans
+
+
+YEAR_SAID = re.compile(r"\b(19|20)\d\d\b|\bnineteen[\s-]+(ten|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|o|oh|zero|one|two|"
+                       r"three|four|five|six|seven|eight|nine|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|"
+                       r"eighteen|nineteen)\b|\btwo thousand\b|\btwenty[\s-]+(o|oh|zero|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b")
+
+
+def has_year(t):
+    return bool(YEAR_SAID.search(str(t or "").lower()))
 
 
 def norm_fallback(q, norm):
