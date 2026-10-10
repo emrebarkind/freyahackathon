@@ -419,7 +419,12 @@ def spoken_day(tokens):
     for i, w in enumerate(tokens):
         if re.fullmatch(r"\d{1,2}", w) and 1 <= int(w) <= 31:
             return int(w), tokens[:i] + tokens[i + 1:]
-    for i, w in enumerate(tokens):   # "January eight 1991", "the eight of May"
+    for i, w in enumerate(tokens):   # "January eight 1991", "twenty-one August", "thirty January"
+        if w in ("twenty", "thirty"):
+            nx = tokens[i + 1] if i + 1 < len(tokens) else ""
+            if nx in UNITS and UNITS[nx] > 0 and nx not in ("oh", "o") and TENS[w] + UNITS[nx] <= 31:
+                return TENS[w] + UNITS[nx], tokens[:i] + tokens[i + 2:]
+            return TENS[w], tokens[:i] + tokens[i + 1:]
         if w in UNITS and UNITS[w] > 0:
             return UNITS[w], tokens[:i] + tokens[i + 1:]
         if w in TEENS and i + 1 < len(tokens) and tokens[i + 1] in TENS:

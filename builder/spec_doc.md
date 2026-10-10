@@ -43,7 +43,8 @@ use the default shown and record it in `assumptions`.
    "amount_field": "past_due",                     // account field with the amount owed
    "days_field": "days_late",                      // account field with how many days late the product is
    "floor_field": {"<product type>": "<account field holding the minimum acceptable amount>"},
-   "floor_pct": null                               // only if the floor is a percentage of the amount owed instead (0 = any amount)
+   "floor_pct": null,                              // only if the floor is a percentage of the amount owed instead (0 = any amount)
+   "floor_names": {"<product type>": "<what the brief calls the floor, e.g. minimum payment>"}
  },
  "bands": [                                        // lateness bands, by the account's days_late, inclusive bounds
    {"name": "early", "min": 1, "max": 7,
@@ -129,6 +130,8 @@ Meaning of the less obvious ones:
   offer_floor: the same without a date;
   below_floor: the amount is under the floor; after_deadline: the date is past the latest allowed ({date} = latest date); not_business_day: ({date} = next business day);
   vague_ask: ask once for the exact day; propose_deadline: propose ({amount} on {date}).
+- In offers, {amount} already names the floor when the amount is the floor ("the minimum payment of 126 dollars"), so lines need not
+  name it again.
 - readback_item: one promise ({name} {amount} {date}); confirm_q: the confirmation question the brief prescribes.
 - recorded: said only after the bank confirmed the promise; sms_line: any sentence the brief requires after a recorded promise ("" if none).
 - record_failed: the promise could not be recorded.

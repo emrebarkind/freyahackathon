@@ -86,7 +86,7 @@ def simulate(spec, variables, bank, turns, max_steps=300):
     def feed(stage, u):
         V.update({stage + "_kind": u.get("k", "none"), stage + "_text": u.get("t", ""), stage + "_date": u.get("d", ""),
                   stage + "_amount": u.get("a", ""), stage + "_scope": u.get("s", "none"), stage + "_side": u.get("side", "none"),
-                  stage + "_for": u.get("f", "none")})
+                  stage + "_for": u.get("f", "none"), stage + "_cut": u.get("cut", "no")})
 
     tr.append(("agent", "<opening>"))
     feed("open", turns.pop(0))

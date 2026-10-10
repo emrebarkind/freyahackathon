@@ -34,6 +34,8 @@ SCRIPTS = {
                      dict(k="yes", a=630.0, t="Yes, I can pay six hundred and thirty"), dict(k="yes")],
     "PUB-06-637": [C, dict(k="answer", t="17 May 1986"), dict(k="answer", t="1502"), dict(k="too_much"),
                    dict(k="proposes", a=637.0, d="Friday", t="I can pay six hundred and thirty-seven dollars on Friday"), dict(k="yes")],
+    "PUB-09-cut": [C, dict(k="answer", t="11 August 1981"), dict(k="answer", t="5560"), dict(k="too_much", cut="yes", t="I cannot pay that amount right now. I would like"),
+                   dict(k="restructure", t="lower instalments, a new payment plan")],
     "PUB-07": [C, dict(k="answer", t="5 December 1975"), dict(k="answer", t="7093"), dict(k="vague", d="the week after next", t="the week after next"),
                dict(k="proposes", d="Monday the 26th"), dict(k="yes"), dict(k="yes")],
     "PUB-08": [C, dict(k="answer", t="28 April 1993"), dict(k="answer", t="3317"), dict(k="already_paid", t="I paid it in the app this morning")],

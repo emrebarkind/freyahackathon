@@ -125,6 +125,10 @@ def extraction(stage, spec):
     desc = ("Classify ONLY the customer's latest message. Values: " +
             "; ".join(f"{k} = {v}" for k, v in kinds.items()) + "; none = nothing new was said.")
     schema = [{"name": stage + "_kind", "type": "string", "enum_values": list(kinds) + ["none"], "description": desc, "min_confidence": 0.0},
+              {"name": stage + "_cut", "type": "string", "enum_values": ["yes", "no"], "min_confidence": 0.0,
+               "description": "yes = the customer's latest message stops in the middle of a sentence, ending on an unfinished phrase "
+                              "(e.g. '... I would like', '... I want to', '... sorry, I mean', '... on the'), so they have not finished; "
+                              "no = it is a complete thought."},
               {"name": stage + "_side", "type": "string", "enum_values": ["robot", "scam", "question", "none"], "min_confidence": 0.0,
                "description": "Does the customer's latest message ALSO contain a side question, besides its main point? "
                               "robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; "

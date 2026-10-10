@@ -33,7 +33,13 @@ def L(key, **kw):
     """Spec line with {placeholders} filled (customer names always available). Never raises."""
     t = S.get("lines", dict()).get(key, "")
     for k, v in list(kw.items()) + [(k, v) for k, v in CTX.items() if k not in kw]:
-        t = t.replace("{" + k + "}", str(v))
+        v = str(v)
+        if k == "amount" and v.startswith("the ") and " of " in v and "{amount}" in t:
+            before = t.split("{amount}")[0][-30:].lower()
+            label_words = v[4:].split(" of ")[0].split()
+            if re.search(r"minimum|lowest|least|floor", before) or any(w in before for w in label_words):
+                v = v.split(" of ", 1)[1]          # the line already names the floor
+        t = t.replace("{" + k + "}", v)
     t = re.sub(r"\{[a-z_0-9]+\}", "", t)       # never speak an unfilled placeholder
     return re.sub(r"\s+", " ", t).strip()
 
@@ -42,6 +48,22 @@ def money(x):
     s = speak_amount(x)
     w = S.get("currency_word", "")
     return (s + " " + w).strip()
+
+
+def floor_label(p):
+    """'minimum payment' / 'instalment amount': what the floor is called, so offers say 'the minimum payment of 126 dollars'."""
+    lab = S["products"].get("floor_names", dict()).get(p["type"])
+    if not lab:
+        ff = S["products"].get("floor_field", dict()).get(p["type"])
+        lab = ff.replace("_", " ") if ff else ""
+    return lab
+
+
+def pay(p, amt):
+    """Spoken amount for an offer: names the floor when the amount is the floor."""
+    if p and abs(float(amt) - p["floor"]) < 0.005 and p["floor"] < p["full"] - 0.005 and floor_label(p):
+        return "the " + floor_label(p) + " of " + money(amt)
+    return money(amt)
 
 
 def say(V, *parts):
@@ -228,6 +250,9 @@ def take_input(V, stage):
         sc = "all"
     elif fr not in ("", "none") and fr in S.get("products", dict()).get("names", dict()):
         sc = "type:" + fr
+    V["_cut"] = str(g("cut") or "no").strip().lower()
+    if (stage + "_cut") in V:
+        V[stage + "_cut"] = "no"
     side = str(g("side") or "none").strip().lower()
     if (stage + "_side") in V:
         V[stage + "_side"] = "none"
@@ -428,6 +453,10 @@ def parse_callback(text, today, V):
     full = str(text or "").lower()
     corr = after_correction(full).lower()
     hm = spoken_time(corr) if corr != full else None
+    if hm is None and corr != full:      # "at ten, sorry, eleven": a bare hour replaces the time it corrects
+        m = re.fullmatch(r"\s*(?:at\s+)?(\d{1,2}|" + "|".join(HOUR_WORDS) + r")(\s+.*)?", corr)
+        if m and spoken_time(CORRECTION.split(full)[0]):
+            hm = spoken_time("at " + corr)
     hm = hm or spoken_time(full)
     d = None
     explicit = r"\b(today|tomorrow|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(st|nd|rd|th)?\s+[a-z]{3,}|next|this)\b"
@@ -668,7 +697,7 @@ def make_offer(V, s, p, step_idx, pre=""):
     if floor_first:
         p["floor_note_said"] = True
         p["floor_offered"] = True
-    line = L("offer_floor_date" if floor_first else "offer", name=p["name"], amount=money(amt), date=spoken(d))
+    line = L("offer_floor_date" if floor_first else "offer", name=p["name"], amount=pay(p, amt), date=spoken(d))
     say(V, pre, line)
     return talk(V, "nego", s)
 
@@ -732,7 +761,7 @@ def apply_proposal(V, s, p, dtxt, a, scope_all=False):
             p["too_much"] = True
             d0 = p["offer"][1] if p.get("offer") else None
             p["offer"] = [p["floor"], d0]
-            return "ask", L("below_floor", amount=money(p["floor"]), name=p["name"])
+            return "ask", L("below_floor", amount=pay(p, p["floor"]), name=p["name"])
         amount = val
     date = None
     if dtxt:
@@ -763,7 +792,7 @@ def apply_proposal(V, s, p, dtxt, a, scope_all=False):
                 return "ask", L("vague_ask")
             dl = datetime.date.fromisoformat(p["deadline"])
             p["offer"] = [amount if amount is not None else default_amount(p), iso(dl)]
-            return "ask", L("propose_deadline", date=spoken(dl), amount=money(p["offer"][0]))
+            return "ask", L("propose_deadline", date=spoken(dl), amount=pay(p, p["offer"][0]))
     if amount is not None and date is not None:
         agree(p, amount, date, p.get("clamped", False))
         return "agreed", ""
@@ -888,7 +917,7 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         p = cur(s)
         if p is None:
             return advance(V, s)
-    again = L("repeat_offer", name=p["name"], amount=money(p["offer"][0]), date=spoken(p["offer"][1])) if p.get("offer") and p["offer"][1] else L("ask_today")
+    again = L("repeat_offer", name=p["name"], amount=pay(p, p["offer"][0]), date=spoken(p["offer"][1])) if p.get("offer") and p["offer"][1] else L("ask_today")
     if special(V, s, k, p):
         return
     if common_intents(V, s, k, again, True):
@@ -912,8 +941,8 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             res, pre = apply_proposal(V, s, p, dtxt, None)
             if res == "agreed":
                 p["agreed"][0] = p["floor"]
-                return advance(V, s, L("offer_floor", amount=money(p["floor"])))
-            say(V, L("offer_floor", amount=money(p["floor"])), pre)
+                return advance(V, s, L("offer_floor", amount=pay(p, p["floor"])))
+            say(V, L("offer_floor", amount=pay(p, p["floor"])), pre)
             return talk(V, "nego", s)
         if p["used"] == 0:
             return make_offer(V, s, p, 1)          # attempt 1 = the floor on the attempt-1 date, said once with its note
@@ -921,7 +950,7 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         p["offer"] = [p["floor"], d]
         p["floor_offered"] = True
         p["floor_note_said"] = True
-        say(V, L("offer_floor_date", amount=money(p["floor"]), date=spoken(d)))
+        say(V, L("offer_floor_date", amount=pay(p, p["floor"]), date=spoken(d)))
         return talk(V, "nego", s)
     if k in ("yes", "agrees", "pay_today") and p.get("offer") and p["offer"][1] and not dtxt and \
             (a is None or snap_amount(p, a) <= p["offer"][0] + 0.005):
@@ -935,7 +964,7 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             say(V, pre)
             return talk(V, "nego", s)
         if res == "refuse":
-            return refusal(V, s, p, L("below_floor_again", amount=money(p["floor"])))
+            return refusal(V, s, p, L("below_floor_again", amount=pay(p, p["floor"])))
     if k in ("yes", "agrees", "pay_today"):
         if p.get("offer") and p["offer"][1]:
             agree(p, p["offer"][0], p["offer"][1])
@@ -1113,6 +1142,12 @@ def run(V):
         return
     stage = s.get("stage", "open")
     k, t, dtxt, a, scope = take_input(V, stage)
+    if V.get("_cut") == "yes" and stage in ("open", "tp", "nego", "confirm", "hardship") and not dtxt and a is None \
+            and s.get("cut_waits", 0) < 2 and k not in ("wrong_number", "deceased", "dispute", "already_paid", "hardship", "restructure"):
+        s["cut_waits"] = s.get("cut_waits", 0) + 1     # the customer stopped mid-sentence: let them finish
+        say(V, L("id_continue") or "Please go on.")
+        return talk(V, stage, s)
+    s["cut_waits"] = 0
     if s.get("same", 0) >= 2 and stage in ("nego", "confirm") and k not in special_kinds():
         k, dtxt, a, scope = "no", "", None, "none"     # we said the same thing three times: stop looping, treat as a refusal
     prev = V.get("say", "")
