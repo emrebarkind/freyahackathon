@@ -15,8 +15,8 @@ Check types (input -> expect):
 |---|---|---|
 | `deadline` | `now` (YYYY-MM-DDTHH:MM), `product` (one product record exactly as get_account returns it) | latest allowed promise date for that product, YYYY-MM-DD |
 | `floor` | `now`, `product` | lowest amount (in currency units, e.g. 120.5) the agent may accept for that product |
-| `attempts` | `now`, `product` | how many payment proposals the agent may make for that product in total if the customer refuses each one flatly (0 = none) |
-| `offers` | `now`, `product` | ordered list of `[amount, "YYYY-MM-DD"]` proposals the agent makes if the customer flatly refuses each one (no counter-offer, no "too much") |
+| `attempts` | `now`, `product` | how many payment proposals the agent makes for that product AFTER the customer flatly refuses the opening "full amount today" ask, refusing each one flatly (0 = none) |
+| `offers` | `now`, `product` | ordered list of `[amount, "YYYY-MM-DD"]` proposals the agent makes after the opening ask, if the customer flatly refuses each one (no counter-offer, no "too much"). The opening ask itself is never listed, even when a brief counts it as attempt 1 |
 | `business_day` | `date` | true / false: may a promise fall on this date |
 | `callback_ok` | `now`, `date`, `time` (HH:MM) | true / false: may the agent book a callback (for a third party who answered) at that date and time |
 | `close` | `situation` (one of the list below) | `{"outcome": ..., "reason": ...}` sent to close_call ("" when the brief gives no reason) |

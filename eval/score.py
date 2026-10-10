@@ -39,12 +39,11 @@ def facts(spec, now, rec):
 
 
 def offers(spec, now, rec):
-    """Proposals in order when the customer flatly refuses each: the opening ask, then the persuasion steps."""
+    """Proposals in order after the opening 'full amount today' ask, when the customer flatly refuses each."""
     V, p = facts(spec, now, rec)
     if p["status"] != "open":
         return []
-    first = p["deadline"] if (spec.get("rules") or {}).get("first_ask") == "deadline" else engine.iso(engine.today_of(V))
-    seq = [[round(p["full"], 2), first]]
+    seq = []
     s = {"products": [p], "ci": 0, "stage": "nego", "phase": "items"}
     saved = engine.say, engine.talk, engine.advance
     engine.say = lambda V_, *a: None

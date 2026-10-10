@@ -2,6 +2,7 @@
 and an adjudication pass on disagreements."""
 import copy
 import json
+import os
 import pathlib
 import re
 
@@ -277,8 +278,77 @@ REPAIR = """Your spec has these problems:
 Fix them and output the complete corrected spec JSON in a ```json block."""
 
 
-def extract(briefs, openapi, trace, budget=None):
+AUDIT = """You are auditing a spec that one analyst produced from the materials above. Check these high-risk
+fields one by one against the documents: {fields}.
+For each field: find the sentence(s) in the bank materials or the tool API file that decide it (a later memo or
+dated change beats the rule it changes), quote them, and say whether the spec value carries out exactly what they
+say. Then list every rule in the materials that the spec does not carry at all (a holiday, a band, a code, a
+limit, a format, an exception).
+
+<spec>
+{spec}
+</spec>
+
+Write one line per field: FIELD: OK | WRONG -- "quote" -- what is wrong. Then a ```json block holding ONLY the
+changes, as {{"path.to.field": new value, ...}} with dotted paths (list items by index, e.g. "bands.1.max", or a
+whole value such as "calendar.holidays"). Use {{}} when nothing must change. Never change a value the materials
+do not decide."""
+
+AUDIT_FIELDS = CORE + ["identity", "products"]
+
+
+def set_path(d, path, value):
+    keys = path.split(".")
+    for i, k in enumerate(keys[:-1]):
+        if isinstance(d, list):
+            d = d[int(k)]
+            continue
+        if not isinstance(d.get(k), (dict, list)):
+            d[k] = [] if keys[i + 1].isdigit() else {}
+        d = d[k]
+    last = keys[-1]
+    if isinstance(d, list):
+        if int(last) < len(d):
+            d[int(last)] = value
+        elif int(last) == len(d):
+            d.append(value)
+        else:
+            raise IndexError(path)
+    else:
+        d[last] = value
+
+
+def read_and_audit(base, trace):
+    """Mode B: one reading at the highest effort, then a targeted audit of the high-risk fields against the
+    source documents. The audit answers with changes only, so nothing it did not look at can be lost."""
+    out = claude.ask(base, SYSTEM, "read the brief and tool API into a spec (single strong reading)", trace, effort="max")
+    spec = claude.json_block(out, keys=SPEC_KEYS)
+    audit = claude.ask(base + "\n\n" + AUDIT.format(fields=", ".join(AUDIT_FIELDS), spec=json.dumps(spec, indent=1)),
+                       SYSTEM, "audit the high-risk fields of the reading against the source documents", trace)
+    trace.note("audit: " + audit.split("```")[0].strip()[:3000])
+    try:
+        changes = claude.json_block(audit)
+    except Exception as e:
+        trace.note(f"audit answer did not parse ({e}); keeping the reading")
+        return spec
+    fixed = copy.deepcopy(spec)
+    for path, value in changes.items():
+        try:
+            set_path(fixed, path, value)
+        except Exception as e:
+            trace.note(f"audit change {path} not applied ({type(e).__name__})")
+    trace.note(f"audit changed: {sorted(changes) or 'nothing'}")
+    return fixed
+
+
+def extract(briefs, openapi, trace, budget=None, mode=None):
+    """mode A (default): two independent readings + adjudication. mode B: one strong reading + targeted audit
+    (BUILDER_EXTRACT_MODE=B). Both then share the same validation loop and repair budget."""
     base = prompt_for(briefs, openapi)
+    mode = mode or os.environ.get("BUILDER_EXTRACT_MODE", "A")
+    trace.note(f"extraction mode {mode}")
+    if mode == "B":
+        return validate_loop(read_and_audit(base, trace), base, openapi, trace, budget)
     texts = claude.ask_many([(base, SYSTEM, "read the brief and tool API into a spec (reading 1)"),
                              (base, SYSTEM, "read the brief and tool API into a spec (reading 2, independent)")], trace)
     specs = []
@@ -301,6 +371,10 @@ def extract(briefs, openapi, trace, budget=None):
                 spec = claude.json_block(out, keys=SPEC_KEYS)
             except Exception as e:
                 trace.note(f"adjudication answer did not parse ({e}); keeping reading 1")
+    return validate_loop(spec, base, openapi, trace, budget)
+
+
+def validate_loop(spec, base, openapi, trace, budget):
     for attempt in range(10):                 # bounded by the shared repair budget
         spec_model.normalise(spec)
         errs = validate(spec, openapi)

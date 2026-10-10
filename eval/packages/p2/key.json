@@ -118,8 +118,9 @@
      "monthly_payment": 35.0
     }
    },
-   "expect": 1,
-   "source": "Memo A: The early band now covers 1 to 14 days in arrears, and the mid band 15 to 30. The late band is unchanged. Deadlines and persuasion attempts per band are unchanged. / 13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 |"
+   "expect": 0,
+   "source": "Memo A: The early band now covers 1 to 14 days in arrears, and the mid band 15 to 30. The late band is unchanged. Deadlines and persuasion attempts per band are unchanged. / 13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 |",
+   "convention": "opening 'full amount today' ask excluded (it is step 1 in this brief)"
   },
   {
    "id": "C10",
@@ -135,13 +136,9 @@
      "monthly_payment": 0.0
     }
    },
-   "expect": [
-    [
-     233.4,
-     "2026-11-05"
-    ]
-   ],
-   "source": "Memo A: The early band now covers 1 to 14 days in arrears, and the mid band 15 to 30. The late band is unchanged. Deadlines and persuasion attempts per band are unchanged. / 20. Every proposal Isla makes of an amount on a date is one persuasion attempt, the opening ask included. Attempts are counted per product and never exceed the band's number. ... Step 1: the full `arrears_amount`, today. Step 2: the full `arrears_amount` on the 5th business day after today, or on the deadline if that is earlier. Step 3: the floor, on the deadline."
+   "expect": [],
+   "source": "Memo A: The early band now covers 1 to 14 days in arrears, and the mid band 15 to 30. The late band is unchanged. Deadlines and persuasion attempts per band are unchanged. / 20. Every proposal Isla makes of an amount on a date is one persuasion attempt, the opening ask included. Attempts are counted per product and never exceed the band's number. ... Step 1: the full `arrears_amount`, today. Step 2: the full `arrears_amount` on the 5th business day after today, or on the deadline if that is earlier. Step 3: the floor, on the deadline.",
+   "convention": "opening 'full amount today' ask excluded (it is step 1 in this brief)"
   },
   {
    "id": "C11",
@@ -157,8 +154,9 @@
      "monthly_payment": 260.0
     }
    },
-   "expect": 2,
-   "source": "Memo A: The early band now covers 1 to 14 days in arrears, and the mid band 15 to 30. The late band is unchanged. Deadlines and persuasion attempts per band are unchanged. / 13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 |"
+   "expect": 1,
+   "source": "Memo A: The early band now covers 1 to 14 days in arrears, and the mid band 15 to 30. The late band is unchanged. Deadlines and persuasion attempts per band are unchanged. / 13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 |",
+   "convention": "opening 'full amount today' ask excluded (it is step 1 in this brief)"
   },
   {
    "id": "C12",
@@ -316,10 +314,6 @@
    "expect": [
     [
      812.4,
-     "2026-11-24"
-    ],
-    [
-     812.4,
      "2026-11-27"
     ],
     [
@@ -327,7 +321,8 @@
      "2026-11-27"
     ]
    ],
-   "source": "20. Every proposal Isla makes of an amount on a date is one persuasion attempt, the opening ask included. Attempts are counted per product and never exceed the band's number. ... Step 1: the full `arrears_amount`, today. Step 2: the full `arrears_amount` on the 5th business day after today, or on the deadline if that is earlier. Step 3: the floor, on the deadline. / 13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 | / 11. Business days are Monday to Friday, except these bank holidays: 30 November 2026 (St Andrew's Day), 25 December 2026, 28 December 2026, 1 January 2027 and 4 January 2027. 24 December 2026 is a normal business day for the collections desk."
+   "source": "20. Every proposal Isla makes of an amount on a date is one persuasion attempt, the opening ask included. Attempts are counted per product and never exceed the band's number. ... Step 1: the full `arrears_amount`, today. Step 2: the full `arrears_amount` on the 5th business day after today, or on the deadline if that is earlier. Step 3: the floor, on the deadline. / 13. Each product is banded on its own `days_in_arrears`: ... | 1 to 10 | early | the 8th business day after today (today does not count) | 1 | ... | 11 to 30 | mid | today plus 14 calendar days | 2 | ... | 31 to 60 | late | the last business day of the current calendar month | 3 | / 11. Business days are Monday to Friday, except these bank holidays: 30 November 2026 (St Andrew's Day), 25 December 2026, 28 December 2026, 1 January 2027 and 4 January 2027. 24 December 2026 is a normal business day for the collections desk.",
+   "convention": "opening 'full amount today' ask excluded (it is step 1 in this brief)"
   },
   {
    "id": "C21",
@@ -346,14 +341,11 @@
    "expect": [
     [
      375.0,
-     "2026-12-04"
-    ],
-    [
-     375.0,
      "2026-12-14"
     ]
    ],
-   "source": "20. Every proposal Isla makes of an amount on a date is one persuasion attempt, the opening ask included. Attempts are counted per product and never exceed the band's number. ... Step 1: the full `arrears_amount`, today. Step 2: the full `arrears_amount` on the 5th business day after today, or on the deadline if that is earlier. Step 3: the floor, on the deadline. / Memo B: Friday 11 December 2026 is added as a non-business day because of the core banking migration. Treat it exactly like a bank holiday: no promise may fall on it, no callback may be booked on it, and it is skipped when counting business days."
+   "source": "20. Every proposal Isla makes of an amount on a date is one persuasion attempt, the opening ask included. Attempts are counted per product and never exceed the band's number. ... Step 1: the full `arrears_amount`, today. Step 2: the full `arrears_amount` on the 5th business day after today, or on the deadline if that is earlier. Step 3: the floor, on the deadline. / Memo B: Friday 11 December 2026 is added as a non-business day because of the core banking migration. Treat it exactly like a bank holiday: no promise may fall on it, no callback may be booked on it, and it is skipped when counting business days.",
+   "convention": "opening 'full amount today' ask excluded (it is step 1 in this brief)"
   },
   {
    "id": "C22",
@@ -457,7 +449,7 @@
     "amount": 87.5
    },
    "expect": 8750,
-   "source": "19. `create_promise` takes the amount in pence as a whole number: £87.50 is sent as 8750."
+   "source": "19. `create_promise` takes the amount in pence as a whole number: \u00a387.50 is sent as 8750."
   }
  ]
 }
