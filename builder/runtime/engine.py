@@ -461,6 +461,12 @@ def stage_tp(V, s, k, t, dtxt):
                 s["cb_asked_day"] = True
                 say(V, L("tp_ask"))
                 return talk(V, "tp", s)
+        if d is None and hm is None:                 # small talk, no day or time: ask again without using a try
+            s["tp_empty"] = s.get("tp_empty", 0) + 1
+            if s["tp_empty"] >= 5:
+                return close(V, s, "no_callback")
+            say(V, L("tp_ask"))
+            return talk(V, "tp", s)
         ok = d is not None and hm is not None and callback_ok(V, d, hm)
         if ok:
             s["cb"] = [iso(d), hm]
@@ -1282,7 +1288,8 @@ def run(V):
     if V.get("_cut") != "yes" and t and k in ("too_much", "no", "cannot", "unclear", "none") and not dtxt and a is None and \
             not re.search(r"[.?!]\s*$", t) and re.search(r"\b(to|like|want|mean|i|the|a|an|on|and|but|because|would|can|pay|just|so|my)\s*$", t.lower()):
         V["_cut"] = "yes"                              # text backup: the message ends on an unfinished phrase
-    if V.get("_cut") == "yes" and stage in ("open", "tp", "nego", "confirm", "hardship") and not dtxt and a is None \
+    if V.get("_cut") == "yes" and stage in ("open", "tp", "id", "nego", "confirm", "hardship") and not dtxt and a is None \
+            and k in ("unclear", "none", "too_much", "cannot") \
             and s.get("cut_waits", 0) < 2 and k not in ("wrong_number", "deceased", "dispute", "already_paid", "hardship", "restructure"):
         s["cut_waits"] = s.get("cut_waits", 0) + 1     # the customer stopped mid-sentence: let them finish
         s["reask"] = True

@@ -94,3 +94,24 @@ def test_relative_reveals_during_identity_goes_to_callback_flow():
     script = [C, dict(k="wrong_person", t="oh, you want Maria? I'm her husband"), dict(k="gives_time", t="tomorrow at eleven")]
     led, tr = run_case(A, CASES["PUB-02"], script)
     assert (led["outcome"], led["reason"]) == ("not_reached", "callback")
+
+
+def test_third_party_small_talk_does_not_use_callback_tries():
+    script = [dict(k="third_party", t="I am her husband"), dict(k="unclear", t="work has been exhausting today"),
+              dict(k="unclear", t="the traffic was a nightmare"), dict(k="gives_time", t="tomorrow morning around eleven")]
+    led, tr = run_case(A, CASES["PUB-02"], script)
+    assert led["callbacks"] == [dict(date="2026-10-15", time="11:00")], agent_lines(tr)
+
+
+def test_cut_off_during_identity_does_not_repeat_the_question():
+    script = [C, dict(k="answer", t="19 October 1983"), dict(k="answer", t="4401"),
+              dict(k="unclear", cut="yes", t="I'm so sorry, I"), dict(k="answer", t="four four one zero"), dict(k="yes"), dict(k="yes")]
+    led, tr = run_case(A, CASES["PUB-01"] | dict(identity=dict(date_of_birth="1983-10-19", phone_last4="4410")), script)
+    lines = agent_lines(tr)
+    assert sum("phone number" in x for x in lines) == 2, lines
+
+
+def test_clear_yes_in_a_cut_off_message_is_acted_on():
+    script = ids("PUB-01") + [dict(k="yes"), dict(k="yes", cut="yes", t="Yes, I confirm. I've been")]
+    led, tr = run_case(A, CASES["PUB-01"], script)
+    assert len(led["promises"]) == 1, agent_lines(tr)
