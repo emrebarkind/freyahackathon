@@ -1,4 +1,4 @@
-[    0.0s] START 2026-10-10T12:53:59+0000
+[    0.0s] START 2026-10-10T12:58:44+0000
 [    0.0s] NOTE briefs=['kit/build-the-builder/briefs/brief-a.md'] tool_api=kit/build-the-builder/tools/openapi.json slot=brief-a
 [    0.0s] STEP 1. spec extraction
 [    0.0s] NOTE spec loaded from submission/brief-a.spec.json (no model call)
@@ -38,13 +38,13 @@
 [    0.0s] TEST PASS local several products, all paid today
 [    0.0s] NOTE local self-test: 10/10 passed
 [    0.0s] STEP 3. compile workflow
-[    0.0s] NOTE workflow: 17 nodes, 9 engine-run calls, 121661 bytes
+[    0.0s] NOTE workflow: 17 nodes, 9 engine-run calls, 126667 bytes
 [    0.0s] STEP 4. validate, save, publish
 [    1.1s] TEST PASS platform dry-run validation
-[    5.8s] NOTE FREYA workflow_id=968b2ca2-56fa-45eb-a496-b718d83c93f9 agent_id=709b2618-eec2-42f3-a7a4-7fbc35dd9945 version=3
-[    5.8s] STEP 5. chat smoke test on Freya
-[   12.7s] TEST PASS chat workflow answers over chat -- Hello? / I can only explain why I am calling once I know I am speaking with the right person. Am I speaking with Mr Morgan? / When would be a good time to reach Mr Morgan?
-[   12.7s] TEST PASS chat nothing about the debt before verification
-[   12.7s] STEP 6. export
-[   13.6s] NOTE exported submission/brief-a.workflow.json
-[   13.6s] END 2026-10-10T12:54:12+0000 total_seconds=13.6 model_calls=0 model_cost_usd=0.00
+[    4.0s] NOTE FREYA workflow_id=968b2ca2-56fa-45eb-a496-b718d83c93f9 agent_id=709b2618-eec2-42f3-a7a4-7fbc35dd9945 version=4
+[    4.0s] STEP 5. chat smoke test on Freya
+[   12.9s] TEST PASS chat workflow answers over chat -- Hello? / I can only explain why I am calling once I know I am speaking with the right person. Am I speaking with Mr Morgan? / When would be a good time to reach Mr Morgan?
+[   12.9s] TEST PASS chat nothing about the debt before verification
+[   12.9s] STEP 6. export
+[   13.3s] NOTE exported submission/brief-a.workflow.json
+[   13.3s] END 2026-10-10T12:58:57+0000 total_seconds=13.3 model_calls=0 model_cost_usd=0.00

@@ -1,4 +1,4 @@
-[    0.0s] START 2026-10-10T12:54:12+0000
+[    0.0s] START 2026-10-10T12:58:57+0000
 [    0.0s] NOTE briefs=['kit/build-the-builder/briefs/brief-a.md', 'kit/build-the-builder/briefs/brief-b.md'] tool_api=kit/build-the-builder/tools/openapi.json slot=brief-b
 [    0.0s] STEP 1. spec extraction
 [    0.0s] NOTE spec loaded from submission/brief-b.spec.json (no model call)
@@ -35,13 +35,13 @@
 [    0.0s] TEST PASS local several products, all paid today
 [    0.0s] NOTE local self-test: 10/10 passed
 [    0.0s] STEP 3. compile workflow
-[    0.0s] NOTE workflow: 17 nodes, 9 engine-run calls, 120824 bytes
+[    0.0s] NOTE workflow: 17 nodes, 9 engine-run calls, 125830 bytes
 [    0.0s] STEP 4. validate, save, publish
 [    0.9s] TEST PASS platform dry-run validation
-[    3.2s] NOTE FREYA workflow_id=7ec25973-ffdd-4def-b892-f4047937d6b1 agent_id=136eb10e-c7c9-418b-9860-95662bf7a0f4 version=3
-[    3.2s] STEP 5. chat smoke test on Freya
-[   13.1s] TEST PASS chat workflow answers over chat -- Hello? / I can only discuss that with Mr Morgan once I have confirmed who I am speaking with. Am I speaking with Mr Morgan? / When could I reach Mr Morgan?
-[   13.1s] TEST PASS chat nothing about the debt before verification
-[   13.1s] STEP 6. export
-[   13.9s] NOTE exported submission/brief-b.workflow.json
-[   13.9s] END 2026-10-10T12:54:26+0000 total_seconds=13.9 model_calls=0 model_cost_usd=0.00
+[    4.1s] NOTE FREYA workflow_id=7ec25973-ffdd-4def-b892-f4047937d6b1 agent_id=136eb10e-c7c9-418b-9860-95662bf7a0f4 version=4
+[    4.1s] STEP 5. chat smoke test on Freya
+[   12.4s] TEST PASS chat workflow answers over chat -- Hello? / I can only discuss that with Mr Morgan once I have confirmed who I am speaking with. Am I speaking with Mr Morgan? / When could I reach Mr Morgan?
+[   12.4s] TEST PASS chat nothing about the debt before verification
+[   12.4s] STEP 6. export
+[   13.0s] NOTE exported submission/brief-b.workflow.json
+[   13.0s] END 2026-10-10T12:59:10+0000 total_seconds=13.0 model_calls=0 model_cost_usd=0.00

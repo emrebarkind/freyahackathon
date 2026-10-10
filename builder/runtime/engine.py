@@ -881,6 +881,17 @@ def product_target(s, scope):
 def stage_nego(V, s, k, t, dtxt, a, scope):
     prods = s["products"]
     multi = len(prods) > 1
+    if k in ("unclear", "none") and not dtxt and a is None:
+        if not s.get("unclear_once"):
+            s["unclear_once"] = True     # small talk / a fragment is not an answer yet: ask the same question once more
+            p0 = cur(s) if s.get("phase") != "today" else None
+            if p0 is not None and p0.get("offer") and p0["offer"][1]:
+                say(V, L("repeat_offer", name=p0["name"], amount=pay(p0, p0["offer"][0]), date=spoken(p0["offer"][1])))
+            else:
+                say(V, L("ask_today_multi") if multi else L("ask_today"))
+            return talk(V, "nego", s)
+    else:
+        s["unclear_once"] = False
     target = product_target(s, scope) if multi else None
     if target is not None:
         s["ci"] = target
