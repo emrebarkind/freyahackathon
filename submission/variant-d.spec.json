@@ -37,19 +37,21 @@
    {
     "field": "dob",
     "kind": "date",
-    "ask": "Could you tell me your date of birth, please?"
+    "format": "%Y-%m-%d",
+    "ask": "Could you please tell me your date of birth?"
    },
    {
     "field": "mobile_last4",
     "kind": "digits",
     "length": 4,
-    "ask": "What are the last four digits of the mobile number we have on file for you?"
+    "ask": "Could you please tell me the last four digits of the mobile number we have on file for you?"
    }
   ],
   "max_wrong": 2,
+  "max_wrong_per_question": null,
   "date_order": "dmy",
   "hints": {
-   "day_month_swapped": "It looks like the day and the month may be the wrong way round. Could you give me your date of birth again, day first, then month, then year?"
+   "day_month_swapped": "I think the day and the month may be the wrong way round. Could you say your date of birth again, with the month as a word?"
   },
   "purpose_is_decline": true,
   "question_is_decline": false,
@@ -58,7 +60,9 @@
    "verified": "verified",
    "all_verified": "all_verified",
    "left": "wrong_answers_left",
-   "hint": "hint"
+   "hint": "hint",
+   "pass_values": [],
+   "reject_values": []
   }
  },
  "products": {
@@ -74,7 +78,16 @@
    "personal_loan": "monthly_payment",
    "mortgage": "monthly_payment"
   },
-  "floor_pct": null
+  "floor_pct": null,
+  "floor_names": {
+   "credit_card": "contractual monthly payment",
+   "personal_loan": "contractual monthly payment",
+   "mortgage": "contractual monthly payment"
+  },
+  "amount_scale": 1,
+  "list_field": "products",
+  "id_field": "product_id",
+  "type_field": "type"
  },
  "bands": [
   {
@@ -85,7 +98,8 @@
     "kind": "business_days_after",
     "n": 10
    },
-   "attempts": 1
+   "attempts": 1,
+   "ladder": null
   },
   {
    "name": "over_30",
@@ -95,7 +109,8 @@
     "kind": "business_days_after",
     "n": 10
    },
-   "attempts": 2
+   "attempts": 2,
+   "ladder": null
   }
  ],
  "ladder": [
@@ -109,7 +124,12 @@
   }
  ],
  "rules": {
-  "refuse_deadline_is_refusal": true
+  "refuse_deadline_is_refusal": true,
+  "deadline_adjust": "previous_business_day",
+  "first_ask": "today"
+ },
+ "after_promise": {
+  "ask_anything_else": true
  },
  "notes": {
   "enabled": false
@@ -131,7 +151,7 @@
   "paid": {
    "outcome": "paid",
    "reason": "",
-   "note": "paid"
+   "note": ""
   },
   "transfer_restructuring": {
    "outcome": "transferred",
@@ -151,22 +171,22 @@
   "refused": {
    "outcome": "no_ptp",
    "reason": "refused",
-   "note": "refused"
+   "note": ""
   },
   "hardship": {
    "outcome": "no_ptp",
    "reason": "hardship",
-   "note": "hardship"
+   "note": ""
   },
   "dispute": {
    "outcome": "no_ptp",
    "reason": "dispute",
-   "note": "dispute"
+   "note": ""
   },
   "service_error": {
    "outcome": "no_ptp",
    "reason": "system",
-   "note": "system"
+   "note": ""
   },
   "id_failed": {
    "outcome": "security_fail",
@@ -224,85 +244,147 @@
    "reason": "c_reason"
   }
  },
+ "responses": {
+  "add_note": {
+   "field": "ok",
+   "values": [
+    "true"
+   ]
+  },
+  "close_call": {
+   "field": "ok",
+   "values": [
+    "true"
+   ]
+  },
+  "create_promise": {
+   "field": "ok",
+   "values": [
+    "true"
+   ]
+  },
+  "get_account": {
+   "field": "ok",
+   "values": [
+    "true"
+   ]
+  },
+  "schedule_callback": {
+   "field": "ok",
+   "values": [
+    "true"
+   ]
+  },
+  "transfer_to_agent": {
+   "field": "ok",
+   "values": [
+    "true"
+   ]
+  },
+  "verify_identity": {
+   "field": "ok",
+   "values": [
+    "true"
+   ]
+  }
+ },
+ "intents": {
+  "hardship": "Financial difficulty, for example job loss, illness or bereavement.",
+  "restructure": "The customer asks for a reduced plan.",
+  "human": "The customer asks for a person."
+ },
+ "call_variables": [],
  "lines": {
   "opening": "Hello, this is Harbour Bank's virtual assistant, and we record this call.",
   "confirm_ask": "Is this {title} {last_name}?",
-  "robot": "Yes, I'm Harbour Bank's virtual assistant, an automated service.",
-  "scam": "I understand your caution. I'm Harbour Bank's virtual assistant, and I will never ask for your PIN or passwords. If you prefer, you can call us back on the number on our official website.",
-  "purpose_before_verify": "I can explain once I've confirmed I'm speaking with the right person. It's just a couple of quick security questions.",
+  "robot": "Yes, I am Harbour Bank's virtual assistant.",
+  "scam": "I understand your caution. You can always call Harbour Bank back on the number on our official website.",
+  "purpose_before_verify": "I can explain once I have confirmed I am speaking with the right person.",
   "no_info": "I'm sorry, I can't share that information.",
-  "not_talk_once": "I understand. This will only take a few minutes. May I continue?",
-  "tp_ask": "I'm afraid I can't share any details. When would be a good time to reach {title} {last_name}, today or the next business day, between 12 noon and 8 pm?",
+  "not_talk_once": "I understand, this will only take a moment.",
+  "tp_ask": "When would be a good time to reach them?",
   "tp_ask_time": "What time would suit, between 12 noon and 8 pm?",
-  "tp_outside_window": "I'm sorry, I can only call back today or on the next business day, between 12 noon and 8 pm, and later than now. Is there another time that works?",
-  "tp_no_info": "I'm sorry, I can't share any details. I can only arrange a time to call back.",
-  "tp_booked": "Thank you. We'll call back on {date} at {time}.",
-  "wrong_number": "I'm sorry for disturbing you.",
-  "condolence": "I'm very sorry for your loss. Thank you for letting me know.",
-  "id_intro": "Before we go on, I need to ask you two quick security questions.",
-  "id_why": "These questions protect your privacy, so I only discuss your details with you.",
-  "id_explain": "I ask these questions to make sure I'm speaking with the right person and to keep your information safe.",
-  "id_declined": "I understand. Without these answers I can't continue. You can contact us any time through online banking.",
+  "tp_outside_window": "I'm sorry, I can only arrange a call back later today or on the next business day, between 12 noon and 8 pm. What time would suit?",
+  "tp_no_info": "I'm sorry, I can't share any details.",
+  "tp_booked": "Thank you, we will call back on {date} at {time}.",
+  "wrong_number": "I'm sorry for the trouble, and thank you for letting me know.",
+  "condolence": "I'm very sorry for your loss, and I'm sorry to have troubled you.",
+  "id_intro": "Before we go on, I need to ask you two security questions.",
+  "id_why": "These questions protect your privacy and make sure I only speak with the right person.",
+  "id_explain": "I need to confirm your identity before I can tell you why I'm calling.",
+  "id_declined": "I understand. Without these answers I can't go on with this call.",
   "id_repeat": "Sorry, I didn't catch that. Could you say it again?",
   "id_continue": "Thank you.",
-  "id_wrong": "I'm sorry, that doesn't match what we have. Let's try that again.",
-  "id_failed": "I'm sorry, I couldn't confirm your identity, so I can't continue. Please get in touch with us through online banking.",
+  "id_wrong": "I'm sorry, that doesn't match our records.",
+  "id_failed": "I'm sorry, I can't confirm your identity on this call. Please contact us through online banking.",
   "disclose_intro": "Thank you. I'm calling about a missed payment.",
-  "product_line": "Your {name} has {amount} in arrears and is {days} days late.",
-  "ask_today": "Could you pay the full {amount} today?",
-  "ask_today_multi": "Could you pay the full amounts today?",
-  "next_product": "Now, about your {name}.",
-  "offer": "Would you be able to pay {amount} by {date}?",
+  "product_line": "Your {name} has arrears of {amount}, and it is {days} days late.",
+  "ask_today": "Can you pay the full {amount} today?",
+  "ask_today_multi": "Can you pay the full amounts today?",
+  "next_product": "Now for your {name}.",
+  "offer": "Could you pay {amount} by {date}?",
   "offer_floor_date": "Could you pay {amount} by {date}?",
-  "offer_floor": "If the full amount is too much, the least we can accept is {amount}. Could you manage that?",
-  "below_floor": "I'm sorry, that's below the minimum we can accept. The minimum is {amount}. Could you manage that?",
-  "below_floor_again": "I'm sorry, I can't accept less than {amount}.",
-  "date_past": "That date has already passed. Could you choose a date from today onwards?",
-  "not_business_day": "That day isn't a business day. The next business day is {date}. Would that work?",
-  "after_deadline": "I'm sorry, the latest date I can accept is {date}. Could you pay by then?",
+  "offer_floor": "Could you pay {amount}?",
+  "below_floor": "I'm sorry, the lowest amount I can accept is {floor}. Could you manage that?",
+  "below_floor_again": "I'm sorry, I can't accept that amount.",
+  "date_past": "That date has already passed. Which date would work for you?",
+  "not_business_day": "That day is not a business day. The next business day is {date}.",
+  "after_deadline": "I'm afraid the latest date I can accept is {date}.",
   "vague_ask": "Which exact day would that be?",
   "propose_deadline": "Could you pay {amount} by {date}?",
-  "ask_date_for_amount": "On what date could you pay {amount}?",
-  "repeat_offer": "Just to repeat, could you pay {amount} by {date}?",
-  "readback_intro": "Let me read that back to you.",
-  "readback_item": "{amount} for your {name} on {date}.",
-  "clamped_note": "For your {name}, the latest date I can accept is {date}, so I'll use that date.",
+  "ask_date_for_amount": "On which date could you pay {amount}?",
+  "repeat_offer": "To repeat, could you pay {amount} by {date}?",
+  "readback_intro": "Let me read that back.",
+  "readback_item": "For your {name}, {amount} on {date}.",
+  "clamped_note": "For your {name}, the latest date I can accept is {date}.",
   "confirm_q": "Shall I go ahead and log that?",
-  "recorded": "Thank you, your promise has been recorded.",
+  "recorded": "Thank you, your promise is recorded.",
   "sms_line": "You'll get an email confirmation shortly.",
-  "record_failed": "I'm sorry, our system had a problem and your promise could not be recorded.",
-  "paid_line": "Thank you for letting me know. Payments can take up to three working days to show on your account.",
-  "dispute_line": "I understand. I won't ask you for a payment promise today, and the team will look into it.",
-  "hardship": "I'm really sorry to hear that. Our Customer Care team can help with situations like this. Would you like me to put you through to them?",
-  "hardship_declined": "I understand. If you change your mind, our Customer Care team is there to help.",
-  "restructure_line": "Of course. I'll put you through to our team who can talk about a payment plan.",
-  "human_ask_help": "Of course. Before I transfer you, is there anything I can help you with?",
-  "transfer": "I'll put you through now. Please hold.",
-  "goodbye": "Thank you for your time. Goodbye."
+  "record_failed": "I'm sorry, our system could not save that promise, so it has not been recorded.",
+  "paid_line": "Thank you. Payments can take up to three working days to reach your account.",
+  "dispute_line": "Thank you for telling me, I won't ask you for a payment today.",
+  "hardship": "I'm sorry to hear that. Would you like me to put you through to our Customer Care team?",
+  "hardship_declined": "I understand.",
+  "hardship_short": "Would you like that?",
+  "restructure_line": "I'll put you through to our team who handle payment plans.",
+  "human_ask_help": "Is there anything I can help you with myself?",
+  "transfer": "I'm transferring you now, please hold.",
+  "offer_short": "Would that work for you?",
+  "offer_short_date": "That would be on {date}.",
+  "anything_else": "Is there anything else I can help you with?",
+  "promise_change": "I'm sorry, I can't change that promise on this call.",
+  "go_on": "Sorry, please go on.",
+  "goodbye": "Thank you for your time. Goodbye.",
+  "confirm_again": "Sorry, I didn't catch that. Shall I go ahead and log that, yes or no?",
+  "callback_failed": "I'm sorry, I couldn't book that call back.",
+  "transfer_failed": "I'm sorry, the transfer did not go through.",
+  "system_error": "I'm sorry, our system is not responding right now."
  },
  "assumptions": [
-  "The memo of 25 September 2026 beats policy v4.2 where they disagree, as Priya's email says.",
-  "Security question (b) is the last four digits of the mobile number (memo item 1), not the postcode (7.3). It maps to verify field 'mobile_last4', and question (a), date of birth, maps to 'dob'.",
-  "Two wrong security answers in total end the check (memo item 2), not three (7.4). This applies even though the tool API description says three.",
-  "The latest promise date is the 10th business day after today (memo item 3). This replaces '14 calendar days after today' (7.7).",
-  "Customers more than 30 days late get two persuasion attempts: first the full arrears on the latest allowed date (7.9), then the minimum amount on the latest allowed date (memo item 4). Customers 30 days late or less get one attempt. I set band boundaries at 0-30 and 31 or more days (upper bound 100000 as an open end).",
-  "The only hint value in the tool API is 'day_month_swapped'. The brief gives no wording for it, so the agent asks for the date of birth again, day first, to match date_order 'dmy'.",
-  "Callbacks are allowed today or the next business day (memo item 5 adds to 7.5), from 12:00 to 20:00 inclusive and strictly after the current time. No callback after two asks in total gives NC-NOCB.",
-  "The brief names no currency. I used the default 'dollars', although the brief's wording (postcode, working days) suggests a UK bank.",
-  "The brief does not say whether a numeric date is read day-first or month-first. I used the default 'dmy'.",
-  "The brief does not say how to read 'next Friday'. I used the default 'following_week'.",
-  "The minimum acceptable amount for every product type is the account field monthly_payment (7.8), so floor_pct is null.",
-  "The brief does not require add_note (the API marks it as Brief B), so notes.enabled is false. The note values in events still use the add_note reason enum in case they are needed.",
-  "Customers are behind on one product only, so the multi-product settings keep their defaults and do not matter in practice.",
-  "If the customer refuses the persuasion offer on the latest allowed date, the call closes as NP-REF (7.9), so refuse_deadline_is_refusal is true.",
-  "Customers who still decline security after one explanation get SEC-REF (security_fail/refused). Asking what the call is about counts as declining (default).",
-  "For a request to speak to a person, the agent asks once whether it can help, then transfers to queue 'agents' (TR-AGT).",
-  "For hardship, the agent offers the Customer Care team (queue 'care'). If accepted the code is TR-CARE, if declined NP-HARD. A reduced-plan request goes to queue 'plans' (TR-PLAN, reason 'plan').",
-  "The system is retried once on failure. If it fails twice, the call closes with NP-SYS (7.11).",
-  "Saying 'I don't want to talk' twice ends the call (default max_not_talk 2). The brief gives no code for this.",
-  "Where 7.1 requires stating that the call is recorded, the opening says 'we record this call'.",
-  "The brief prescribes the exact wording of the confirmation question 'Is this {title} {last_name}?' (7.2), 'Shall I go ahead and log that?' (7.10) and 'You'll get an email confirmation shortly.' (7.11). These lines use it word for word.",
-  "The brief does not say what happens to the rest of the arrears when the customer pays only the minimum, so offer_floor says nothing about it.",
-  "Callback day 'today' is allowed even if today is not a business day, so business_days_only is false. The brief says 'same day' with no business-day limit."
+  "The memo of 25 September 2026 beats policy v4.2 section 7 where they disagree, as the cover email says.",
+  "Memo 1 beats 7.3: the second security question is the last four digits of the mobile number (tool field mobile_last4), not the postcode. The first question is date of birth (tool field dob).",
+  "Memo 2 beats 7.4: two wrong answers in total end the check, not three. The tool API summary still says three, but the brief wins.",
+  "Memo 3 beats 7.7: the latest promise date is the 10th business day after today, not 14 calendar days after.",
+  "Memo 4 adds lateness bands: up to 30 days late gets one attempt (full arrears by the deadline). More than 30 days late gets a second attempt (the minimum amount by the deadline). The first band starts at 0 and the second has an open upper bound of 100000.",
+  "Memo 5 extends 7.5: callbacks can be booked today or on the next business day, 12:00 to 20:00, strictly after now, with two asks in total.",
+  "The brief names no currency, so the default 'dollars' is used.",
+  "The minimum acceptable amount (floor) is the account field monthly_payment for every product type, called the contractual monthly payment.",
+  "The brief does not say whether the first full-arrears ask is for today or by the deadline, so the default 'today' is used.",
+  "add_note is not required by brief D, so notes are disabled and every note value is empty.",
+  "The confirmation question 'Is this {title} {last_name}?' and the read-back question 'Shall I go ahead and log that?' are used word for word from the brief.",
+  "The brief requires stating that the call is recorded. The opening says 'we record this call' (active voice).",
+  "After a recorded promise the agent says 'You'll get an email confirmation shortly.' (7.11).",
+  "The brief does not say how 'next Friday' is read, so the default 'following_week' is used.",
+  "The brief does not say how a numbers-only date is read. The materials use day-month style ('2 October 2026'), so 'dmy' is used.",
+  "The brief gives no wording for the tool's only hint value 'day_month_swapped'. The hint line says the day and month may be swapped and asks the customer to repeat the date of birth with the month as a word, so the next answer can be read without doubt. It does not mention the debt.",
+  "The brief does not say how many 'I don't want to talk' replies end the call, so the default of 2 is used.",
+  "The brief does not say whether a promise can be changed, so promise_change says it cannot be changed on this call.",
+  "The brief does not say whether to ask 'anything else' after a promise, so the default (one more turn) is used.",
+  "The brief does not say whether a same-day callback must fall on a business day, so business_days_only is false.",
+  "Promise dates must be business days, so a deadline that is not a business day moves to the previous business day.",
+  "Customers are behind on one product only. Multi-product settings keep their defaults and are not used in practice.",
+  "The system-failure rule is 'fails twice, then apologise and close with NP-SYS'. This maps to the service_error event.",
+  "Already paid uses the PD code (outcome paid, no reason). Dispute uses NP-DIS with no promise.",
+  "Requests for a reduced plan go to queue 'plans' (TR-PLAN). Requests for a person go to queue 'agents' (TR-AGT) after asking once whether the agent can help. Hardship accepted goes to queue 'care' (TR-CARE); declined closes with NP-HARD."
  ]
 }
