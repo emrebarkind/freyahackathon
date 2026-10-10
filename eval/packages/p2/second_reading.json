@@ -1,0 +1,250 @@
+{
+ "checks": [
+  {
+   "id": "C1",
+   "expect": [
+    "date_of_birth",
+    "postcode"
+   ],
+   "source": "Rule 7: 'first the date of birth, then the postcode of the address on file'; API enum date_of_birth, postcode",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C2",
+   "expect": 2,
+   "source": "Rule 9: 'Two wrong answers in total, across both questions, end the check.' Memo: 'The two-wrong-answers limit in rule 9 also stands.'",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C3",
+   "expect": "07031984",
+   "source": "Rule 8: '7 March 1984 is sent as 07031984'",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C4",
+   "expect": "G12 8QQ",
+   "source": "Rule 8: 'capital letters with a single space before its last three characters'",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C5",
+   "expect": false,
+   "source": "Memo B: 'Friday 11 December 2026 is added as a non-business day'",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C6",
+   "expect": false,
+   "source": "Rule 11: '30 November 2026 (St Andrew's Day)' is a bank holiday",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C7",
+   "expect": true,
+   "source": "Rule 11: '24 December 2026 is a normal business day for the collections desk' (Thursday)",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C8",
+   "expect": "2026-11-13",
+   "source": "Memo A: early band now 1 to 14; rule 13: 'the 8th business day after today (today does not count)'. 12 days -> early; 8th BD after Tue 3 Nov = Fri 13 Nov",
+   "confidence": "high",
+   "note": "Under v3.2 alone it would be mid (2026-11-17); memo moves 12 into early"
+  },
+  {
+   "id": "C9",
+   "expect": 1,
+   "source": "Memo A: 'The early band now covers 1 to 14 days in arrears'; rule 13 early = 1 attempt",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C10",
+   "expect": [
+    [
+     233.4,
+     "2026-11-05"
+    ]
+   ],
+   "source": "Memo A early 1-14 (11 days -> early, 1 attempt); rule 20 Step 1: 'the full arrears_amount, today'",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C11",
+   "expect": 2,
+   "source": "Memo A: 'the mid band 15 to 30'; rule 13 mid = 2 attempts",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C12",
+   "expect": "2026-11-27",
+   "source": "Rule 13 mid: 'today plus 14 calendar days'; rule 14: bring forward. 16 Nov + 14 = Mon 30 Nov (St Andrew's Day) -> Sat/Sun -> Fri 27 Nov",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C13",
+   "expect": "2026-12-10",
+   "source": "Rule 14 + memo B: 27 Nov + 14 = Fri 11 Dec (non-business day per memo) -> Thu 10 Dec",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C14",
+   "expect": "2026-12-16",
+   "source": "Rule 13 early 8th business day after today; memo B: 11 Dec 'skipped when counting business days'. From Thu 3 Dec: 4,7,8,9,10,14,15,16",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C15",
+   "expect": "2026-11-27",
+   "source": "Rule 13 late: 'the last business day of the current calendar month'; 30 Nov is a bank holiday -> Fri 27 Nov",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C16",
+   "expect": "2026-12-31",
+   "source": "Rule 14: 'If today is already the last business day of the month, the late-band deadline is the last business day of the following month.' Fri 27 Nov is last BD of Nov (30 Nov holiday) -> Thu 31 Dec",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C17",
+   "expect": "2027-01-05",
+   "source": "Rule 13 early 8th BD after today, skipping 25 Dec, 28 Dec, 1 Jan, 4 Jan: 21,22,23,24,29,30,31 Dec, 5 Jan",
+   "confidence": "high",
+   "note": "Pilot ends 18 Dec but deadline is computed from the rule regardless"
+  },
+  {
+   "id": "C18",
+   "expect": 75.0,
+   "source": "Rule 17: '30% of arrears_amount, rounded up to the next whole pound. A result that is already a whole number of pounds stays as it is.' 250*0.3=75",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C19",
+   "expect": 101.0,
+   "source": "Rule 17: 30% rounded up to next whole pound; 333.34*0.3=100.002 -> 101",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C20",
+   "expect": [
+    [
+     812.4,
+     "2026-11-24"
+    ],
+    [
+     812.4,
+     "2026-11-27"
+    ],
+    [
+     244.0,
+     "2026-11-27"
+    ]
+   ],
+   "source": "Rule 20 steps 1-3; late band 3 attempts; deadline last BD of Nov = 27 Nov (30 Nov holiday); 5th BD after 24 Nov = 2 Dec, later than deadline -> deadline; floor ceil(243.72)=244",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C21",
+   "expect": [
+    [
+     375.0,
+     "2026-12-04"
+    ],
+    [
+     375.0,
+     "2026-12-14"
+    ]
+   ],
+   "source": "Rule 20 steps 1-2; 27 days = mid, 2 attempts; 5th BD after Fri 4 Dec skipping 11 Dec (memo B) = Mon 14 Dec, before deadline 18 Dec",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C22",
+   "expect": false,
+   "source": "Memo D: 'A callback must now be between 09:00 and 18:30, both included.' 18:45 is outside",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C23",
+   "expect": true,
+   "source": "Memo D: 09:00-18:30 both included; Mon 7 Dec is the next business day after Fri 4 Dec",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C24",
+   "expect": true,
+   "source": "Rule 4: 'today or one of the next two business days'; memo B: 11 Dec skipped -> next two BDs after Thu 10 Dec are 14 and 15 Dec; 09:00 included",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C25",
+   "expect": false,
+   "source": "Rule 4: 'must be later than now' (14:30 is before 15:00 today)",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C26",
+   "expect": {
+    "outcome": "no_ptp",
+    "reason": "declined"
+   },
+   "source": "Rule 31 no_ptp reason = note reason; memo C: 'The reason code refused is retired. Use declined instead, both as the close_call reason and as the add_note reason.'",
+   "confidence": "high",
+   "note": "Assumes a single-product (or all-refused) call with no promise recorded"
+  },
+  {
+   "id": "C27",
+   "expect": "declined",
+   "source": "Memo C: 'Use declined instead ... as the add_note reason'",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C28",
+   "expect": {
+    "outcome": "handoff",
+    "reason": "care"
+   },
+   "source": "Rule 28: 'call transfer_to_agent with queue care_team and close as handoff / care'",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C29",
+   "expect": "arrears_solutions",
+   "source": "Rule 29: 'call transfer_to_agent with queue arrears_solutions'",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C30",
+   "expect": 8750,
+   "source": "Rule 19: '\u00a387.50 is sent as 8750'",
+   "confidence": "high",
+   "note": ""
+  }
+ ]
+}
