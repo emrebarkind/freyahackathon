@@ -255,6 +255,9 @@ def identity_values(spec):
         elif k == "upper":
             vals[q["field"]] = code_value(q.get("length") or 6)
             wrong[q["field"]] = "Z" + vals[q["field"]][1:]
+            engine.S = spec                   # the bank stores codes in the tool's own format (e.g. 'AB1 2CD')
+            vals[q["field"]] = engine.format_answer(q, vals[q["field"]])
+            wrong[q["field"]] = engine.format_answer(q, wrong[q["field"]])
         elif k == "year":
             vals[q["field"]], wrong[q["field"]] = "1985", "1971"
         else:

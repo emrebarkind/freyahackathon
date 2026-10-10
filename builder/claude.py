@@ -12,31 +12,54 @@ MODEL = os.environ.get("BUILDER_MODEL", "claude-opus-5-5")
 
 
 async def _ask(prompt, system, model, effort):
-    opts = ClaudeAgentOptions(model=model, system_prompt=system, allowed_tools=[], max_turns=1,
+    # No tools are allowed; a few turns of headroom so a refused tool attempt does not end the call in an error.
+    opts = ClaudeAgentOptions(model=model, system_prompt=system, allowed_tools=[], max_turns=4,
                               permission_mode="dontAsk", setting_sources=[], effort=effort)
-    text, cost = [], 0.0
-    async for m in query(prompt=prompt, options=opts):
-        if isinstance(m, AssistantMessage):
-            text += [b.text for b in m.content if isinstance(b, TextBlock)]
-        elif isinstance(m, ResultMessage):
-            cost = m.total_cost_usd or 0.0
-            if m.result and not text:
-                text = [m.result]
-    return "".join(text), cost
+    turns, cost = [], 0.0
+    try:
+        async for m in query(prompt=prompt, options=opts):
+            if isinstance(m, AssistantMessage):
+                t = "".join(b.text for b in m.content if isinstance(b, TextBlock))
+                if t.strip():
+                    turns.append(t)
+            elif isinstance(m, ResultMessage):
+                cost = m.total_cost_usd or 0.0
+                if m.result and not turns:
+                    turns = [m.result]
+    except Exception:
+        if not turns:
+            raise
+    # the answer is the longest text turn (a short preamble or a refused-tool remark is not the answer)
+    return (max(turns, key=len) if turns else ""), cost
 
 
 def ask(prompt, system, purpose, trace, model=MODEL, effort="high"):
     t0 = time.time()
-    out, cost = asyncio.run(_ask(prompt, system, model, effort))
+    try:
+        out, cost = asyncio.run(_ask(prompt, system, model, effort))
+    except Exception as e:                    # one retry: a transient API or SDK error must not stop the build
+        trace.note(f"model call failed ({type(e).__name__}: {str(e)[:200]}); retrying once")
+        out, cost = asyncio.run(_ask(prompt, system, model, effort))
     trace.model_call(model, purpose, time.time() - t0, cost)
     return out
 
 
 def ask_many(jobs, trace, model=MODEL, effort="high"):
     """jobs: list of (prompt, system, purpose). Runs them concurrently."""
+    async def one(p, s):
+        try:
+            return await _ask(p, s, model, effort)
+        except Exception as e:
+            trace.note(f"model call failed ({type(e).__name__}: {str(e)[:200]}); retrying once")
+            try:
+                return await _ask(p, s, model, effort)
+            except Exception as e2:
+                trace.note(f"model call failed again ({type(e2).__name__}); continuing without it")
+                return "", 0.0
+
     async def run():
         t0 = time.time()
-        res = await asyncio.gather(*[_ask(p, s, model, effort) for p, s, _ in jobs])
+        res = await asyncio.gather(*[one(p, s) for p, s, _ in jobs])
         for (p, s, purpose), (_, cost) in zip(jobs, res):
             trace.model_call(model, purpose, time.time() - t0, cost)
         return [r[0] for r in res]
