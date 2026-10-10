@@ -265,7 +265,7 @@ def product_facts(V, raw):
     return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
                 band=b.get("name", ""), deadline=iso(deadline), attempts=int(b.get("attempts", 1)), ladder=b.get("ladder") or None,
                 used=0, too_much=False, floor_offered=False, vague_asked=False, offer=None,
-                agreed=None, status="open", reason="", refused_offers=[], raw=raw)
+                agreed=None, status="open", reason="", refused_offers=[])
 
 
 def cal_deadline(today, rule):
@@ -355,8 +355,7 @@ def take_input(V, stage):
         V[stage + "_side"] = "none"
     if side != k and side in ("robot", "scam") and not (stage in ("open", "tp") and k == "unclear"):
         V["_prefix"] = L(side)
-    elif side == "question" and k in ("yes", "no", "proposes", "too_much", "vague", "cannot", "refuses", "agrees") \
-            and stage in ("nego", "confirm"):
+    elif side == "question" and k in ("proposes", "too_much", "vague") and stage == "nego":
         V["_prefix"] = L("no_info")
     V["_norm"] = str(g("norm") or "").strip()
     for f in ("text", "date", "norm"):
@@ -545,6 +544,9 @@ def stage_tp(V, s, k, t, dtxt):
         say(V, L("confirm_ask", **names(V)))
         return talk(V, "open", s)
     if k in ("purpose", "offers_pay", "question", "robot", "scam"):
+        s["tp_side"] = s.get("tp_side", 0) + 1
+        if s["tp_side"] > 4:                            # keeps asking instead of giving a time
+            return no_callback(V, s)
         line = L("robot") if k == "robot" else (L("scam") if k == "scam" else L("tp_no_info"))
         say(V, line, L("tp_ask"))
         return talk(V, "tp", s)
@@ -1011,6 +1013,7 @@ def readback(V, s, pre=""):
 
 
 def agree(p, amount, date, clamped=False):
+    p["asks"] = 0
     p["agreed"] = [round(float(amount), 2), date]
     p["status"] = "agreed"
     p["offer"] = None
@@ -1145,6 +1148,16 @@ def special(V, s, k, p, scope="none"):
             if q["status"] == "open":
                 q["status"] = "dispute"
         finish(V, s, L("dispute_line"))
+        return True
+    if k == "hardship" and s.get("hardship_offered"):     # offered once already: no second offer, no persuasion
+        if p is not None and p["status"] == "open":
+            p["status"] = "hardship"
+            p["offer"] = None
+        if any(q["status"] == "agreed" for q in s["products"]) and s.get("stage") == "confirm":
+            say(V, L("hardship_declined"), L("confirm_q"))
+            talk(V, "confirm", s)
+            return True
+        advance(V, s, L("hardship_declined"))
         return True
     if k == "hardship":
         s["hardship_offered"] = True
@@ -1352,10 +1365,14 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         if res == "agreed":
             return advance(V, s)
         if res == "ask":
+            p["asks"] = p.get("asks", 0) + 1
+            if p["asks"] > 2:              # the same impossible date or period again and again: a refusal (one attempt)
+                p["asks"] = 0
+                return refusal(V, s, p, L("below_floor_again", amount=pay(p, p["floor"])))
             say(V, pre)
             return talk(V, "nego", s)
         if res == "refuse":
-            return refusal(V, s, p, L("below_floor_again", amount=pay(p, p["floor"])))
+            return refusal(V, s, p, L("below_floor_final", amount=pay(p, p["floor"])) or L("below_floor_again", amount=pay(p, p["floor"])))
     if k in ("yes", "agrees", "pay_today"):
         if p.get("offer") and p["offer"][1]:
             agree(p, p["offer"][0], p["offer"][1])
@@ -1379,8 +1396,15 @@ def propose_all(V, s, dtxt, a, k):
     for p in s["products"]:
         if p["status"] != "open":
             continue
-        if k in ("yes", "agrees") and not dtxt and a is None and p.get("offer"):
-            agree(p, p["offer"][0], p["offer"][1])
+        if k in ("yes", "agrees") and not dtxt and a is None:
+            if p.get("offer") and p["offer"][1]:
+                agree(p, p["offer"][0], p["offer"][1])
+                continue
+            ref = cur(s) if cur(s) is not None and cur(s).get("offer") and cur(s)["offer"][1] else None
+            ref = ref or next((q for q in s["products"] if q.get("agreed")), None)
+            d0 = (ref.get("offer") or ref.get("agreed"))[1] if ref else iso(today_of(V))
+            dq = min(datetime.date.fromisoformat(d0), datetime.date.fromisoformat(p["deadline"]))
+            agree(p, default_amount(p), iso(dq), iso(dq) != d0)      # the same date as the others, capped at its deadline
             continue
         res, pre = apply_proposal(V, s, p, dtxt, a if len(s["products"]) == 1 else None, scope_all=True)
         if res != "agreed":
@@ -1402,12 +1426,12 @@ def stage_hardship(V, s, k, t, dtxt, a):
         return special(V, s, k, p) and None
     if k in ("human",):
         k = "yes"
-    if k in ("robot", "scam") and not s.get("hardship_side"):
-        s["hardship_side"] = True
+    if k in ("robot", "scam") and s.get("hardship_side", 0) < 3:
+        s["hardship_side"] = s.get("hardship_side", 0) + 1
         say(V, L(k), L("hardship_short") or "Would you like that?")
         return talk(V, "hardship", s)
-    if k in ("unclear", "none", "question") and not dtxt and a is None and not s.get("hardship_reasked"):
-        s["hardship_reasked"] = True             # the offer was made once: re-prompt without naming the team again
+    if k in ("unclear", "none", "question") and not dtxt and a is None and s.get("hardship_reasked", 0) < 2:
+        s["hardship_reasked"] = s.get("hardship_reasked", 0) + 1   # re-prompt without naming the team again
         say(V, L("no_info") if k == "question" else "", L("hardship_short") or "Would you like that?")
         return talk(V, "hardship", s)
     if k in ("yes", "agrees"):
@@ -1688,7 +1712,7 @@ def plan_chain(V):
             V[k + suffix(c["phys"])] = v
         V["plan_" + c["phys"]] = calls[i + 1]["phys"] if i + 1 < len(calls) else final
     fs["chain"] = calls
-    fs["chain_s0"] = s0
+    fs["chain_s0"] = jget(dict(x=s0), "x", dict())
     fs["chain_await"] = fs.get("await", "")
     fs["chain_final"] = final
     fs["chain_say"] = V.get("say", "")
@@ -1729,7 +1753,7 @@ def chain_step(V, s):
         go(V, final)
         return True
     # a call failed: rebuild the state from what really happened, then continue one call at a time
-    st0 = json.loads(s["chain_s0"]) if s.get("chain_s0") else dict()
+    st0 = dict(s.get("chain_s0") or dict())
     st0["no_chain"] = True
     put(V, st0)
     if s.get("chain_prefix"):
@@ -1755,10 +1779,11 @@ def fallback_close(V):
     """Outcome to close with if later engine runs keep failing on the platform (api_close_fb)."""
     s = st(V)
     if s.get("await") == "chain" and s.get("chain_s0"):
-        s = json.loads(s["chain_s0"])                  # what really happened so far, not the planned result
+        s = s["chain_s0"]                              # what really happened so far, not the planned result
         prods = s.get("products") or []
         e = ev("promise" if any(p.get("status") == "recorded" for p in prods) else ("service_error" if prods else "unclear"))
         V["fb_outcome"], V["fb_reason"] = e.get("outcome", ""), e.get("reason", "") or ""
+        V["fb_nr"] = "no" if V["fb_reason"] else "yes"
         V["fb_say"] = (L("system_error") or "I'm sorry, we have a technical problem and need to end the call. Please call us back.") + " " + L("goodbye")
         return
     prods = s.get("products") or []
@@ -1768,6 +1793,7 @@ def fallback_close(V):
         e = ev("promise" if any(p.get("status") == "recorded" for p in prods) else ("service_error" if prods else "unclear"))
         o, r = e.get("outcome", ""), e.get("reason", "") or ""
     V["fb_outcome"], V["fb_reason"] = o, r
+    V["fb_nr"] = "no" if r else "yes"
     V["fb_say"] = (L("system_error") or "I'm sorry, we have a technical problem and need to end the call. Please call us back.") + " " + L("goodbye")
 
 
@@ -1881,8 +1907,9 @@ def stage_after(V, s, k, t):
     if k == "human":
         return transfer(V, s, "human", L("transfer"))
     if k == "hardship":
-        if not ev("transfer_support").get("queue"):
-            return finish(V, s, L("hardship"))
+        if not ev("transfer_support").get("queue") or s.get("hardship_offered"):
+            return finish(V, s, L("hardship") if not s.get("hardship_offered") else "")
+        s["hardship_offered"] = True
         s["after_offer"] = "support"
         say(V, L("hardship"))
         return talk(V, "after", s)

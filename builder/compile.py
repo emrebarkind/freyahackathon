@@ -78,6 +78,8 @@ def _minify(src):
 def embed_json(obj):
     """JSON text that holds no double braces (allowed whitespace between structural braces), else hex."""
     t = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+    t = re.sub(r'"(?:[^"\\]|\\.)*"', lambda m: m.group(0).replace("{", "\\u007b").replace("}", "\\u007d")
+               if ("{{" in m.group(0) or "}}" in m.group(0)) else m.group(0), t)
     t2 = t.replace("}}", "} }").replace("{{", "{ {")
     while "}}" in t2 or "{{" in t2:
         t2 = t2.replace("}}", "} }").replace("{{", "{ {")
@@ -129,11 +131,14 @@ def code_step(spec, routes):
         {"variable": "step_response.status", "operator": "equals", "operand": "error"}] + extra}]}
     # A failed or timed-out code run writes no variables, so `next` would still name the previous target and replay
     # it. Retry the run instead; after repeated failures close the call safely with the engine's fallback outcome.
-    trans = [{"target_node": "api_close_fb", "description": "the engine keeps failing (fallback outcome known)",
-              "condition": err([{"variable": "step_failure_count", "operator": "greater_than", "operand": 3},
+    trans = [{"target_node": "api_close_fb_nr", "description": "the engine keeps failing (fallback outcome known, no reason)",
+              "condition": err([{"variable": "step_failure_count", "operator": "greater_than", "operand": 9},
+                                {"variable": "fb_nr", "operator": "equals", "operand": "yes"}])},
+             {"target_node": "api_close_fb", "description": "the engine keeps failing (fallback outcome known)",
+              "condition": err([{"variable": "step_failure_count", "operator": "greater_than", "operand": 9},
                                 {"variable": "fb_outcome", "operator": "is_set"}])},
              {"target_node": "api_close_fb0", "description": "the engine keeps failing before it ever ran",
-              "condition": err([{"variable": "step_failure_count", "operator": "greater_than", "operand": 3}])},
+              "condition": err([{"variable": "step_failure_count", "operator": "greater_than", "operand": 9}])},
              {"target_node": "step", "description": "retry a failed engine run", "condition": err([])}]
     trans += [{"target_node": r, "description": "engine routes to " + r,
                "condition": {"logic": "or", "conditions": [{"variable": "next", "operator": "equals", "operand": r}]}}
@@ -486,6 +491,8 @@ def compile_workflow(spec, openapi):
                 sorry = re.sub(r"\{[a-z_0-9]+\}", "", sorry)
                 fb = {k: v.replace("{{c_outcome}}", "{{fb_outcome}}").replace("{{c_reason}}", "{{fb_reason}}") for k, v in body.items()}
                 nodes["api_close_fb"] = api_node("api_close_fb", tool, f"{base}/{tool}", fb, types, nxt="end", tts=sorry)
+                fb_nr = {k: v for k, v in fb.items() if v != "{{fb_reason}}"}
+                nodes["api_close_fb_nr"] = api_node("api_close_fb_nr", tool, f"{base}/{tool}", fb_nr, types, nxt="end", tts=sorry)
                 un = spec["events"].get("unclear", {})
                 fb0 = {k: (v.replace("{{c_outcome}}", "const:" + un.get("outcome", "")).replace("{{c_reason}}", "const:" + (un.get("reason") or ""))
                            if v in ("{{c_outcome}}", "{{c_reason}}") else v) for k, v in body.items()}

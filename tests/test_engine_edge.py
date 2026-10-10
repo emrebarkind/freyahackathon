@@ -406,3 +406,45 @@ def test_first_question_names_the_amount_on_reask():
     led, tr = _gen(spec, IDS + [dict(k="unclear", t="hmm, well"), dict(k="yes"), dict(k="yes")])
     lines = [t for w, t in tr if w == "agent"]
     assert "Can you pay the full 300 dollars today?" in lines[4], lines
+
+
+def test_yes_for_all_without_a_date_uses_the_offered_date():
+    led, tr = run_case(B, CASES["PUB-13"], ids_b("PUB-13") + [dict(k="no"), dict(k="yes", f="all", t="yes, the same for all of them"), dict(k="yes")])
+    dates = sorted(p["date"] for p in led["promises"])
+    assert len(dates) == 2 and str(min(dates)) != "2026-10-14", agent_lines(tr)
+    assert not any("please go on" in x.lower() for x in agent_lines(tr)), agent_lines(tr)
+
+
+def test_insisting_on_a_date_after_the_deadline_ends():
+    script = ids("PUB-07") + [dict(k="proposes", d="15 December", t="15 December")] * 6
+    led, tr = run_case(A, CASES["PUB-07"], script)
+    assert led["outcome"] is not None, agent_lines(tr)
+
+
+def test_relative_asking_what_it_is_about_ends():
+    led, tr = run_case(A, CASES["PUB-02"], [dict(k="third_party", t="her husband")] + [dict(k="purpose", t="what is this about?")] * 8)
+    assert led["outcome"] == "not_reached", agent_lines(tr)
+
+
+def test_support_team_offered_only_once():
+    script = ids("PUB-05") + [dict(k="hardship", t="I lost my job"), dict(k="proposes", d="Friday", a=50, t="I can pay 50 on Friday"),
+                              dict(k="hardship", t="as I said I lost my job"), dict(k="no"), dict(k="no"), dict(k="no")]
+    led, tr = run_case(A, CASES["PUB-05"], script)
+    assert sum("support team" in x for x in agent_lines(tr)) == 1, agent_lines(tr)
+
+
+def test_peak_call_variables_stay_small():
+    import json as _j
+    from builder.runtime import engine
+    peak = [0]
+    orig = engine.main
+
+    def main(V):
+        orig(V)
+        peak[0] = max(peak[0], len(_j.dumps(V)))
+    engine.main = main
+    try:
+        run_case(B, CASES["PUB-11"], ids_b("PUB-11") + [dict(k="yes", t="yes " * 60), dict(k="yes")])
+    finally:
+        engine.main = orig
+    assert peak[0] < 12000, peak[0]
