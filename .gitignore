@@ -17,3 +17,4 @@ traces/brief-*.trace.log
 traces/variant-*.trace.log
 traces/test-*.trace.log
 .claude/worktrees/
+submission/test-*

@@ -336,14 +336,15 @@ def take_input(V, stage):
     t = str(g("text") or "").strip()
     dt = str(g("date") or "").strip()
     a = num(g("amount"))
-    sc = str(g("scope") or "none").strip().lower()
-    fr = str(g("for") or "none").strip().lower()
+    sc = "none"
+    fr = str(g("for") or "none").strip()
     if (stage + "_for") in V:
         V[stage + "_for"] = "none"
-    if fr == "all":
+    types = dict((str(t).lower(), t) for t in S.get("products", dict()).get("names", dict()))
+    if fr.lower() == "all":
         sc = "all"
-    elif fr not in ("", "none") and fr in S.get("products", dict()).get("names", dict()):
-        sc = "type:" + fr
+    elif fr.lower() not in ("", "none") and fr.lower() in types:
+        sc = "type:" + types[fr.lower()]
     V["_cut"] = str(g("cut") or "no").strip().lower()
     if (stage + "_cut") in V:
         V[stage + "_cut"] = "no"
@@ -353,7 +354,8 @@ def take_input(V, stage):
         V[stage + "_side"] = "none"
     if side != k and side in ("robot", "scam") and not (stage in ("open", "tp") and k == "unclear"):
         V["_prefix"] = L(side)
-    elif side == "question" and k not in ("question", "purpose", "asks_why", "unclear", "none") and stage not in ("open", "tp", "id"):
+    elif side == "question" and k in ("yes", "no", "proposes", "too_much", "vague", "cannot", "refuses", "agrees") \
+            and stage in ("nego", "confirm"):
         V["_prefix"] = L("no_info")
     V["_norm"] = str(g("norm") or "").strip()
     for f in ("text", "date", "norm"):
@@ -363,8 +365,6 @@ def take_input(V, stage):
         V[stage + "_amount"] = 0
     if (stage + "_kind") in V:
         V[stage + "_kind"] = "none"
-    if (stage + "_scope") in V:
-        V[stage + "_scope"] = "none"
     if a == 0:
         a = None
     return k, t, dt, a, sc
@@ -457,7 +457,11 @@ def stage_init(V, s):
 
 
 def names(V):
-    return dict(title=V.get("title", ""), first_name=V.get("first_name", ""), last_name=V.get("last_name", ""))
+    out = dict(title=V.get("title", ""), first_name=V.get("first_name", ""), last_name=V.get("last_name", ""))
+    for k in S.get("call_variables", []) or []:          # any other call variable the brief's lines use
+        if k not in out and k != "now":
+            out[k] = str(V.get(k, "") or "")
+    return out
 
 
 def common_intents(V, s, k, again, verified):
@@ -1372,9 +1376,13 @@ def stage_hardship(V, s, k, t, dtxt, a):
         return special(V, s, k, p) and None
     if k in ("human",):
         k = "yes"
+    if k in ("robot", "scam") and not s.get("hardship_side"):
+        s["hardship_side"] = True
+        say(V, L(k), L("hardship_short") or "Would you like that?")
+        return talk(V, "hardship", s)
     if k in ("unclear", "none", "question") and not dtxt and a is None and not s.get("hardship_reasked"):
-        s["hardship_reasked"] = True
-        say(V, L("no_info") if k == "question" else "", L("hardship_offer_again") or L("go_on") or "Sorry, I did not catch that.")
+        s["hardship_reasked"] = True             # the offer was made once: re-prompt without naming the team again
+        say(V, L("no_info") if k == "question" else "", L("hardship_short") or "Would you like that?")
         return talk(V, "hardship", s)
     if k in ("yes", "agrees"):
         return transfer(V, s, "support", L("transfer"))
@@ -1501,11 +1509,12 @@ def record_next(V, s):
         rec = [p for p in s["products"] if p["status"] == "recorded"]
         failed = [p for p in s["products"] if p["status"] == "service_error"]
         lines = []
+        mixed = bool(rec) and bool(failed)
         if rec:
-            lines.append(L("recorded"))
+            lines.append(for_products(rec, "recorded", mixed))
             lines.append(L("sms_line"))
         if failed:
-            lines.append(L("record_failed"))
+            lines.append(for_products(failed, "record_failed", mixed))
         if rec and S.get("after_promise", dict()).get("ask_anything_else", True):
             s["stage"] = "after"                    # give the customer a turn (change requests, transfers after a promise)
             say(V, " ".join(lines), L("anything_else") or "Is there anything else I can help you with?")
@@ -1521,6 +1530,18 @@ def promise_amount(p):
     scale = float(S["products"].get("amount_scale") or 1)
     a = round(p["agreed"][0] * scale, 2)
     return int(round(a)) if scale != 1 else a
+
+
+def for_products(prods, key, name_them):
+    """A line about some products only: names them when the outcome differs between products."""
+    names = " and ".join(p["name"] for p in prods)
+    t = S.get("lines", dict()).get(key, "")
+    if not name_them:
+        return L(key, name=names) if "{name}" in t else L(key)
+    if "{name}" in t:
+        return L(key, name=names)
+    line = L(key)
+    return ("For your " + names + ": " + line[:1].lower() + line[1:]) if line else ""
 
 
 def after_promise(V, s):
@@ -1566,12 +1587,22 @@ def run(V):
             if ok:
                 return close(V, s, s.pop("cb_event", "callback"), s.pop("cb_booked", ""))
             return no_callback(V, s, L("callback_failed") or "I'm sorry, I could not book the callback. Please call us back.")
-        line = s.get("say_after_transfer", "") if ok else (L("transfer_failed") or "I'm sorry, I could not connect you right now. Please call us back.")
-        return close(V, s, "transfer_" + s.get("transferred", "human"), line)
+        if ok:
+            return close(V, s, "transfer_" + s.get("transferred", "human"), s.get("say_after_transfer", ""))
+        line = L("transfer_failed") or "I'm sorry, I could not connect you right now. Please call us back."
+        s.pop("transferred", None)
+        if not s.get("products"):
+            return close(V, s, "service_error", line)
+        for p in s["products"]:
+            if p["status"] in ("open", "agreed"):
+                p["status"] = "service_error"
+        return finish(V, s, line)
     if aw in ("api_close", "api_close_nr"):
         go(V, "end")
         return
     stage = s.get("stage", "open")
+    if s.get("products") and cur(s) is not None:
+        focus(cur(s))                                  # product fields for every line said this step
     k, t, dtxt, a, scope = take_input(V, stage)
     if s.pop("human_pending", False) and k in ("no", "refuses", "not_talk", "human", "unclear", "none", "asks_why"):
         k = "human"                                    # still wants a person after being asked once: transfer
@@ -1610,6 +1641,12 @@ def run(V):
 
 def stage_after(V, s, k, t):
     """After a recorded promise: 'can I change it?', a transfer request, or goodbye."""
+    offer = s.pop("after_offer", "")
+    if offer == "support" and k in ("yes", "agrees", "human"):
+        return transfer(V, s, "support", L("transfer"))
+    if k in ("robot", "scam"):
+        say(V, L(k), L("anything_else") or "Is there anything else I can help you with?")
+        return talk(V, "after", s)
     if k == "change":
         return finish(V, s, L("promise_change"))
     if k == "restructure":
@@ -1619,20 +1656,18 @@ def stage_after(V, s, k, t):
     if k == "hardship":
         if not ev("transfer_support").get("queue"):
             return finish(V, s, L("hardship"))
-        s["stage"] = "hardship_after"
+        s["after_offer"] = "support"
         say(V, L("hardship"))
         return talk(V, "after", s)
     if k == "question" and not s.get("after_q"):
         s["after_q"] = True
         say(V, L("no_info"), L("anything_else") or "Is there anything else I can help you with?")
         return talk(V, "after", s)
-    if s.get("stage") == "hardship_after" and k in ("yes", "agrees"):
-        return transfer(V, s, "support", L("transfer"))
     return finish(V, s)
 
 
 def dispatch(V, s, stage, k, t, dtxt, a, scope):
-    if stage in ("after", "hardship_after"):
+    if stage == "after":
         return stage_after(V, s, k, t)
     if stage == "open":
         return stage_open(V, s, k, t)
@@ -1650,7 +1685,9 @@ def dispatch(V, s, stage, k, t, dtxt, a, scope):
 
 
 def main(V):
+    CTX.clear()
     CTX.update(names(V))
+    V["next"] = ""
     try:
         run(V)
     except Exception as e:  # never let the call die: apologise and close safely

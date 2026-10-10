@@ -43,6 +43,9 @@ SLOTS = {"verify_identity": {"q_field", "q_answer"}, "get_account": set(),
 
 
 ALL_SLOTS = set().union(*SLOTS.values()) | {"cb_datetime"}
+PLACEHOLDERS = {"title", "first_name", "last_name", "name", "amount", "date", "days", "time", "deadline", "floor", "full"}
+STATEMENT_LINES = {"robot", "scam", "tp_no_info", "not_talk_once", "id_wrong", "id_why", "id_explain", "no_info",
+                   "below_floor_again", "paid_line", "dispute_line", "recorded", "sms_line", "record_failed"}
 
 
 def tool_required(openapi, tool):
@@ -188,6 +191,12 @@ def validate(spec, openapi):
                         f"Rephrase in the active voice ('we record this call') or use 'noted'")
         if "{{" in str(v) or "}}" in str(v):
             errs.append(f"lines.{k} must use single braces")
+        for ph in re.findall(r"\{([a-zA-Z_0-9]+)\}", str(v)):
+            if ph not in PLACEHOLDERS and ph not in (spec.get("call_variables") or []):
+                errs.append(f"lines.{k} uses {{{ph}}}, which the engine cannot fill (allowed: {sorted(PLACEHOLDERS)} "
+                            f"and call_variables)")
+        if k in STATEMENT_LINES and str(v).strip().endswith("?"):
+            errs.append(f"lines.{k} must be a statement (another sentence follows it in the same turn), not a question")
     return errs
 
 

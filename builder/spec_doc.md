@@ -118,6 +118,8 @@ use the default shown and record it in `assumptions`.
  "intents": {},                                    // optional: how the brief defines a situation, one line each, quoting its
                                                    // examples, for keys among hardship, dispute, already_paid, restructure, vague,
                                                    // too_much, human. Only where the brief defines it.
+ "call_variables": [],                             // call variables the brief lists besides customer_id, first_name,
+                                                   // last_name, title, now (e.g. "company_name"), if lines use them
  "lines": { ... },                                 // every sentence the agent speaks, see below
  "assumptions": ["..."]                            // anything you had to decide that the brief does not say
 }
@@ -127,7 +129,13 @@ use the default shown and record it in `assumptions`.
 
 Write each sentence in plain spoken English, short. Where the brief prescribes words, use them exactly.
 Placeholders in braces are filled by the engine: {title} {first_name} {last_name} {name} (product name)
-{amount} (spoken amount with currency) {date} (spoken date) {days} (days late) {time}.
+{amount} (spoken amount with currency) {date} (spoken date) {days} (days late) {time} {deadline} {floor} {full},
+plus any other call variable the brief lists (declare it in "call_variables", e.g. ["company_name"]). No other placeholders.
+The engine joins lines into one turn, so: these lines are statements that another sentence follows, and must NOT end
+with a question: robot, scam, tp_no_info, not_talk_once, id_wrong, id_why, id_explain, no_info, below_floor_again,
+paid_line, dispute_line, recorded, sms_line, record_failed. These are one bare question with no preamble (no "Thank
+you." or "I'm sorry" in front): confirm_ask, tp_ask, tp_ask_time, ask_today, ask_today_multi, offer_short, confirm_q,
+hardship_short, anything_else.
 Never mention the debt, a payment, the product or the bank department before identity is verified, in any
 line used before verification (opening, confirm_ask, robot, scam, purpose_before_verify, tp_*, wrong_number,
 condolence, id_*). Use the word "recorded" ONLY in the lines `recorded`, `sms_line` and `record_failed`
@@ -143,7 +151,7 @@ disclose_intro, product_line, ask_today, ask_today_multi, next_product,
 offer, offer_floor_date, offer_floor, below_floor, below_floor_again, date_past, not_business_day,
 after_deadline, vague_ask, propose_deadline, ask_date_for_amount, repeat_offer,
 readback_intro, readback_item, clamped_note, confirm_q, recorded, sms_line, record_failed,
-paid_line, dispute_line, hardship, hardship_declined, hardship_offer_again, restructure_line, human_ask_help, transfer,
+paid_line, dispute_line, hardship, hardship_declined, hardship_short, restructure_line, human_ask_help, transfer,
 offer_short, offer_short_date, anything_else, promise_change, go_on, goodbye
 
 Meaning of the less obvious ones:
@@ -163,7 +171,9 @@ Meaning of the less obvious ones:
 - recorded: said only after the bank confirmed the promise; sms_line: any sentence the brief requires after a recorded promise ("" if none).
 - record_failed: the promise could not be recorded.
 - hardship: one sentence of sympathy plus the offer the brief prescribes (e.g. connect to a support team).
-- hardship_offer_again: re-asks the support/transfer offer once if the answer was unclear.
+- hardship_short: a short re-prompt after an unclear answer to the hardship offer, WITHOUT naming the team again ("Would you like that?").
+- hardship_declined: said when the customer declines the hardship offer; do not mention the team or the offer again.
+- below_floor_again: a short acknowledgement WITHOUT any amount (another offer may follow in the same turn).
 - offer_short: a neutral re-prompt after a side question, WITHOUT the amount ("Would that work for you?").
 - offer_short_date: the date of the pending floor offer ({date}), e.g. "That would be on {date}."
 - go_on: said when the customer stopped mid-sentence ("Sorry, please go on.").

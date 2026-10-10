@@ -46,7 +46,7 @@ SCRIPTS = {
     "PUB-10": [C, dict(k="answer", t="23 February 1989"), dict(k="answer", t="9904"), dict(k="no", t="not today"),
                dict(k="yes", t="yes this Friday is fine"), dict(k="yes")],
     "PUB-11": [C, dict(k="answer", t="3 June 1987"), dict(k="answer", t="2288"), dict(k="no", t="not today"),
-               dict(k="proposes", d="this Friday", s="all", t="I can pay all three this Friday"), dict(k="yes")],
+               dict(k="proposes", d="this Friday", f="all", t="I can pay all three this Friday"), dict(k="yes")],
     "PUB-12": [C, dict(k="answer", t="19 October 1983"), dict(k="answer", t="4401"), dict(k="answer", t="4410"),
                dict(k="no", t="not all today"), dict(k="proposes", d="tomorrow", t="the card tomorrow"),
                dict(k="no"), dict(k="no"), dict(k="no"), dict(k="yes")],
@@ -58,7 +58,7 @@ SCRIPTS = {
                     dict(k="proposes", d="tomorrow", f="credit_card", t="I only agreed to pay the credit card tomorrow."),
                     dict(k="no"), dict(k="no"), dict(k="no"), dict(k="yes")],
     "PUB-13": [C, dict(k="answer", t="8 January 1991"), dict(k="answer", t="6604"), dict(k="no", t="not today"),
-               dict(k="proposes", d="30 October", s="all", t="both on 30 October"), dict(k="yes")],
+               dict(k="proposes", d="30 October", f="all", t="both on 30 October"), dict(k="yes")],
 }
 
 

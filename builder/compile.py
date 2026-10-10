@@ -108,6 +108,9 @@ KINDS = {
         "yes": "accepts being connected / transferred",
         "no": "declines being connected / transferred",
         "proposes": "names a date or an amount they can pay themselves",
+        "robot": "asks whether you are a robot or an AI",
+        "scam": "asks whether this is a scam",
+        "question": "asks a question",
         "unclear": "anything else",
     },
     "confirm": {
@@ -131,6 +134,8 @@ KINDS = {
         "restructure": "asks for a new payment plan, lower instalments or restructuring",
         "human": "asks to speak to a human",
         "hardship": "mentions illness, a death in the family, or job loss",
+        "robot": "asks whether you are a robot or an AI",
+        "scam": "asks whether this is a scam",
         "yes": "says yes (accepts what was just offered)",
         "question": "asks a question",
         "unclear": "anything else",
@@ -324,8 +329,10 @@ def compile_workflow(spec, openapi):
     stages = ["open", "tp", "id", "nego", "hardship", "confirm", "after"]
     for st in stages:
         nodes["talk_" + st] = talk_node(st, spec)
-    first = (spec["lines"]["opening"] + " " + spec["lines"]["confirm_ask"]).replace("{title}", "{{title}}").replace(
-        "{last_name}", "{{last_name}}").replace("{first_name}", "{{first_name}}")
+    first = spec["lines"]["opening"] + " " + spec["lines"]["confirm_ask"]
+    for v in ["title", "first_name", "last_name"] + [x for x in spec.get("call_variables", []) or [] if x != "now"]:
+        first = first.replace("{" + v + "}", "{{" + v + "}}")
+    first = re.sub(r"(?<!\{)\{[a-z_0-9]+\}(?!\})", "", first)       # never speak an unfilled placeholder
     nodes["talk_open"]["on_enter"] = {"type": "tts", "text": first}
     nodes["talk_open"]["on_enter_first_entry_only"] = True
     nodes["talk_open_again"] = dict(talk_node("open", spec), name="talk_open_again")
