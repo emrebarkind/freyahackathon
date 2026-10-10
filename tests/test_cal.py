@@ -74,3 +74,14 @@ def test_spoken_times_and_corrections():
         assert (gd.isoformat(), gh) == (d, h), t
     assert cal.parse_spoken_date("the 21st, sorry, I mean the 20th", TODAY).isoformat() == "2026-10-20"
     assert cal.parse_spoken_date("Friday, actually no, Thursday", TODAY).isoformat() == "2026-10-15"
+
+
+def test_payment_date_forms():
+    T = TODAY
+    cases = {"Friday next week": "2026-10-23", "next week Friday": "2026-10-23", "the Friday after next": "2026-10-30",
+             "maybe the 20th": "2026-10-20", "I will decide, the 20th": "2026-10-20", "a week from today": "2026-10-21",
+             "in three days": "2026-10-17", "not today, but Friday": "2026-10-16", "I can't pay today, maybe Monday": "2026-10-19",
+             "October twenty second": "2026-10-22", "a week on Friday": "2026-10-23"}
+    for t, e in cases.items():
+        assert cal.parse_spoken_date(t, T).isoformat() == e, t
+    assert cal.parse_spoken_date("next week", T) is None

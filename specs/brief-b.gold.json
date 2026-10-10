@@ -250,7 +250,12 @@
   "human_ask_help": "I can help you with this. Is there something I can do for you first?",
   "transfer": "I'll transfer you now.",
   "goodbye": "Thank you for your time. Goodbye.",
-  "id_format_hint": "Could you say it as day, month and year, for example the first of May nineteen eighty?"
+  "id_format_hint": "Could you say it as day, month and year, for example the first of May nineteen eighty?",
+  "hardship_offer_again": "Would you like me to connect you with our customer support team?",
+  "offer_short": "Would that work for you?",
+  "offer_short_date": "That would be on {date}.",
+  "anything_else": "Is there anything else I can help you with?",
+  "promise_change": "A recorded promise cannot be changed on this call, but you can change it in the mobile app."
  },
  "tool_bodies": {
   "verify_identity": {

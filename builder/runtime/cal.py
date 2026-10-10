@@ -255,45 +255,74 @@ def parse_spoken_date(text, today, rules=None):
     return _parse_spoken_date(text, today, rules)
 
 
+SMALL_N = dict(a=1, an=1, one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9, ten=10, couple=2)
+MONTH_RE = r"\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\b"
+
+
 def _parse_spoken_date(text, today, rules=None):
-    """Best-effort: returns a datetime.date or None. Handles ISO, 'today', 'tomorrow',
-    '(this|next) <weekday>', bare weekday (next occurrence), '<day> <month>' / '<month> <day>' with
-    digits or ordinal words, and 'the 23rd'. `rules` may set next_weekday='following_week' (default)."""
+    """Best-effort spoken payment date -> datetime.date or None (relative to `today`, never the real clock).
+    Handles ISO, today/tomorrow/day after tomorrow, 'in 3 days', 'a week from today', '(this|next) <weekday>',
+    '<weekday> next week', 'the <weekday> after next', bare weekday (next occurrence), '<day> <month>',
+    '<month> <day>', 'the 23rd', ordinal words. Negated mentions ('not today') are ignored."""
     rules = rules or {}
-    t = str(text or "").lower().strip()
-    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", t)
+    t = " " + str(text or "").lower().replace("-", " ").replace(",", " ") + " "
+    m = re.search(r"(\d{4}) (\d{2}) (\d{2})", t) or re.search(r"(\d{4})/(\d{2})/(\d{2})", t)
     if m:
-        return datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-    if "day after tomorrow" in t:
+        try:
+            return datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            pass
+    t = re.sub(r"\b(not|can't|cannot|can not|won't|wont|couldn't)\s+(?:pay\s+|do\s+it\s+|make\s+it\s+)?(today|tomorrow|now|right now|this week)\b", " ", t)
+    # relative offsets
+    m = re.search(r"\b(?:in|within)\s+(a|an|one|two|three|four|five|six|seven|eight|nine|ten|couple of|\d+)\s+(day|days|week|weeks)\b", t) or \
+        re.search(r"\b(a|an|one|two|three|four|five|six|seven|\d+)\s+(day|days|week|weeks)\s+from\s+(?:today|now)\b", t)
+    if m:
+        n = m.group(1).replace(" of", "")
+        n = int(n) if n.isdigit() else SMALL_N.get(n, 1)
+        return today + datetime.timedelta(days=n * (7 if m.group(2).startswith("week") else 1))
+    if re.search(r"\bday after tomorrow\b", t):
         return today + datetime.timedelta(days=2)
-    if "tomorrow" in t:
-        return today + datetime.timedelta(days=1)
-    if re.search(r"\btoday\b|\bnow\b|right away", t):
-        return today
     month = None
-    for i, mn in enumerate(MONTHS):
-        if re.search(r"\b" + mn[:3] + r"[a-z]*\b", t):
-            month = i + 1
+    for mm in re.finditer(MONTH_RE, t):
+        w = mm.group(1)
+        if w == "may":   # 'may' is a month only next to a day number / ordinal
+            ctx = t[max(0, mm.start() - 15):mm.end() + 15]
+            if not re.search(r"\d|\b(first|second|third|[a-z]+th|twenty|thirty)\b", ctx):
+                continue
+        month = [i for i, mn in enumerate(MONTHS) if mn.startswith(w[:3])][0] + 1
     day = None
-    m = re.search(r"\b(\d{1,2})(?:st|nd|rd|th)?\b", t)
-    if m and 1 <= int(m.group(1)) <= 31:
-        day = int(m.group(1))
-    else:
-        tt = t.replace("-", " ")
+    for mm in re.finditer(r"\b(\d{1,2})(?:st|nd|rd|th)?\b(?!\s*(?::|am|pm|a\.m|p\.m|o'clock|oclock|dollars?|euros?|pounds?|days?|weeks?|hundred))", t):
+        before = t[max(0, mm.start() - 8):mm.start()]
+        if re.search(r"\b(at|around|about|after|before|by)\s+$", before) and not month:
+            continue
+        if 1 <= int(mm.group(1)) <= 31:
+            day = int(mm.group(1))
+    if day is None:
         for w, v in sorted(ORD_WORDS.items(), key=lambda kv: -len(kv[0])):
-            mm = re.search(r"\b(twenty|thirty)\s+" + w + r"\b", tt)
+            mm = re.search(r"\b(twenty|thirty)\s+" + w + r"\b", t)
             if mm:
                 day = NUM_WORDS[mm.group(1)] + v
                 break
-            if re.search(r"\b" + w + r"\b", tt):
+            if re.search(r"\b" + w + r"\b", t) and not re.search(r"\b" + w + r"\s+(week|time|attempt)", t):
                 day = v
                 break
+    if day is None and month:
+        toks = [x for x in t.split() if x]
+        d0, _ = spoken_day([x for x in toks if not re.fullmatch(MONTH_RE.strip("\\b"), x)])
+        if d0:
+            day = d0
+    nxt = rules.get("next_weekday", "following_week")
     for i, wd in enumerate(WEEKDAYS):
-        if re.search(r"\b" + wd + r"\b", t):
-            if re.search(r"\bnext\s+" + wd, t) and rules.get("next_weekday", "following_week") == "following_week":
+        if re.search(r"\b" + wd + r"s?\b", t):
+            if re.search(r"\b" + wd + r"\s+after\s+next\b", t):
+                return weekday_in_week(today, i, "this") + datetime.timedelta(weeks=2)
+            if re.search(r"\b(" + wd + r"\s+next\s+week|next\s+week\s+(on\s+)?" + wd + r"|a\s+week\s+on\s+" + wd + r"|" + wd + r"\s+week)\b", t):
                 return weekday_in_week(today, i, "next")
-            if re.search(r"\bthis\s+" + wd, t):
-                return weekday_in_week(today, i, "this")
+            if re.search(r"\bnext\s+" + wd, t):
+                return weekday_in_week(today, i, "next") if nxt == "following_week" else upcoming_weekday(today, i)
+            if re.search(r"\bthis\s+(coming\s+)?" + wd, t):
+                d = weekday_in_week(today, i, "this")
+                return d if d >= today else upcoming_weekday(today, i)
             if day is not None:
                 break  # "Monday the 26th" -> use the day number below
             return upcoming_weekday(today, i, include_today=False)
@@ -314,6 +343,10 @@ def _parse_spoken_date(text, today, rules=None):
         elif d < today - datetime.timedelta(days=180):
             d = datetime.date(y + 1, mth, day)
         return d
+    if re.search(r"\btomorrow\b", t):
+        return today + datetime.timedelta(days=1)
+    if re.search(r"\b(today|now|right away|immediately|this afternoon|this evening|tonight)\b", t):
+        return today
     return None
 
 

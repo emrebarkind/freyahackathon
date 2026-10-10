@@ -116,6 +116,8 @@ def simulate(spec, variables, bank, turns, max_steps=300):
             continue
         if nxt and nxt.startswith("talk_"):
             tr.append(("agent", V.get("say", "")))
+            if not turns and nxt == "talk_after":
+                turns = [dict(k="done", t="no, that's all, thank you")]
             if not turns:
                 tr.append(("customer", "<silence>"))
                 break

@@ -173,6 +173,15 @@ def product_facts(V, raw):
     dl = int(num(raw.get(S["products"].get("days_field", "days_late"))) or 0)
     b = band_for(dl)
     deadline = cal_deadline(today, b["deadline"])
+    adj = b["deadline"].get("adjust", S.get("rules", dict()).get("deadline_adjust", "previous_business_day"))
+    if adj != "none" and not is_business_day(deadline):
+        if adj == "next_business_day":
+            deadline = next_business_day(deadline)
+        else:
+            x = deadline
+            while not is_business_day(x) and x > today:
+                x = x - datetime.timedelta(days=1)
+            deadline = x if is_business_day(x) else next_business_day(deadline)
     return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
                 band=b.get("name", ""), deadline=iso(deadline), attempts=int(b.get("attempts", 1)),
                 used=0, too_much=False, floor_offered=False, vague_asked=False, offer=None,
@@ -254,6 +263,7 @@ def take_input(V, stage):
     if (stage + "_cut") in V:
         V[stage + "_cut"] = "no"
     side = str(g("side") or "none").strip().lower()
+    V["_side"] = side
     if (stage + "_side") in V:
         V[stage + "_side"] = "none"
     if side != k and side in ("robot", "scam") and not (stage in ("open", "tp") and k == "unclear"):
@@ -359,6 +369,7 @@ def common_intents(V, s, k, again, verified):
     if k == "human":
         if not s.get("human_asked") and S.get("human", dict()).get("ask_first", True):
             s["human_asked"] = True
+            s["human_pending"] = True
             say(V, L("human_ask_help"))
             talk(V, s["stage"], s)
             return True
@@ -385,6 +396,8 @@ def common_intents(V, s, k, again, verified):
 
 def stage_open(V, s, k, t):
     again = L("confirm_ask", **names(V))
+    if k in ("unclear", "none") and V.get("_side") in ("robot", "scam"):
+        k = V["_side"]
     if k == "confirmed":
         return start_identity(V, s)
     if k == "third_party":
@@ -429,18 +442,35 @@ def stage_tp(V, s, k, t, dtxt):
         return talk(V, "tp", s)
     if k in ("gives_time", "unclear", "none") and (dtxt or t):
         d, hm = parse_callback(dtxt + " " + t, today, V)
+        if d is None and s.get("cb_day"):
+            d = datetime.date.fromisoformat(s["cb_day"])      # day said in an earlier turn
+        if hm is None and s.get("cb_time"):
+            hm = s["cb_time"]
+        if d is None and hm is not None and callback_ok(V, today, hm):
+            d = today                                          # a time alone means today when that is allowed
+        if d is not None and hm is None:                       # ask for the missing time without using a try
+            s["cb_day"] = iso(d)
+            if not s.get("cb_asked_time"):
+                s["cb_asked_time"] = True
+                say(V, L("tp_ask_time"))
+                return talk(V, "tp", s)
+        if hm is not None and d is None:
+            s["cb_time"] = hm
+            if not s.get("cb_asked_day"):
+                s["cb_asked_day"] = True
+                say(V, L("tp_ask"))
+                return talk(V, "tp", s)
         ok = d is not None and hm is not None and callback_ok(V, d, hm)
         if ok:
             s["cb"] = [iso(d), hm]
             s["pre"] = L("tp_booked", date=spoken(d), time=hm)
             return call(V, s, "api_callback", cb_date=iso(d), cb_time=hm)
         s["tp_tries"] = s.get("tp_tries", 0) + 1
+        s.pop("cb_day", None)
+        s.pop("cb_time", None)
         if s["tp_tries"] >= S["callback"].get("max_asks", 2):
             return close(V, s, "no_callback")
-        if d is not None and hm is None:
-            say(V, L("tp_ask_time"))
-        else:
-            say(V, L("tp_outside_window"))
+        say(V, L("tp_outside_window"))
         return talk(V, "tp", s)
     if k in ("no_time", "declines"):
         return close(V, s, "no_callback")
@@ -460,7 +490,13 @@ def parse_callback(text, today, V):
     hm = hm or spoken_time(full)
     d = None
     explicit = r"\b(today|tomorrow|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(st|nd|rd|th)?\s+[a-z]{3,}|next|this)\b"
-    for part in ([corr] if corr != full and re.search(explicit, corr) else []) + [full]:
+    def strip_times(x):
+        x = re.sub(r"\b\d{1,2}[:.]\d{2}\s*(am|pm|a\.m\.|p\.m\.)?", " ", x)
+        x = re.sub(r"\b\d{1,2}\s*(am|pm|a\.m\.|p\.m\.|o'clock|oclock)\b", " ", x)
+        x = re.sub(r"\b(at|around|about|after|before|by|from|until|till)\s+\d{1,2}\b(?!\s*(st|nd|rd|th))", " ", x)
+        return x
+    full_d, corr_d = strip_times(full), strip_times(corr)
+    for part in ([corr_d] if corr != full and re.search(explicit, corr) else []) + [full_d]:
         d = parse_spoken_date(part, today, S.get("date_rules"))
         if d is None and re.search(r"\b(this )?(morning|afternoon|evening|later|tonight)\b", part) and not re.search(r"tomorrow", part):
             d = today
@@ -522,21 +558,36 @@ def stage_id(V, s, k, t):
     if k in ("robot", "scam", "human", "not_talk"):
         if common_intents(V, s, k, q["ask"], False):
             return
-    if k == "wrong_person":
-        return close(V, s, "wrong_number", L("wrong_number"))
-    combined = (s.get("partial", "") + " " + t).strip()
-    ans = normalize_answer(q, combined if q.get("kind") in ("digits", "date", "year") else t)
-    if not ans and q.get("kind") in ("date", "year") and t and not s.get("partial"):
-        ans = "partial"            # e.g. "the fourteenth of March..." with the year still to come
-    if ans == "partial":
+    if k in ("wrong_person", "third_party"):      # not the customer after all: someone else is on the line
+        s["stage"] = "tp"
+        s["tp_tries"] = 0
+        say(V, L("tp_ask"))
+        return talk(V, "tp", s)
+    kind = q.get("kind")
+    ans = normalize_answer(q, t)                           # 1. the latest turn on its own
+    if ans in ("", "partial"):
+        nf = norm_fallback(q, V.get("_norm", ""))          # 2. the extractor's normalised value
+        if nf:
+            ans = nf
+    if ans in ("", "partial") and s.get("partial") and kind in ("digits", "date", "year"):
+        both = normalize_answer(q, (s["partial"] + " " + t).strip())   # 3. the earlier fragment + this turn
+        if both and both != "partial":
+            ans = both
+    looks_partial = t and not re.search(r"(19|20)\d\d|\b(nineteen|two thousand)\b", t.lower()) and kind in ("date", "year")
+    if (ans == "partial" or (not ans and looks_partial)) and len((s.get("partial", "") + " " + t).split()) < 14 and not s.get("partial_used"):
         s["partial"] = (s.get("partial", "") + " " + t).strip()
+        if ans != "partial":
+            s["partial_used"] = True       # one 'go on' for a date/year with the year still to come
         say(V, L("id_continue"))
         return talk(V, "id", s)
     s["partial"] = ""
-    if not ans:
-        ans = norm_fallback(q, V.get("_norm", ""))
+    s["partial_used"] = False
+    if ans == "partial":
+        ans = ""
     if not ans:
         s["repeats"] = s.get("repeats", 0) + 1
+        if s["repeats"] >= 4:
+            return close(V, s, "id_failed", L("id_failed"))
         say(V, L("id_repeat"), q["ask"] if s["repeats"] < 2 else (L("id_format_hint") or q["ask"]))
         return talk(V, "id", s)
     s["repeats"] = 0
@@ -689,8 +740,13 @@ def make_offer(V, s, p, step_idx, pre=""):
     if d > dl:
         d = dl
     offer = [round(amt, 2), iso(d)]
-    if offer in p["refused_offers"] and step_idx < p["attempts"]:
-        return make_offer(V, s, p, step_idx + 1, pre)
+    if offer in p["refused_offers"]:
+        if step_idx < p["attempts"]:
+            return make_offer(V, s, p, step_idx + 1, pre)
+        p["used"] = step_idx                 # rule: never repeat an offer the customer already refused
+        p["status"] = "refused"
+        p["offer"] = None
+        return advance(V, s, pre)
     p["used"] = step_idx
     p["offer"] = offer
     floor_first = amt == p["floor"] and amt < p["full"] and not p.get("floor_note_said")
@@ -706,6 +762,10 @@ def refusal(V, s, p, pre=""):
     """A flat refusal / non-answer on product p: consume one persuasion attempt or give up."""
     if p.get("offer"):
         p["refused_offers"].append(p["offer"])
+    if s.get("hardship_offered"):            # no persuasion after a hardship disclosure
+        p["status"] = "hardship"
+        p["offer"] = None
+        return advance(V, s, pre)
     if p["used"] < p["attempts"]:
         return make_offer(V, s, p, p["used"] + 1, pre)
     p["status"] = "refused"
@@ -758,10 +818,20 @@ def apply_proposal(V, s, p, dtxt, a, scope_all=False):
             if p["floor_offered"]:
                 return "refuse", ""
             p["floor_offered"] = True
+            p["floor_note_said"] = True
             p["too_much"] = True
             d0 = p["offer"][1] if p.get("offer") else None
+            if dtxt:                                           # keep the customer's own date if it is allowed
+                dd = parse_spoken_date(dtxt, today, S.get("date_rules"))
+                if dd is not None:
+                    st2, v2 = check_date(V, p, dd)
+                    if st2 in ("ok", "not_business"):
+                        d0 = iso(v2)
+            if d0 is None:
+                d0 = iso(ladder_date(today, S["ladder"][0].get("date", "deadline"), p))
             p["offer"] = [p["floor"], d0]
-            return "ask", L("below_floor", amount=pay(p, p["floor"]), name=p["name"])
+            return "ask", (L("below_floor", amount=pay(p, p["floor"]), name=p["name"]) + " " +
+                           L("offer_short_date", date=spoken(d0))).strip()
         amount = val
     date = None
     if dtxt:
@@ -789,6 +859,7 @@ def apply_proposal(V, s, p, dtxt, a, scope_all=False):
         if vague:
             if not p["vague_asked"]:
                 p["vague_asked"] = True
+                p["vague_pending"] = True
                 return "ask", L("vague_ask")
             dl = datetime.date.fromisoformat(p["deadline"])
             p["offer"] = [amount if amount is not None else default_amount(p), iso(dl)]
@@ -881,7 +952,8 @@ def product_target(s, scope):
 def stage_nego(V, s, k, t, dtxt, a, scope):
     prods = s["products"]
     multi = len(prods) > 1
-    if k in ("unclear", "none") and not dtxt and a is None:
+    pv = cur(s)
+    if k in ("unclear", "none") and not dtxt and a is None and not (pv and pv.get("vague_pending")):
         if not s.get("unclear_once"):
             s["unclear_once"] = True     # small talk / a fragment is not an answer yet: ask the same question once more
             p0 = cur(s) if s.get("phase") != "today" else None
@@ -929,18 +1001,36 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         if p is None:
             return advance(V, s)
     again = L("repeat_offer", name=p["name"], amount=pay(p, p["offer"][0]), date=spoken(p["offer"][1])) if p.get("offer") and p["offer"][1] else L("ask_today")
+    # after a side turn the offer was already spoken: re-prompt without naming the amount again
+    short = (L("offer_short") or "Would that work for you?") if p.get("offer") and p["offer"][1] else again
+    vague_pending = p.pop("vague_pending", False)
+    if vague_pending and k not in special_kinds() and k not in ("yes", "agrees") and \
+            (not dtxt or parse_spoken_date(dtxt, today_of(V), S.get("date_rules")) is None) and a is None:
+        dl = datetime.date.fromisoformat(p["deadline"])          # rule: no exact day after asking once -> propose the deadline
+        p["offer"] = [default_amount(p), iso(dl)]
+        say(V, L("propose_deadline", date=spoken(dl), amount=pay(p, p["offer"][0])))
+        return talk(V, "nego", s)
     if special(V, s, k, p):
         return
-    if common_intents(V, s, k, again, True):
+    if common_intents(V, s, k, short, True):
         return
     if k == "asks_amount":            # "you tell me" / "how much?": the agent always proposes the amount
         say(V, again)
         return talk(V, "nego", s)
     if k in ("question", "purpose"):
-        say(V, L("no_info"), again)
+        say(V, L("no_info"), short)
         return talk(V, "nego", s)
     if multi and scope == "all" and (dtxt or a is not None or k in ("yes", "agrees")):
         return propose_all(V, s, dtxt, a, k)
+    if k == "too_much" and a is not None:     # "too much, I could manage three hundred": the amount wins over the label
+        p["too_much"] = True
+        res, pre = apply_proposal(V, s, p, dtxt, a)
+        if res == "agreed":
+            return advance(V, s)
+        if res == "ask":
+            say(V, pre)
+            return talk(V, "nego", s)
+        return refusal(V, s, p, L("below_floor_again", amount=pay(p, p["floor"])))
     if k == "too_much":
         if p["floor_offered"]:
             return refusal(V, s, p)
@@ -1012,6 +1102,14 @@ def propose_all(V, s, dtxt, a, k):
 
 def stage_hardship(V, s, k, t, dtxt, a):
     p = cur(s) or (s["products"][0] if s["products"] else None)
+    if k in ("restructure",) and p is not None:
+        return special(V, s, k, p) and None
+    if k in ("human",):
+        k = "yes"
+    if k in ("unclear", "none", "question") and not dtxt and a is None and not s.get("hardship_reasked"):
+        s["hardship_reasked"] = True
+        say(V, L("no_info") if k == "question" else "", L("hardship_offer_again") or L("hardship"))
+        return talk(V, "hardship", s)
     if k in ("yes", "agrees"):
         s["transferred"] = "support"
         s["say_after_transfer"] = L("transfer")
@@ -1055,9 +1153,22 @@ def stage_confirm(V, s, k, t, dtxt, a, scope):
         if cur(s) is None:
             return readback(V, s)
         return refusal(V, s, cur(s), L("next_product", name=cur(s)["name"], amount=money(cur(s)["full"])))
-    if k in ("yes", "agrees", "confirm"):
+    changed = False
+    if (dtxt or a is not None) and len(agreed) == 1:     # "yes, but make it Monday": re-check the new value first
+        p0 = agreed[0]
+        dd = parse_spoken_date(dtxt, today_of(V), S.get("date_rules")) if dtxt else None
+        changed = (dd is not None and iso(dd) != p0["agreed"][1]) or (a is not None and abs(snap_amount(p0, a) - p0["agreed"][0]) > 0.005)
+    if k in ("yes", "agrees", "confirm") and not changed:
         s["rec_queue"] = [p["id"] for p in agreed]
         return record_next(V, s)
+    if k == "too_much" and agreed:
+        p0 = agreed[0]
+        for p in agreed:
+            p["status"] = "open"
+            p["offer"] = list(p["agreed"])
+        s["stage"] = "nego"
+        s["ci"] = s["products"].index(p0)
+        return stage_nego(V, s, "too_much", t, dtxt, a, "none")
     if dtxt or a is not None:
         target = agreed[0] if len(agreed) == 1 else None
         if target is None:
@@ -1103,6 +1214,10 @@ def record_next(V, s):
             lines.append(L("sms_line"))
         if failed:
             lines.append(L("record_failed"))
+        if rec and S.get("after_promise", dict()).get("ask_anything_else", True):
+            s["stage"] = "after"                    # give the customer a turn (change requests, transfers after a promise)
+            say(V, " ".join(lines), L("anything_else") or "Is there anything else I can help you with?")
+            return talk(V, "after", s)
         return finish(V, s, " ".join(lines))
     pid = q[0]
     p = [x for x in s["products"] if x["id"] == pid][0]
@@ -1153,14 +1268,17 @@ def run(V):
         return
     stage = s.get("stage", "open")
     k, t, dtxt, a, scope = take_input(V, stage)
+    if s.pop("human_pending", False) and k in ("no", "refuses", "not_talk", "human", "unclear", "none", "asks_why"):
+        k = "human"                                    # still wants a person after being asked once: transfer
     if V.get("_cut") == "yes" and stage in ("open", "tp", "nego", "confirm", "hardship") and not dtxt and a is None \
             and s.get("cut_waits", 0) < 2 and k not in ("wrong_number", "deceased", "dispute", "already_paid", "hardship", "restructure"):
         s["cut_waits"] = s.get("cut_waits", 0) + 1     # the customer stopped mid-sentence: let them finish
         say(V, L("id_continue") or "Please go on.")
         return talk(V, stage, s)
     s["cut_waits"] = 0
-    if s.get("same", 0) >= 2 and stage in ("nego", "confirm") and k not in special_kinds():
-        k, dtxt, a, scope = "no", "", None, "none"     # we said the same thing three times: stop looping, treat as a refusal
+    if s.get("same", 0) >= 2 and stage in ("nego", "confirm") and k in ("unclear", "none", "question", "asks_amount", "proposes") \
+            and not dtxt and a is None:
+        k, scope = "no", "none"     # the same line three times and still nothing new: stop looping, count a non-answer
     prev = V.get("say", "")
     dispatch(V, s, stage, k, t, dtxt, a, scope)
     s2 = st(V)
@@ -1169,7 +1287,36 @@ def run(V):
         put(V, s2)
 
 
+def stage_after(V, s, k, t):
+    """After a recorded promise: 'can I change it?', a transfer request, or goodbye."""
+    if k == "change":
+        return finish(V, s, L("promise_change"))
+    if k == "restructure":
+        s["transferred"] = "restructuring"
+        s["say_after_transfer"] = L("restructure_line")
+        return call(V, s, "api_transfer", t_queue=ev("transfer_restructuring").get("queue", "restructuring"))
+    if k == "human":
+        s["transferred"] = "human"
+        s["say_after_transfer"] = L("transfer")
+        return call(V, s, "api_transfer", t_queue=ev("transfer_human").get("queue", "general"))
+    if k == "hardship":
+        s["stage"] = "hardship_after"
+        say(V, L("hardship"))
+        return talk(V, "after", s)
+    if k == "question" and not s.get("after_q"):
+        s["after_q"] = True
+        say(V, L("no_info"), L("anything_else") or "Is there anything else I can help you with?")
+        return talk(V, "after", s)
+    if s.get("stage") == "hardship_after" and k in ("yes", "agrees"):
+        s["transferred"] = "support"
+        s["say_after_transfer"] = L("transfer")
+        return call(V, s, "api_transfer", t_queue=ev("transfer_support").get("queue", "support"))
+    return finish(V, s)
+
+
 def dispatch(V, s, stage, k, t, dtxt, a, scope):
+    if stage in ("after", "hardship_after"):
+        return stage_after(V, s, k, t)
     if stage == "open":
         return stage_open(V, s, k, t)
     if stage == "tp":

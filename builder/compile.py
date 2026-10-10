@@ -113,8 +113,25 @@ KINDS = {
         "yes": "confirms the read-back (yes, correct, I confirm)",
         "no": "does not confirm / refuses",
         "proposes": "changes the date or the amount",
+        "too_much": "now says the amount is too much",
+        "already_paid": "says they already paid",
+        "dispute": "says the debt is not theirs",
+        "hardship": "mentions illness, a death in the family, or job loss",
         "restructure": "asks for a new payment plan or lower instalments",
         "human": "asks to speak to a human",
+        "robot": "asks whether you are a robot or an AI",
+        "scam": "asks whether this is a scam",
+        "question": "asks another question",
+        "unclear": "anything else",
+    },
+    "after": {
+        "done": "nothing else / no thanks / goodbye / thanks",
+        "change": "wants to change or cancel the promise just recorded (date or amount)",
+        "restructure": "asks for a new payment plan, lower instalments or restructuring",
+        "human": "asks to speak to a human",
+        "hardship": "mentions illness, a death in the family, or job loss",
+        "yes": "says yes (accepts what was just offered)",
+        "question": "asks a question",
         "unclear": "anything else",
     },
 }
@@ -198,7 +215,7 @@ def compile_workflow(spec, openapi):
     base = openapi["servers"][0]["url"].rstrip("/")
     bodies = spec["tool_bodies"]
     nodes = {}
-    stages = ["open", "tp", "id", "nego", "hardship", "confirm"]
+    stages = ["open", "tp", "id", "nego", "hardship", "confirm", "after"]
     for st in stages:
         nodes["talk_" + st] = talk_node(st, spec)
     first = (spec["lines"]["opening"] + " " + spec["lines"]["confirm_ask"]).replace("{title}", "{{title}}").replace(

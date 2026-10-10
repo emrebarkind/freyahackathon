@@ -79,7 +79,8 @@ def test_brief_a_cases():
 
 def test_sms_line_survives_notes():
     led, tr = run_case(SPEC_B, CASES["PUB-12"], SCRIPTS["PUB-12"])
-    assert "text message" in [t for w, t in tr if w == "agent"][-1]
+    lines = [t for w, t in tr if w == "agent"]
+    assert any("text message" in x for x in lines[-2:]), lines[-2:]
 
 
 def test_brief_b_cases():

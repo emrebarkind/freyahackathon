@@ -145,6 +145,8 @@ def run_case(spec, case, script, verbose=False):
             continue
         if nxt and nxt.startswith("talk_"):
             transcript.append(("agent", V.get("say", "")))
+            if not turns and nxt == "talk_after":
+                turns = [dict(k="done", t="no, that's all, thank you")]
             if not turns:
                 transcript.append(("customer", "<hangs up>"))
                 break
