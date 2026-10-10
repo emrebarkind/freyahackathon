@@ -159,3 +159,18 @@ def test_details_question_is_answered_not_no_info():
     script = ids("PUB-01") + [dict(k="details", t="which card is this about?"), dict(k="yes"), dict(k="yes")]
     led, tr = run_case(A, CASES["PUB-01"], script)
     assert "4821" in agent_lines(tr)[4] and "don't have" not in agent_lines(tr)[4] and len(led["promises"]) == 1
+
+
+
+def test_postcode_and_year_identity_from_variant_c():
+    spec = json.load(open(ROOT / "submission" / "variant-c.spec.json"))
+    import sys as _s
+    _s.path.insert(0, str(ROOT))
+    from builder import selftest
+    bank = selftest.GenericBank(spec, dict(postcode="SW1A1AA", birth_year="1985"),
+                                [selftest.make_product(spec, 0, list(spec["products"]["names"])[0], 3)])
+    V0 = dict(customer_id="c", first_name="Alex", last_name="Morgan", title="Mr", now="2026-10-14T11:00")
+    turns = [dict(k="confirmed"), dict(k="answer", t="it's S W one A, one A A"), dict(k="answer", t="nineteen"),
+             dict(k="answer", t="eighty-five"), dict(k="already_paid")]
+    led, tr = selftest.simulate(spec, V0, bank, turns)
+    assert led["outcome"] == spec["events"]["paid"]["outcome"], tr

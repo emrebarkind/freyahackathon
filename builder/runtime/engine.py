@@ -584,6 +584,10 @@ def stage_id(V, s, k, t):
         return talk(V, "tp", s)
     kind = q.get("kind")
     ans = normalize_answer(q, t)                           # 1. the latest turn on its own
+    if kind == "upper":
+        nf0 = norm_fallback(q, V.get("_norm", ""))
+        if nf0 and re.fullmatch(r"[A-Z0-9]{3,}", nf0) and (not q.get("length") or len(nf0) == int(q["length"])):
+            ans = nf0
     if ans in ("", "partial"):
         nf = norm_fallback(q, V.get("_norm", ""))          # 2. the extractor's normalised value
         if nf:
@@ -651,13 +655,19 @@ def normalize_answer(q, text):
         m = re.search(r"\b(19\d\d|20\d\d)\b", text)
         if m:
             return m.group(1)
+        if year_is_prefix(text):
+            return "partial"           # "nineteen..." with the rest still to come
         n = words_to_number(text)
         if n and 1900 <= n <= 2100:
             return str(int(n))
         b = parse_birth_date("1 january " + text)
         return b[:4] if b else ""
     if kind == "upper":
-        return re.sub(r"[^A-Za-z0-9]", "", text).upper()
+        code = spoken_code(text)
+        n = int(q.get("length") or 0)
+        if n and 0 < len(code) < n:
+            return "partial"
+        return code
     return text.strip()
 
 
