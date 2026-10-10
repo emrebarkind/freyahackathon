@@ -436,6 +436,9 @@ def apply_defaults(spec, openapi):
                                             if k not in spec["products"]})
     rs = spec.setdefault("responses", {})
     for tool, v in response_shape(openapi).items():
+        rp = response_props(openapi, tool)
+        if tool in rs and rp and rs[tool].get("field") and rs[tool]["field"] not in rp:
+            rs[tool] = v                     # a field the tool API does not have: use what the API declares
         rs.setdefault(tool, v)
     R_ = spec.setdefault("identity", {}).setdefault("response", {})
     vf = response_props(openapi, "verify_identity").get(R_.get("verified", "verified")) or {}

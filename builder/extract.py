@@ -182,6 +182,21 @@ def validate(spec, openapi):
     for q in spec["identity"].get("questions", []):
         if q.get("format") and not all(x in q["format"] for x in ("%Y", "%m", "%d")):
             errs.append(f"identity question {q.get('field')}: format must be a strftime pattern with %Y %m %d")
+    vprops = comp.response_props(openapi, "verify_identity")
+    if vprops:
+        for key, f in (spec["identity"].get("response") or {}).items():
+            if key in ("ok", "verified", "all_verified", "left", "hint") and f and f not in vprops:
+                errs.append(f"identity.response.{key} '{f}' is not a field of the verify_identity response (fields: {sorted(vprops)})")
+    for tool, r in (spec.get("responses") or {}).items():
+        rp = comp.response_props(openapi, tool)
+        if rp and r.get("field") and r["field"] not in rp:
+            errs.append(f"responses.{tool}.field '{r['field']}' is not a field of the {tool} response (fields: {sorted(rp)})")
+        en = (rp.get(r.get("field") or "") or {}).get("enum")
+        for v in r.get("values") or []:
+            if en and v not in en:
+                errs.append(f"responses.{tool}.values: '{v}' is not one of {en}")
+    if not (spec["events"].get("transfer_human") or {}).get("queue") and not spec["lines"].get("human_no_transfer"):
+        errs.append("events.transfer_human has no queue: add lines.human_no_transfer (what to tell a customer who wants a person)")
     for name, e in spec["events"].items():
         if name.startswith("transfer_") and e.get("queue") is None and "queue" not in e:
             errs.append(f"events.{name}.queue missing (use \"\" if the brief does not transfer in this situation)")

@@ -302,20 +302,24 @@ def run_all(spec, openapi):
             return [(p, n) for p in pids] if notes_on and n else []
         spoken = [dict(k="answer", t=spoken_form(q, ident[q["field"]])) for q in spec["identity"]["questions"]]
         full = single[0][spec["products"].get("amount_field", "past_due")]
+        first_date = today.isoformat()
+        if spec.get("rules", {}).get("first_ask") == "deadline":
+            engine.S = spec
+            first_date = engine.product_facts(dict(now=V0["now"]), dict(single[0], type=types[0], product_id="p1"))["deadline"]
         cb = spec["callback"]
         nb = cal.next_business_day(today, include_self=False)
         start_h = int(cb.get("start", "10:00")[:2])
         cb_time = "%02d:00" % min(start_h + 1, int(cb.get("end", "19:00")[:2]))
         scenarios = [
             ("happy path, pays in full today", [C] + answers + [dict(k="yes"), dict(k="yes")], single,
-             expected(spec, "promise", promises=[("p1", full, today.isoformat())])),
+             expected(spec, "promise", promises=[("p1", full, first_date)])),
             ("someone else answers, books a callback", [dict(k="third_party"), dict(k="gives_time", t="next business day at %s" % cb_time, d=nb.isoformat())], single,
              expected(spec, "callback", callbacks=[(nb.isoformat(), cb_time)])),
             ("wrong number", [dict(k="wrong_number")], single, expected(spec, "wrong_number")),
             ("identity fails", [C] + [dict(k="answer", t=wrong[spec["identity"]["questions"][0]["field"]])] * int(spec["identity"].get("max_wrong", 3)), single,
              expected(spec, "id_failed")),
             ("identity answered the way people speak", [C] + spoken + [dict(k="yes"), dict(k="yes")], single,
-             expected(spec, "promise", promises=[("p1", full, today.isoformat())])),
+             expected(spec, "promise", promises=[("p1", full, first_date)])),
             ("already paid", [C] + answers + [dict(k="already_paid")], single, expected(spec, "paid", notes=notes_for("paid"))),
             ("dispute", [C] + answers + [dict(k="dispute")], single, expected(spec, "dispute", notes=notes_for("dispute"))),
             ("hardship, accepts support" if T else "hardship (no transfer in this brief)", [C] + answers + [dict(k="hardship"), dict(k="yes")], single,
@@ -332,7 +336,13 @@ def run_all(spec, openapi):
             multi = [make_product(spec, i, t, dl0) for i, t in enumerate(types[:3])]
             fri = cal.ladder_date(today, "last_business_day_this_week", None) if False else None
             idf = spec["products"].get("id_field", "product_id")
-            prom = [(p[idf], p[spec["products"].get("amount_field", "past_due")], today.isoformat()) for p in multi]
+            engine.S = spec
+
+            def first_for(p):
+                if spec.get("rules", {}).get("first_ask") != "deadline":
+                    return today.isoformat()
+                return engine.product_facts(dict(now=V0["now"]), dict(p, type=p.get(spec["products"].get("type_field", "type")), product_id=p[idf]))["deadline"]
+            prom = [(p[idf], p[spec["products"].get("amount_field", "past_due")], first_for(p)) for p in multi]
             scenarios.append(("several products, all paid today", [C] + answers + [dict(k="yes"), dict(k="yes")], multi,
                               expected(spec, "promise", promises=prom)))
         for sc in scenarios:

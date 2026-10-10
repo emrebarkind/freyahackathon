@@ -187,4 +187,6 @@ Meaning of the less obvious ones:
 Optional lines (a sensible default is used when absent): callback_failed (the callback could not be booked),
 transfer_failed (the transfer did not go through), confirm_again (a second, plainer read-back question, e.g. "Sorry, I
 did not catch that. Do you confirm, yes or no?"), cb_ask (asks a verified customer when to call back, if
-callback_requested is used), system_error (the bank's system does not respond).
+callback_requested is used), system_error (the bank's system does not respond), human_no_transfer (REQUIRED when
+events.transfer_human has no queue: what the agent says instead of transferring, using the brief's words),
+restructuring_no_transfer / support_no_transfer (optional, the same for those situations).

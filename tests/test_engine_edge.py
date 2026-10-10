@@ -362,3 +362,47 @@ def test_chain_platform_returning_early_still_reaches_the_planned_turn():
         selftest.route = orig
     assert len(led["promises"]) == 3 and led["outcome"] == "promise"
     assert any("recorded" in x for x in agent_lines(tr)), agent_lines(tr)
+
+
+def test_single_type_products_targeted_by_name_words():
+    from builder import selftest
+    spec = copy.deepcopy(B)
+    spec["products"]["names"] = {"*": "{label}"}
+    spec["products"]["floor_field"] = {"*": "minimum_payment"}
+    spec["products"]["floor_names"] = {"*": "minimum payment"}
+    p1 = dict(selftest.make_product(spec, 0, "credit_card", 3), label="car loan", minimum_payment=90.0)
+    p2 = dict(selftest.make_product(spec, 1, "credit_card", 3), label="credit line", minimum_payment=120.0)
+    turns = IDS + [dict(k="proposes", d="Friday", t="I can pay the car loan on Friday, but not the credit line"),
+                   dict(k="no"), dict(k="yes")]
+    led, tr = _gen(spec, turns, products=[p1, p2])
+    assert [p[0] for p in led["promises"]] == ["p1"], tr
+
+
+def test_special_intent_with_a_date_in_the_first_answer_is_not_a_promise():
+    led, tr = run_case(B, CASES["PUB-11"], ids_b("PUB-11") + [dict(k="already_paid", d="last Monday", f="all", t="I already paid all of them last Monday")])
+    assert led["promises"] == [] and led["outcome"] == "paid", agent_lines(tr)
+
+
+def test_any_calendar_day_when_the_brief_allows_it():
+    spec = copy.deepcopy(A)
+    spec["rules"]["deadline_adjust"] = "none"
+    led, tr = _gen(spec, IDS + [dict(k="proposes", d="Saturday", t="Saturday"), dict(k="yes")])
+    assert [p[2] for p in led["promises"]] == ["2026-10-17"], tr
+
+
+def test_no_human_queue_says_the_brief_line_not_transfer():
+    spec = copy.deepcopy(A)
+    spec["events"]["transfer_human"] = dict(outcome="no_promise", reason="person_requested", queue="")
+    spec["lines"]["human_no_transfer"] = "You can call us on 0800 555 0199."
+    spec["human"]["ask_first"] = False
+    led, tr = _gen(spec, IDS + [dict(k="human")])
+    said = " ".join(t for w, t in tr if w == "agent")
+    assert led["transfers"] == [] and "0800" in said and "transfer" not in said.lower(), tr
+
+
+def test_first_question_names_the_amount_on_reask():
+    spec = copy.deepcopy(A)
+    spec["lines"]["ask_today"] = "Can you pay the full {amount} today?"
+    led, tr = _gen(spec, IDS + [dict(k="unclear", t="hmm, well"), dict(k="yes"), dict(k="yes")])
+    lines = [t for w, t in tr if w == "agent"]
+    assert "Can you pay the full 300 dollars today?" in lines[4], lines
