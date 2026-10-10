@@ -1,0 +1,59 @@
+[    0.0s] START 2026-10-10T17:53:33+0000
+[    0.0s] NOTE briefs=['rehearsal/brief-f.md'] tool_api=rehearsal/brief-f.openapi.json slot=rehearsal-f
+[    0.0s] STEP 1. spec extraction
+[   92.3s] MODEL CALL #1 model=claude-opus-5-5 seconds=91.4 cost_usd=0.499 purpose: read the brief and tool API into a spec (reading 1)
+[   92.3s] MODEL CALL #2 model=claude-opus-5-5 seconds=91.4 cost_usd=0.489 purpose: read the brief and tool API into a spec (reading 2, independent)
+[   92.3s] NOTE readings disagree on: nothing
+[   92.3s] NOTE validation round 1: 0 problem(s)
+[   92.3s] NOTE assumption: Memo CFS-M-2026-31 (21 Sep 2026, effective 28 Sep 2026) overrides OP-07 v4.1 where they conflict, as the cover mail says: Early band 1-14 days, Mid band 15-30 days, Mid deadline is the 6th working day (was the 8th), overdraft floor is 40% (was 25%), callback window is 08:30-18:00 (was 09:00-17:30), the vulnerability transfer goes to team 'vulnerability' (customer_care is retired and rejected by the dialler), and 24/12/2026 is a closure day.
+[   92.3s] NOTE assumption: Holidays are the OP-07 7.2 closure days plus Christmas Eve 2026 from the memo.
+[   92.3s] NOTE assumption: OP-07 7.3: 'next Friday' means the first such day after today, so date_rules.next_weekday is 'upcoming'.
+[   92.3s] NOTE assumption: Callback days are 'today or one of the next two working days', working days only, and later than now. This is encoded as ['today', 'within_business_days:2'] with business_days_only true.
+[   92.3s] NOTE assumption: If the third party cannot give any time at all, the agent does not ask again and closes NO_CONTACT / NO_CALLBACK (OP-07 4.3). max_asks 2 covers only the case where a time is outside the window.
+[   92.3s] NOTE assumption: Early band deadline: 14 calendar days after today, moved back to the previous working day if needed (deadline_adjust previous_business_day). Today never counts when counting working days.
+[   92.3s] NOTE assumption: Overdraft floor: products.floor_pct = 40 applies to overdrafts only. Cards use min_due and loans use monthly_repayment through floor_field. The memo says the overdraft floor is rounded UP to the next whole pound, and a result that is already a whole number of pounds stays as it is (£287.30 gives £115.00, £412.50 gives £165.00). The engine must apply this rounding.
+[   92.3s] NOTE assumption: The brief gives no spoken name for the overdraft floor. 'minimum amount' is used. The card and loan floors use the brief's terms 'minimum due' and 'monthly repayment'.
+[   92.3s] NOTE assumption: Ladder: attempt 1 is the same amount (the full amount, or the floor if the customer already said the full amount is too much or offered less) on the 2nd working day after today. Attempt 2 (Mid and Late only) is the floor on the deadline. If an attempt would repeat an offer the customer already refused, the attempts are used up (OP-07 8.13).
+[   92.3s] NOTE assumption: The amount_field is balance_overdue, given in GBP as plain numbers (not pence), so amount_scale is 1.
+[   92.3s] NOTE assumption: The postcode question uses kind 'upper' with no fixed length because UK postcodes vary in length. It is sent in capitals with one space between the outward and inward parts (e.g. 'KM4 7RT'), and spelled letters ('K for kilo') are converted. The year of birth is sent as four digits.
+[   92.3s] NOTE assumption: Identity: 2 wrong answers in total across both questions end the check (OP-07 3.4 and the API). An incomplete answer is not sent and does not count as wrong. If one is sent anyway, the API returns error=incomplete_answer, which is treated as a reject value.
+[   92.3s] NOTE assumption: verify_identity has no hint field in its response, so hints is empty and response.hint is ''. The fields used are match, identity_confirmed and remaining_attempts.
+[   92.3s] NOTE assumption: OP-07 3.6: refusals and 'what is this about?' questions count together, and the second of either kind closes ID_FAIL / DECLINED. Other questions (robot, scam) are answered and do not count as declining.
+[   92.3s] NOTE assumption: Opening: OP-07 2.1 suggests 'This call is recorded.' Per the spec rule for lines, the opening uses the active form 'we record this call' instead.
+[   92.3s] NOTE assumption: There is no line key for the recording objection (OP-07 2.7: explain once that all calls are recorded and the call cannot continue unrecorded, and mention the Kestrel app). A second objection is treated like a second 'I don't want to talk' (max_not_talk 2).
+[   92.3s] NOTE assumption: Legal (cover mail): never mention credit reference agencies, credit files, 'default' or court action. If asked, the agent uses no_info.
+[   92.3s] NOTE assumption: OP-07 9.5 requires an add_note for every account that ends without a promise, so notes are enabled. OP-07 9.7: no notes on any transfer.
+[   92.3s] NOTE assumption: OP-07 12.2 decides the close code whenever get_account has been called. Any transfer gives HANDOFF with that transfer's sub-reason. At least one recorded promise gives PTP. All accounts noted PDC gives PAID_CLAIM. Otherwise NO_PTP with the sub-reason of the first non-PDC account in get_account order.
+[   92.3s] NOTE assumption: OP-07 11.1: once hardship is mentioned, never transfer to arrangements, and make no persuasion attempt.
+[   92.3s] NOTE assumption: The brief does not say whether to ask 'anything else' after a recorded promise. The default true is kept.
+[   92.3s] NOTE assumption: The brief gives no rule for a verified customer asking to be called back later, so callback_requested is not set.
+[   92.3s] NOTE assumption: close_call sub_reason is omitted (reason '') for PTP and PAID_CLAIM, as the API requires.
+[   92.3s] NOTE assumption: Every tool's success is ok == true. create_promise is retried once on failure, then the account is noted SYS (OP-07 10.4).
+[   92.3s] STEP 2. local self-test of the engine on synthetic customers
+[   92.7s] TEST PASS local happy path, pays in full today
+[   92.7s] TEST PASS local someone else answers, books a callback
+[   92.7s] TEST PASS local wrong number
+[   92.7s] TEST PASS local identity fails
+[   92.7s] TEST PASS local identity answered the way people speak
+[   92.7s] TEST PASS local already paid
+[   92.7s] TEST PASS local dispute
+[   92.7s] TEST PASS local hardship, accepts support
+[   92.7s] TEST PASS local restructuring request
+[   92.7s] TEST PASS local flat refusals
+[   92.7s] TEST PASS local the bank fails to record the promise twice
+[   92.7s] TEST PASS local the callback booking fails once, then works
+[   92.7s] TEST PASS local several products, all paid today
+[   92.7s] NOTE local self-test: 13/13 passed
+[   92.7s] STEP 3. compile workflow
+[   92.7s] NOTE workflow: 25 nodes, 16 engine-run calls, 216977 bytes
+[   92.7s] STEP 4. validate, save, publish
+[   93.6s] TEST PASS platform dry-run validation
+[   94.6s] NOTE FREYA workflow_id=3ebaaab8-2cfd-4bbd-822b-8faaf3a535cb agent_id=4b443ffe-0b93-4801-9226-cc759c36afd5 version=1
+[   94.6s] STEP 5. chat smoke test on Freya
+[  104.7s] TEST PASS chat the engine runs on the platform (asks the first security question) -- Hello? / Thank you, Mr Morgan. Before we go on, I need to ask you two security questions. What is the postcode of your home address?
+[  104.7s] TEST PASS chat no unfilled placeholder spoken
+[  104.7s] TEST PASS chat nothing about the debt before verification
+[  104.7s] STEP 6. export
+[  106.6s] NOTE exported submission/rehearsal-f.workflow.json
+{"workflow_id": "3ebaaab8-2cfd-4bbd-822b-8faaf3a535cb", "agent_id": "4b443ffe-0b93-4801-9226-cc759c36afd5", "export": "submission/rehearsal-f.workflow.json"}
+[  106.6s] END 2026-10-10T17:55:20+0000 total_seconds=106.6 model_calls=2 model_cost_usd=0.99
