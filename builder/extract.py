@@ -7,6 +7,7 @@ import re
 
 from . import claude
 from . import compile as comp
+from . import spec_model
 
 DOC = (pathlib.Path(__file__).resolve().parent / "spec_doc.md").read_text()
 
@@ -79,7 +80,7 @@ def enum_of(openapi, tool, param):
 
 
 def validate(spec, openapi):
-    errs = []
+    errs = list(spec_model.check(spec))       # types, ranges, formats, bands, window (Pydantic)
     for k in ["calendar", "identity", "products", "bands", "ladder", "events", "tool_bodies", "lines", "callback", "confirm"]:
         if k not in spec:
             errs.append(f"missing key {k}")

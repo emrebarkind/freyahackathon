@@ -31,7 +31,9 @@ only what models are good at: understanding what the customer said.
 brief(s) + tool API ──► 1. Claude (Opus) reads them into a typed SPEC      builder/extract.py, builder/spec_doc.md
                           · two independent readings, field-by-field diff,
                             adjudication with quotes, validation against the tool API
-                            (fields, enums, required fields, placeholders, line roles), repair loop
+                            (fields, enums, required fields, placeholders, line roles) and a typed
+                            Pydantic model (types, ranges, time/date formats, bands without gaps
+                            or overlaps), repair loop
                         2. local self-test: the compiled workflow is walked  builder/selftest.py
                            like the platform walks it (engine runs, request bodies,
                            transitions) against synthetic customers and injected tool

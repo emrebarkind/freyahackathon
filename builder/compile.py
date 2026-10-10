@@ -486,6 +486,11 @@ def response_shape(openapi):
 def apply_defaults(spec, openapi):
     """Fill what the tool API file decides and the spec left out (in place): response field names and
     success flags, the shape of the account record, the verify pass values of a non-boolean field."""
+    cb = spec.get("callback") or {}
+    for k in ("start", "end"):                # '9:00' -> '09:00' (the engine compares HH:MM strings)
+        m = re.fullmatch(r"\s*(\d{1,2})[:.](\d{2})\s*", str(cb.get(k, "")))
+        if m:
+            cb[k] = "%02d:%s" % (int(m.group(1)), m.group(2))
     spec.setdefault("products", {}).update({k: v for k, v in account_shape(openapi, spec).items()
                                             if k not in spec["products"]})
     rs = spec.setdefault("responses", {})
