@@ -196,7 +196,7 @@
   }
  },
  "lines": {
-  "opening": "Hello, this is Freya Bank's digital assistant calling from Freya Bank. Please note this call is recorded.",
+  "opening": "Hello, this is Freya Bank's digital assistant calling from Freya Bank. Please note that we record this call.",
   "confirm_ask": "Am I speaking with {title} {last_name}?",
   "robot": "I am Freya Bank's digital assistant.",
   "scam": "You can verify this call by phoning Freya Bank's customer service number.",
