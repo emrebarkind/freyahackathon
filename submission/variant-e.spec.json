@@ -1,0 +1,388 @@
+{
+ "currency_word": "pounds",
+ "calendar": {
+  "workdays": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "holidays": []
+ },
+ "date_rules": {
+  "next_weekday": "following_week"
+ },
+ "confirm": {
+  "max_asks": 2
+ },
+ "callback": {
+  "days": [
+   "within_days:3"
+  ],
+  "start": "09:00",
+  "end": "18:00",
+  "after_now": true,
+  "business_days_only": false,
+  "max_asks": 2
+ },
+ "identity": {
+  "questions": [
+   {
+    "field": "postcode",
+    "kind": "upper",
+    "ask": "What is your postcode?"
+   },
+   {
+    "field": "customer_ref",
+    "kind": "upper",
+    "length": 8,
+    "ask": "What is your customer reference? It is two letters followed by six digits."
+   }
+  ],
+  "max_wrong": 3,
+  "max_wrong_per_question": 2,
+  "date_order": "dmy",
+  "hints": {},
+  "purpose_is_decline": true,
+  "question_is_decline": false,
+  "response": {
+   "ok": "",
+   "verified": "status",
+   "all_verified": "identity_confirmed",
+   "left": "attempts_remaining",
+   "hint": "",
+   "pass_values": [
+    "pass"
+   ],
+   "reject_values": [
+    "unreadable"
+   ]
+  }
+ },
+ "products": {
+  "names": {
+   "*": "{label}"
+  },
+  "amount_field": "arrears",
+  "days_field": "days_past_due",
+  "floor_field": {
+   "*": "min_due"
+  },
+  "floor_pct": null,
+  "floor_names": {
+   "*": "minimum due"
+  },
+  "amount_scale": 100,
+  "list_field": "accounts",
+  "id_field": "account_id",
+  "type_field": "type"
+ },
+ "bands": [
+  {
+   "name": "1-30",
+   "min": 1,
+   "max": 30,
+   "deadline": {
+    "kind": "calendar_days_after",
+    "n": 7
+   },
+   "attempts": 1,
+   "ladder": [
+    {
+     "amount": "full",
+     "date": "deadline"
+    }
+   ]
+  },
+  {
+   "name": "31-90",
+   "min": 31,
+   "max": 90,
+   "deadline": {
+    "kind": "business_days_after",
+    "n": 3
+   },
+   "attempts": 2,
+   "ladder": [
+    {
+     "amount": "floor",
+     "date": "tomorrow"
+    },
+    {
+     "amount": "floor",
+     "date": "deadline"
+    }
+   ]
+  }
+ ],
+ "ladder": [
+  {
+   "amount": "full",
+   "date": "deadline"
+  }
+ ],
+ "rules": {
+  "refuse_deadline_is_refusal": true,
+  "deadline_adjust": "previous_business_day",
+  "first_ask": "today"
+ },
+ "after_promise": {
+  "ask_anything_else": true
+ },
+ "notes": {
+  "enabled": true
+ },
+ "multi": {
+  "clamp_single_date": true,
+  "continue_after_paid": true,
+  "continue_after_dispute": true
+ },
+ "human": {
+  "ask_first": true
+ },
+ "max_not_talk": 2,
+ "events": {
+  "promise": {
+   "outcome": "PTP",
+   "reason": ""
+  },
+  "paid": {
+   "outcome": "PAID",
+   "reason": "",
+   "note": ""
+  },
+  "transfer_restructuring": {
+   "outcome": "NP-PLAN",
+   "reason": "",
+   "queue": "",
+   "note": "plan_requested"
+  },
+  "transfer_human": {
+   "outcome": "TR-AGT",
+   "reason": "",
+   "queue": "agents"
+  },
+  "transfer_support": {
+   "outcome": "NP-VUL",
+   "reason": "",
+   "queue": "",
+   "note": "vulnerable"
+  },
+  "refused": {
+   "outcome": "NP-REF",
+   "reason": "",
+   "note": ""
+  },
+  "hardship": {
+   "outcome": "NP-VUL",
+   "reason": "",
+   "note": "vulnerable"
+  },
+  "dispute": {
+   "outcome": "NP-DIS",
+   "reason": "",
+   "note": "dispute"
+  },
+  "service_error": {
+   "outcome": "NP-SYS",
+   "reason": "",
+   "note": ""
+  },
+  "id_failed": {
+   "outcome": "SEC-FAIL",
+   "reason": ""
+  },
+  "id_declined": {
+   "outcome": "SEC-REF",
+   "reason": ""
+  },
+  "callback": {
+   "outcome": "CB-TP",
+   "reason": ""
+  },
+  "no_callback": {
+   "outcome": "NOCB",
+   "reason": ""
+  },
+  "wrong_number": {
+   "outcome": "WN",
+   "reason": ""
+  },
+  "deceased": {
+   "outcome": "DEC",
+   "reason": ""
+  },
+  "unclear": {
+   "outcome": "UNC",
+   "reason": ""
+  },
+  "callback_requested": {
+   "outcome": "CB-REQ",
+   "reason": ""
+  }
+ },
+ "tool_bodies": {
+  "verify_identity": {
+   "question": "q_field",
+   "answer": "q_answer"
+  },
+  "get_account": {},
+  "create_promise": {
+   "account_id": "p_product",
+   "amount_pence": "p_amount",
+   "due_date": "p_date"
+  },
+  "add_note": {
+   "account_id": "n_product",
+   "reason": "n_reason",
+   "text": "const:Automated arrears call note"
+  },
+  "schedule_callback": {
+   "callback_at": "cb_datetime"
+  },
+  "transfer_to_agent": {
+   "queue": "t_queue"
+  },
+  "close_call": {
+   "code": "c_outcome"
+  }
+ },
+ "responses": {
+  "verify_identity": {
+   "field": "status",
+   "values": [
+    "pass"
+   ]
+  },
+  "get_account": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "create_promise": {
+   "field": "success",
+   "values": [
+    true
+   ]
+  },
+  "add_note": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "schedule_callback": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "transfer_to_agent": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "close_call": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  }
+ },
+ "intents": {},
+ "call_variables": [],
+ "lines": {
+  "opening": "Hello, this is Lakeside Bank calling.",
+  "confirm_ask": "Am I speaking with {title} {last_name}?",
+  "robot": "I'm an automated assistant calling for Lakeside Bank.",
+  "scam": "This is a genuine call from Lakeside Bank, and I will never ask for your PIN or password.",
+  "purpose_before_verify": "I can only explain why I'm calling once I've confirmed I'm speaking with the right person.",
+  "no_info": "I'm sorry, I don't have that information.",
+  "not_talk_once": "I understand, this will only take a few minutes.",
+  "tp_ask": "When would be a good time to reach {title} {last_name}?",
+  "tp_ask_time": "What time would suit, between 9 am and 6 pm?",
+  "tp_outside_window": "I'm sorry, I can only call back within the next three days, between 9 am and 6 pm. What time would work?",
+  "tp_no_info": "I'm sorry, I can't share the reason for my call.",
+  "tp_booked": "Thank you, we will call back on {date} at {time}.",
+  "wrong_number": "I'm sorry for the trouble, and thank you for letting me know.",
+  "condolence": "I'm very sorry for your loss, and thank you for letting me know.",
+  "id_intro": "Before we go on, I need to ask you two security questions.",
+  "id_why": "These questions protect your account and make sure I only speak with you.",
+  "id_explain": "I can only continue once I have confirmed your identity.",
+  "id_declined": "I understand. Without these answers I can't continue today.",
+  "id_repeat": "Sorry, could you repeat that?",
+  "id_continue": "Thank you.",
+  "id_wrong": "I'm sorry, that doesn't match our records.",
+  "id_failed": "I'm sorry, I couldn't confirm your identity, so I can't continue on this call. Please contact Lakeside Bank directly.",
+  "disclose_intro": "Thank you. I'm calling about late payments on your Lakeside Bank accounts.",
+  "product_line": "Your {name} is {amount} in arrears, {days} days past due.",
+  "ask_today": "Can you pay the full amount today?",
+  "ask_today_multi": "Can you pay the full amounts today?",
+  "next_product": "Now, your next account.",
+  "offer": "Could you pay {amount} by {date}?",
+  "offer_floor_date": "I understand. Could you pay {amount} on {date} instead?",
+  "offer_floor": "Could you pay {amount} instead?",
+  "below_floor": "I'm sorry, the least I can accept is {floor}.",
+  "below_floor_again": "I understand.",
+  "date_past": "That date has already passed. Which date would work for you?",
+  "not_business_day": "That isn't a business day. Would {date} work instead?",
+  "after_deadline": "I'm sorry, the latest date I can accept is {date}. Could you pay by then?",
+  "vague_ask": "Which exact day would you pay?",
+  "propose_deadline": "Could you pay {amount} by {date}?",
+  "ask_date_for_amount": "On which date would you pay {amount}?",
+  "repeat_offer": "Just to repeat, could you pay {amount} by {date}?",
+  "readback_intro": "Let me read that back.",
+  "readback_item": "{amount} for your {name} on {date}.",
+  "clamped_note": "For your {name}, the latest date I can accept is {date}, so I've used that date.",
+  "confirm_q": "Is that correct?",
+  "recorded": "Thank you, your promise is recorded.",
+  "sms_line": "",
+  "record_failed": "I'm sorry, your promise could not be recorded because of a system problem.",
+  "paid_line": "Thank you for letting me know. Payments can take a few days to show.",
+  "dispute_line": "I understand. I'll add a note that you dispute this account.",
+  "hardship": "I'm sorry to hear that, and thank you for telling me. I'll add a note to your account so your situation is taken into account.",
+  "hardship_declined": "I understand.",
+  "hardship_short": "Is that alright with you?",
+  "restructure_line": "We can't set up a plan on this call. Please use the online arrears planner on our website.",
+  "human_ask_help": "Before I transfer you, is there anything I can help you with?",
+  "transfer": "I'll transfer you to a colleague now.",
+  "offer_short": "Would that work for you?",
+  "offer_short_date": "That would be on {date}.",
+  "anything_else": "Is there anything else I can help you with?",
+  "promise_change": "I'm sorry, I can't change that promise on this call.",
+  "go_on": "Sorry, please go on.",
+  "goodbye": "Thank you for your time. Goodbye.",
+  "cb_ask": "When would be a good time to call you back?",
+  "callback_failed": "I'm sorry, I couldn't book the callback because of a system problem.",
+  "transfer_failed": "I'm sorry, the transfer didn't go through.",
+  "confirm_again": "Sorry, I didn't catch that. Do you confirm, yes or no?",
+  "system_error": "I'm sorry, our system isn't responding right now."
+ },
+ "assumptions": [
+  "Bank name: the brief says Lakeside Bank and the API title says Freya Bank. The brief is more specific about the customer-facing bank, so lines use Lakeside Bank.",
+  "Currency: the API gives amounts in pence and the brief says to divide by 100, so currency_word is pounds and amount_scale is 100.",
+  "Wrong answers: the API says three wrong answers in total end the check, but the brief says two wrong answers on the same question end it. The brief is more specific, so max_wrong_per_question is 2. max_wrong stays 3 to match the API.",
+  "Postcode: no fixed length, because postcodes vary. Customer reference: 'upper' with length 8 (two letters and six digits), both sent in capitals without spaces.",
+  "verify_identity response: success is status='pass'. 'unreadable' is treated as not checked and not counted. identity_confirmed signals that all questions passed and attempts_remaining gives the answers left. The response has no ok field and no hint field, so ok, hint and hints are empty.",
+  "Products: accounts have no product type, so the key '*' is used. The spoken name comes from label, the amount from arrears, days late from days_past_due and the floor from min_due (called 'minimum due').",
+  "Band 1-30: deadline is 7 calendar days after today, with one attempt: the full arrears by the deadline. Band 31-90: deadline is 3 business days after today, with two attempts: min_due tomorrow, then min_due on the deadline.",
+  "The brief does not say promise dates must be business days, so the default previous_business_day adjustment is kept.",
+  "No holidays are listed, so holidays is empty. Workdays default to Monday to Friday.",
+  "Defaults kept because the brief says nothing: 'next Friday' means the following week, confirm max_asks is 2, callback max_asks is 2, first_ask is today, max_not_talk is 2, ask once before transferring to a human, and the multi-product defaults.",
+  "Dates are read day-month-year, because this is a UK-style bank (pence, postcodes).",
+  "Third-party callback: within the next 3 calendar days, 09:00-18:00 inclusive, later than now, any day of the week. It is booked with schedule_callback.callback_at (YYYY-MM-DDTHH:MM).",
+  "A verified customer who asks to be called back is booked with schedule_callback and the call closes with CB-REQ. The brief says 'for the time they give' and sets no window, so the engine's callback window is used.",
+  "Hardship: no transfer. A 'vulnerable' note is added and the call closes with NP-VUL. transfer_support is mapped to the same outcome with no queue.",
+  "Restructuring: no transfer. The customer is pointed to the online arrears planner, a 'plan_requested' note is added and the call closes with NP-PLAN.",
+  "Notes are written only for dispute, vulnerable and plan_requested. There is no note for refusal, paid or system error.",
+  "The brief does not cover requests for a human. The API offers queue 'agents' and code TR-AGT, so transfer_human uses those.",
+  "close_call takes only 'code' and has no reason field, so every reason is ''.",
+  "add_note requires 'text' and no engine slot exists for it, so it is mapped to a fixed text.",
+  "tool_bodies dispute resolved: both specs map every required request field the same way and differ only in the constant add_note text. The brief gives no wording, so spec A's constant is kept.",
+  "The brief does not say whether a recorded promise can be changed, so promise_change says it can't be changed on this call.",
+  "The brief does not ask for an SMS line or a call-recording statement, so sms_line is empty."
+ ]
+}
