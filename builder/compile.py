@@ -148,9 +148,13 @@ def extraction(stage, spec):
         schema.append({"name": stage + "_amount", "type": "float", "min_confidence": 0.0,
                        "description": "An amount of money the customer offers or agrees to pay in the latest message, as a number "
                                       "(e.g. 'six hundred thirty-seven fifty' = 637.5). If they correct themselves, the corrected value. Empty if none."})
-        schema.append({"name": stage + "_scope", "type": "string", "enum_values": ["all", "one", "none"], "min_confidence": 0.0,
-                       "description": "all = the customer's statement is about all of their products together (both, all three, everything); "
-                                      "one = about one specific product; none = not stated."})
+        names = spec.get("products", {}).get("names", {}) if spec else {}
+        if names:
+            spoken = "; ".join(f"{t} = the {re.sub(r'[{][^}]*[}]', '', n).replace('ending', '').strip()}" for t, n in names.items())
+            schema.append({"name": stage + "_for", "type": "string", "enum_values": list(names) + ["all", "none"], "min_confidence": 0.0,
+                           "description": "Which product the customer's date, amount or yes/no in the latest message is about. "
+                                          f"{spoken}; all = all of their products together (both, all three, everything); "
+                                          "none = not stated. If they accept one product and refuse the others, give the product they accept."})
     return schema
 
 

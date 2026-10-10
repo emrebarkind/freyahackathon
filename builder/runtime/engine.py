@@ -221,6 +221,13 @@ def take_input(V, stage):
     dt = str(g("date") or "").strip()
     a = num(g("amount"))
     sc = str(g("scope") or "none").strip().lower()
+    fr = str(g("for") or "none").strip().lower()
+    if (stage + "_for") in V:
+        V[stage + "_for"] = "none"
+    if fr == "all":
+        sc = "all"
+    elif fr not in ("", "none") and fr in S.get("products", dict()).get("names", dict()):
+        sc = "type:" + fr
     side = str(g("side") or "none").strip().lower()
     if (stage + "_side") in V:
         V[stage + "_side"] = "none"
@@ -827,16 +834,35 @@ def special(V, s, k, p):
     return False
 
 
+def product_target(s, scope):
+    """Index of the product a statement names ('type:<product type>'), or None."""
+    if not scope.startswith("type:"):
+        return None
+    for i, p in enumerate(s["products"]):
+        if p["type"] == scope[5:] and p["status"] in ("open", "agreed"):
+            return i
+    return None
+
+
 def stage_nego(V, s, k, t, dtxt, a, scope):
     prods = s["products"]
     multi = len(prods) > 1
+    target = product_target(s, scope) if multi else None
+    if target is not None:
+        s["ci"] = target
+        scope = "one"
+        if prods[target]["status"] == "agreed" and (dtxt or a is not None or k in ("no", "refuses")):
+            prods[target]["status"] = "open"
+            prods[target]["offer"] = list(prods[target]["agreed"])
     if s.get("phase") == "today":
         s["phase"] = "items"
-        if k in ("yes", "agrees", "pay_today"):
+        if k in ("yes", "agrees", "pay_today") and target is None and not dtxt:
             for p in prods:
                 agree(p, p["full"], iso(today_of(V)))
             return readback(V, s)
-        if k in ("proposes", "gives_date", "gives_amount", "too_much", "vague") or dtxt or a is not None:
+        if target is not None:
+            pass
+        elif k in ("proposes", "gives_date", "gives_amount", "too_much", "vague") or dtxt or a is not None:
             s["ci"] = next_open(s)
             if multi and (scope == "all" or (dtxt and a is None and scope != "one")):
                 return propose_all(V, s, dtxt, a, k)
@@ -957,6 +983,29 @@ def stage_hardship(V, s, k, t, dtxt, a):
 
 def stage_confirm(V, s, k, t, dtxt, a, scope):
     agreed = [p for p in s["products"] if p["status"] == "agreed"]
+    ti = product_target(s, scope)
+    if ti is not None and len(agreed) > 1 and s["products"][ti] in agreed and k not in special_kinds():
+        # "I only confirm the credit card": keep that one, the others go back to negotiation as refused offers
+        kp = s["products"][ti]
+        for p in agreed:
+            if p is not kp:
+                p["status"] = "open"
+                p["refused_offers"].append(list(p["agreed"]))
+                p["agreed"] = None
+        if dtxt or a is not None:
+            kp["status"] = "open"
+            kp["offer"] = list(kp["agreed"])
+            res, pre = apply_proposal(V, s, kp, dtxt, a)
+            if res != "agreed":
+                s["stage"] = "nego"
+                s["ci"] = ti
+                say(V, pre)
+                return talk(V, "nego", s)
+        s["stage"] = "nego"
+        s["ci"] = next_open(s)
+        if cur(s) is None:
+            return readback(V, s)
+        return refusal(V, s, cur(s), L("next_product", name=cur(s)["name"], amount=money(cur(s)["full"])))
     if k in ("yes", "agrees", "confirm"):
         s["rec_queue"] = [p["id"] for p in agreed]
         return record_next(V, s)
@@ -988,6 +1037,10 @@ def stage_confirm(V, s, k, t, dtxt, a, scope):
         return refusal(V, s, cur(s))
     say(V, L("confirm_q"))
     return talk(V, "confirm", s)
+
+
+def special_kinds():
+    return ("already_paid", "dispute", "hardship", "restructure", "human", "robot", "scam", "not_talk")
 
 
 def record_next(V, s):
@@ -1051,6 +1104,17 @@ def run(V):
         return
     stage = s.get("stage", "open")
     k, t, dtxt, a, scope = take_input(V, stage)
+    if s.get("same", 0) >= 2 and stage in ("nego", "confirm") and k not in special_kinds():
+        k, dtxt, a, scope = "no", "", None, "none"     # we said the same thing three times: stop looping, treat as a refusal
+    prev = V.get("say", "")
+    dispatch(V, s, stage, k, t, dtxt, a, scope)
+    s2 = st(V)
+    if s2:
+        s2["same"] = (s2.get("same", 0) + 1) if V.get("say", "") == prev and s2.get("stage") in ("nego", "confirm") else 0
+        put(V, s2)
+
+
+def dispatch(V, s, stage, k, t, dtxt, a, scope):
     if stage == "open":
         return stage_open(V, s, k, t)
     if stage == "tp":
