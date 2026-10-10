@@ -321,7 +321,8 @@ def set_path(d, path, value):
 def read_and_audit(base, trace):
     """Mode B: one reading at the highest effort, then a targeted audit of the high-risk fields against the
     source documents. The audit answers with changes only, so nothing it did not look at can be lost."""
-    out = claude.ask(base, SYSTEM, "read the brief and tool API into a spec (single strong reading)", trace, effort="max")
+    effort = os.environ.get("BUILDER_B_EFFORT", "max")
+    out = claude.ask(base, SYSTEM, f"read the brief and tool API into a spec (single reading, effort {effort})", trace, effort=effort)
     spec = claude.json_block(out, keys=SPEC_KEYS)
     audit = claude.ask(base + "\n\n" + AUDIT.format(fields=", ".join(AUDIT_FIELDS), spec=json.dumps(spec, indent=1)),
                        SYSTEM, "audit the high-risk fields of the reading against the source documents", trace)

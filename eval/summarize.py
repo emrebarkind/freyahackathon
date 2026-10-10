@@ -33,10 +33,11 @@ for r in rows:
     runs[(r["pkg"], r["mode"])] += 1
     for f in r["failed"]:
         fails[(r["pkg"], f.get("id"))][r["mode"]] += 1
+MODES = sorted({m for _, m in runs})
 print("\n== failed checks (pkg check: failures per mode / runs)")
 for (pkg, cid), c in sorted(fails.items()):
-    tot = {m: runs[(pkg, m)] for m in ("A", "B")}
+    tot = {m: runs[(pkg, m)] for m in MODES}
     every = all(c[m] == tot[m] for m in tot if tot[m])
     ex = next(f for r in rows if r["pkg"] == pkg for f in r["failed"] if f.get("id") == cid)
-    print(f"{pkg} {cid:4} {ex.get('type', ''):18} A {c['A']}/{tot['A']}  B {c['B']}/{tot['B']}" + ("  ALL RUNS" if every else "") +
+    print(f"{pkg} {cid:4} {ex.get('type', ''):18} " + "  ".join(f"{m} {c[m]}/{tot[m]}" for m in MODES) + ("  ALL RUNS" if every else "") +
           f"  expect={json.dumps(ex.get('expect'))[:80]} got={json.dumps(ex.get('got'), default=str)[:80]}")

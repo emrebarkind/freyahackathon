@@ -20,7 +20,9 @@ RUNS = ROOT / "eval" / "runs"
 def call_api(prompt, options, context):
     mode = (options.get("config") or {}).get("mode", "A")
     pkg = prompt.strip()
-    os.environ["BUILDER_EXTRACT_MODE"] = mode
+    os.environ["BUILDER_EXTRACT_MODE"] = mode[0]
+    if mode == "B_high":
+        os.environ["BUILDER_B_EFFORT"] = "high"
     from builder import extract
     from builder.build import REPAIR_SECONDS, REPAIRS, Budget
     from builder.trace import Trace

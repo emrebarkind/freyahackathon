@@ -1,0 +1,16 @@
+# Mode B with the reading at the same effort as mode A's readings ("high"), for an equal-budget comparison.
+description: spec extraction B at effort high
+prompts:
+  - "{{pkg}}"
+providers:
+  - id: file://provider.py
+    label: B-one-reading-audit-effort-high
+    config: {mode: B_high}
+defaultTest:
+  assert:
+    - type: python
+      value: file://assert_key.py
+tests:
+  - vars: {pkg: p1}
+  - vars: {pkg: p2}
+  - vars: {pkg: p3}
