@@ -2,5 +2,10 @@
  "probe1": {
   "workflow_id": "e3779103-091f-4907-ab19-b7d122e5e307",
   "agent_id": "a18f8023-1801-4fe2-8284-77d7c1ede824"
+ },
+ "probe2": {
+  "workflow_id": "a4ca0e8c-4b0d-46bd-9e51-97eb729b83b8",
+  "agent_id": "35bac80a-02c6-42e3-a116-17e78b1a2be8",
+  "version": 1
  }
 }
