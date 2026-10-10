@@ -83,6 +83,14 @@ The kit is in `kit/build-the-builder/` (briefs, openapi, 13 practice cases, docs
 - **The practice bank does not accept custom cases** (`unknown practice case`). Only the 13 public cases. → Hidden-brief self-tests: structural checks, chat smoke tests (third party, opening), and local unit tests on the runtime code.
 - `claude -p` / Claude Agent SDK works in this container without an API key, using managed auth.
 
+### Probe 1 (chat route, probes/probe1.py)
+- conversation → code (passthrough) → conversation loop works, ~2 s per turn. Code nodes run on the chat route too.
+- An enum extraction variable can NOT be set to `""` from code ("rejected by schema validation"). Fix: add a `none` value to every enum, have code reset it to `none`, and tell extraction "none if not stated in the last message".
+- Extraction overwrites the variable on every turn (other→no→yes worked).
+- Results of an `api_request` node: `<node>_response.data.*` and `<node>_success_count` work. `<tool>_response.*` is NOT filled for pre_actions. Node-level `response_mapping` with a `data.` path works.
+- HTTP 200 + `ok:false` counts as a "success" (failure_count is not set) → routing must check `data.ok`.
+- A tts `on_enter` on an api_request node is spoken, but the chat route then repeats messages and loses variables → use silent; test with simulations.
+
 ## Files (new public repo; see "Repo" below)
 - `builder/build.py`: CLI, timing, trace, orchestration
 - `builder/normalize.py`, `builder/extract.py`: Claude calls (reuses `builder/llm.py`)
