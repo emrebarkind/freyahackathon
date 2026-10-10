@@ -224,7 +224,8 @@ def take_input(V, stage):
         V["_prefix"] = L(side)
     elif side == "question" and k not in ("question", "purpose", "asks_why", "unclear", "none") and stage not in ("open", "tp", "id"):
         V["_prefix"] = L("no_info")
-    for f in ("text", "date"):
+    V["_norm"] = str(g("norm") or "").strip()
+    for f in ("text", "date", "norm"):
         if (stage + "_" + f) in V:
             V[stage + "_" + f] = ""
     if (stage + "_amount") in V:
@@ -506,10 +507,33 @@ def stage_id(V, s, k, t):
         return talk(V, "id", s)
     s["partial"] = ""
     if not ans:
-        say(V, L("id_repeat"), q["ask"])
+        ans = norm_fallback(q, V.get("_norm", ""))
+    if not ans:
+        s["repeats"] = s.get("repeats", 0) + 1
+        say(V, L("id_repeat"), q["ask"] if s["repeats"] < 2 else (L("id_format_hint") or q["ask"]))
         return talk(V, "id", s)
+    s["repeats"] = 0
     s["last_answer"] = ans
     return call(V, s, "api_verify", q_field=q["field"], q_answer=ans)
+
+
+def norm_fallback(q, norm):
+    """The extractor's own normalisation, used only when our parser found nothing."""
+    norm = str(norm or "").strip()
+    if not norm:
+        return ""
+    kind = q.get("kind", "text")
+    if kind == "date":
+        return norm if re.fullmatch(r"(19|20)\d\d-\d\d-\d\d", norm) else ""
+    if kind == "digits":
+        d = re.sub(r"\D", "", norm)
+        n = int(q.get("length") or 0)
+        return d if d and (not n or len(d) == n) else ""
+    if kind == "year":
+        return norm if re.fullmatch(r"(19|20)\d\d", norm) else ""
+    if kind == "upper":
+        return re.sub(r"[^A-Za-z0-9]", "", norm).upper()
+    return norm
 
 
 def normalize_answer(q, text):

@@ -249,7 +249,8 @@
   "restructure_line": "I'll transfer you to our restructuring team.",
   "human_ask_help": "I can help you with this. Is there something I can do for you first?",
   "transfer": "I'll transfer you now.",
-  "goodbye": "Thank you for your time. Goodbye."
+  "goodbye": "Thank you for your time. Goodbye.",
+  "id_format_hint": "Could you say it as day, month and year, for example the first of May nineteen eighty?"
  },
  "tool_bodies": {
   "verify_identity": {

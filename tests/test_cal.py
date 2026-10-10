@@ -44,3 +44,17 @@ def test_numbers_and_birthdates():
     assert cal.parse_birth_date("the fourteenth of March nineteen eighty-eight") == "1988-03-14"
     assert cal.parse_birth_date("12/07/1991") == "1991-07-12"
     assert cal.parse_birth_date("March 14, 1988") == "1988-03-14"
+
+
+BIRTH = {"Twenty-eighth of April nineteen ninety-three": "1993-04-28", "April the third, two thousand and one": "2001-04-03",
+         "eighth of January ninety-one": "1991-01-08", "5 December 75": "1975-12-05", "March fourteenth, nineteen eighty-eight": "1988-03-14",
+         "seventeenth may eighty six": "1986-05-17", "twentieth of december two thousand and five": "2005-12-20", "Jan 30 1984": "1984-01-30"}
+DIGITS = {"zero three five eight": "0358", "forty-four seventy-one": "4471", "four thousand four hundred seventy-one": "4471",
+          "sixty-six thirty": "6630", "double seven two one": "7721", "fifteen oh two": "1502", "twenty-two nineteen": "2219"}
+
+
+def test_spoken_forms():
+    for t, e in BIRTH.items():
+        assert cal.parse_birth_date(t) == e, t
+    for t, e in DIGITS.items():
+        assert cal.digits_only(t) == e, t

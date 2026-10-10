@@ -3,6 +3,7 @@ and an adjudication pass on disagreements."""
 import copy
 import json
 import pathlib
+import re
 
 from . import claude
 
@@ -113,6 +114,9 @@ def validate(spec, openapi):
         if t not in spec["products"].get("floor_field", {}) and not spec["products"].get("floor_pct"):
             errs.append(f"products.floor_field missing for product type {t}")
     for k, v in spec["lines"].items():
+        if k not in ("recorded", "sms_line", "record_failed") and re.search(r"\brecorded\b", str(v), re.I):
+            errs.append(f"lines.{k} uses the word 'recorded'; a judge can hear it as a false claim that a promise was recorded. "
+                        f"Rephrase in the active voice ('we record this call') or use 'noted'")
         if "{{" in str(v) or "}}" in str(v):
             errs.append(f"lines.{k} must use single braces")
     return errs

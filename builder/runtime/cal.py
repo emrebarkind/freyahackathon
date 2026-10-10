@@ -229,42 +229,148 @@ def parse_spoken_date(text, today, rules=None):
     return None
 
 
+def _tokens(text):
+    t = str(text or "").lower()
+    t = re.sub(r"(\d)(st|nd|rd|th)\b", r"\1", t)
+    t = re.sub(r"[-,./]", " ", t)
+    return [w for w in t.split() if w not in ("the", "of", "and", "a", "um", "uh", "er", "its", "it's", "is", "my")]
+
+
+UNITS = dict(zero=0, oh=0, o=0, one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9)
+TEENS = dict(ten=10, eleven=11, twelve=12, thirteen=13, fourteen=14, fifteen=15, sixteen=16, seventeen=17,
+             eighteen=18, nineteen=19)
+TENS = dict(twenty=20, thirty=30, forty=40, fifty=50, sixty=60, seventy=70, eighty=80, ninety=90)
+
+
+def digit_groups(tokens):
+    """Spoken digit string -> digits, keeping leading zeros: 'oh three five eight' -> '0358',
+    'forty four seventy one' -> '4471', 'double seven two one' -> '7721'."""
+    out, i = "", 0
+    while i < len(tokens):
+        w = tokens[i]
+        if re.fullmatch(r"\d+", w):
+            out += w
+        elif w in ("double", "triple") and i + 1 < len(tokens) and tokens[i + 1] in UNITS:
+            out += str(UNITS[tokens[i + 1]]) * (2 if w == "double" else 3)
+            i += 1
+        elif w in UNITS:
+            out += str(UNITS[w])
+        elif w in TEENS:
+            out += str(TEENS[w])
+        elif w in TENS:
+            if i + 1 < len(tokens) and tokens[i + 1] in UNITS and UNITS[tokens[i + 1]] > 0 and tokens[i + 1] not in ("oh", "o"):
+                out += str(TENS[w] + UNITS[tokens[i + 1]])
+                i += 1
+            else:
+                out += str(TENS[w])
+        elif w == "hundred" and out:
+            out += "00"
+        i += 1
+    return out
+
+
+def cardinal(tokens):
+    """'four thousand four hundred seventy one' -> 4471 ; None if no number words."""
+    total, cur, seen = 0, 0, False
+    for w in tokens:
+        if re.fullmatch(r"\d+", w):
+            cur += int(w); seen = True
+        elif w in UNITS:
+            cur += UNITS[w]; seen = True
+        elif w in TEENS:
+            cur += TEENS[w]; seen = True
+        elif w in TENS:
+            cur += TENS[w]; seen = True
+        elif w == "hundred":
+            cur = (cur or 1) * 100; seen = True
+        elif w == "thousand":
+            total += (cur or 1) * 1000; cur = 0; seen = True
+    return total + cur if seen else None
+
+
+def digits_only(text):
+    toks = _tokens(text)
+    if any(w in ("hundred", "thousand") for w in toks):
+        n = cardinal(toks)
+        return str(n) if n is not None else ""
+    return digit_groups(toks)
+
+
+def spoken_year(tokens):
+    """Year from the tokens left after month/day are removed."""
+    for w in tokens:
+        if re.fullmatch(r"(19|20)\d\d", w):
+            return int(w)
+    toks = [w for w in tokens if w in UNITS or w in TEENS or w in TENS or w in ("hundred", "thousand") or re.fullmatch(r"\d{1,2}", w)]
+    if not toks:
+        return None
+    if "thousand" in toks:
+        n = cardinal(toks)
+        return n if n and 1900 <= n <= 2100 else None
+    if toks[0] in ("nineteen", "twenty") and len(toks) >= 2:
+        rest = digit_groups(toks[1:])
+        if rest.isdigit() and len(rest) <= 2:
+            return (1900 if toks[0] == "nineteen" else 2000) + int(rest)
+    g = digit_groups(toks)
+    if len(g) == 4 and g[:2] in ("19", "20"):
+        return int(g)
+    if len(g) == 2:
+        y = int(g)
+        return 1900 + y if y > 30 else 2000 + y
+    return None
+
+
+def spoken_day(tokens):
+    """(day, tokens_without_day)"""
+    for i, w in enumerate(tokens):
+        if w in ("twenty", "thirty") and i + 1 < len(tokens) and tokens[i + 1] in ORD_WORDS and ORD_WORDS[tokens[i + 1]] < 10:
+            return TENS[w] + ORD_WORDS[tokens[i + 1]], tokens[:i] + tokens[i + 2:]
+    for i, w in enumerate(tokens):
+        if w in ORD_WORDS:
+            return ORD_WORDS[w], tokens[:i] + tokens[i + 1:]
+    for i, w in enumerate(tokens):
+        if re.fullmatch(r"\d{1,2}", w) and 1 <= int(w) <= 31:
+            return int(w), tokens[:i] + tokens[i + 1:]
+    for i, w in enumerate(tokens):   # "January eight 1991", "the eight of May"
+        if w in UNITS and UNITS[w] > 0:
+            return UNITS[w], tokens[:i] + tokens[i + 1:]
+        if w in TEENS and i + 1 < len(tokens) and tokens[i + 1] in TENS:
+            continue
+        if w in TEENS:
+            return TEENS[w], tokens[:i] + tokens[i + 1:]
+    return None, tokens
+
+
 def parse_birth_date(text, order="dmy"):
-    """Spoken or numeric birth date -> 'YYYY-MM-DD' or ''. Numeric-only dates use `order`."""
-    t = str(text or "").lower().replace(",", " ")
-    m = re.search(r"(\d{4})-(\d{1,2})-(\d{1,2})", t)
+    """Spoken or numeric birth date -> 'YYYY-MM-DD' or ''. Numeric-only dates use `order` (dmy or mdy)."""
+    raw = str(text or "").lower()
+    m = re.search(r"(\d{4})-(\d{1,2})-(\d{1,2})", raw)
     if m:
         return "%04d-%02d-%02d" % (int(m.group(1)), int(m.group(2)), int(m.group(3)))
-    month = None
-    for i, mn in enumerate(MONTHS):
-        if re.search(r"\b" + mn[:3] + r"[a-z]*\b", t):
-            month = i + 1
-    year = None
-    m = re.search(r"\b(19\d\d|20\d\d)\b", t)
-    if m:
-        year = int(m.group(1))
-    else:
-        m = re.search(r"\b(nineteen|twenty)\s+([a-z]+(?:\s+[a-z]+)?)", t.replace("-", " "))
-        if m:
-            rest = words_to_number(m.group(2))
-            if rest is not None:
-                year = (1900 if m.group(1) == "nineteen" else 2000) + int(rest)
+    toks = _tokens(raw)
+    month, mi = None, None
+    for i, w in enumerate(toks):
+        for j, mn in enumerate(MONTHS):
+            if len(w) >= 3 and mn.startswith(w[:3]) and (w == mn or w == mn[:3] or w == mn[:4] or mn.startswith(w)):
+                month, mi = j + 1, i
+                break
+        if month:
+            break
     if month:
-        tt = re.sub(r"\b(19\d\d|20\d\d)\b", " ", t)
-        m = re.search(r"\b(\d{1,2})(?:st|nd|rd|th)?\b", tt)
-        day = int(m.group(1)) if m else None
-        if day is None:
-            tt = tt.replace("-", " ")
-            for w, v in sorted(ORD_WORDS.items(), key=lambda kv: -len(kv[0])):
-                mm = re.search(r"\b(twenty|thirty)\s+" + w + r"\b", tt)
-                if mm:
-                    day = NUM_WORDS[mm.group(1)] + v; break
-                if re.search(r"\b" + w + r"\b", tt):
-                    day = v; break
-        if day and year:
+        rest = toks[:mi] + toks[mi + 1:]
+        # a 4-digit year or a spoken year usually comes after the day; take the day first
+        year_tok = [w for w in rest if re.fullmatch(r"(19|20)\d\d", w)]
+        if year_tok:
+            rest2 = [w for w in rest if w != year_tok[0]]
+            day, _ = spoken_day(rest2)
+            year = int(year_tok[0])
+        else:
+            day, left = spoken_day(rest)
+            year = spoken_year(left)
+        if day and year and 1 <= day <= 31:
             return "%04d-%02d-%02d" % (year, month, day)
         return ""
-    nums = re.findall(r"\d+", t)
+    nums = re.findall(r"\d+", raw)
     if len(nums) >= 3:
         a, b, c = int(nums[0]), int(nums[1]), int(nums[2])
         if len(nums[0]) == 4:
@@ -275,15 +381,6 @@ def parse_birth_date(text, order="dmy"):
         if 1 <= mth <= 12 and 1 <= d <= 31:
             return "%04d-%02d-%02d" % (c, mth, d)
     return ""
-
-
-def digits_only(text):
-    t = str(text or "")
-    if re.search(r"[a-z]", t.lower()):
-        n = words_to_number(t)
-        if n is not None:
-            return str(int(n))
-    return re.sub(r"\D", "", t)
 
 
 def speak_date(d):

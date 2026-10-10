@@ -131,6 +131,10 @@ def extraction(stage, spec):
         schema.append({"name": stage + "_text", "type": "string", "min_confidence": 0.0,
                        "description": "The customer's answer to the security question in their latest message, copied exactly as said "
                                       "(keep every digit and word, e.g. 'the fourteenth of March 1988' or 'four four seven one'). Empty if none."})
+    if stage == "id":
+        schema.append({"name": "id_norm", "type": "string", "min_confidence": 0.0,
+                       "description": "The same answer normalised: a date as YYYY-MM-DD (day before month when only numbers are said), "
+                                      "a number or code as its digits or characters only, without spaces. Empty if no answer."})
     if stage in ("tp",):
         schema.append({"name": stage + "_text", "type": "string", "min_confidence": 0.0,
                        "description": "The day and time the customer can be reached, copied exactly as said in the latest message, e.g. 'tomorrow around eleven'. Empty if none."})

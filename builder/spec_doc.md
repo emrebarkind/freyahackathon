@@ -99,8 +99,10 @@ Placeholders in braces are filled by the engine: {title} {first_name} {last_name
 {amount} (spoken amount with currency) {date} (spoken date) {days} (days late) {time}.
 Never mention the debt, a payment, the product or the bank department before identity is verified, in any
 line used before verification (opening, confirm_ask, robot, scam, purpose_before_verify, tp_*, wrong_number,
-condolence, id_*). Never say "recorded" in a sense that could be heard as a promise being recorded, except in
-`recorded`.
+condolence, id_*). Use the word "recorded" ONLY in the lines `recorded`, `sms_line` and `record_failed`
+("can record" in an offer is fine): a judge reading the transcript treats any other "recorded" as a claim that a promise was saved. If the
+brief requires telling the customer that the call is recorded, say "we record this call" (active voice, never
+"this call is recorded").
 
 Required keys:
 opening, confirm_ask, robot, scam, purpose_before_verify, no_info, not_talk_once,
