@@ -15,6 +15,12 @@ and `FREYA_API_KEY` (+ `FREYA_API_URL`). Output: the agent on Freya, `submission
 `submission/<slot>.spec.json` (what the builder understood) and `traces/<slot>.trace.log` (the trace; everything is also printed, so `2>&1 | tee traces/<slot>.log` works too). A run takes
 about 1–3 minutes.
 
+Final-day helper (same command, plus log capture and checks):
+
+```bash
+scripts/final_run.sh hidden-1 briefs/hidden-1.md briefs/hidden-1.openapi.json
+```
+
 ## The idea: the weak model only listens, code decides
 
 The phone agent runs on a small fixed model and every case must pass 3 runs out of 3. So the builder does **not**
