@@ -3,3 +3,8 @@ __pycache__/
 .env
 runs/*
 !runs/.gitkeep
+env.sh
+.freya-agents.json
+.personas.json
+traces/
+results/
