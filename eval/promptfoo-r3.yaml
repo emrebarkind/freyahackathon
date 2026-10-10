@@ -1,0 +1,19 @@
+# Round 3: the GEPA guidance (searched on eval/dev only) measured on the frozen packages, both modes.
+description: extraction with GEPA guidance on held-out packages
+prompts:
+  - "{{pkg}}"
+providers:
+  - id: file://provider.py
+    label: A+gepa
+    config: {mode: A, guidance: gepa_guidance.txt}
+  - id: file://provider.py
+    label: B_high+gepa
+    config: {mode: B_high, guidance: gepa_guidance.txt}
+defaultTest:
+  assert:
+    - type: python
+      value: file://assert_key.py
+tests:
+  - vars: {pkg: p1}
+  - vars: {pkg: p2}
+  - vars: {pkg: p3}
