@@ -1,0 +1,1485 @@
+{
+ "initial_node": "talk_open",
+ "system_prompt": "You are a bank's digital assistant on a phone call. Speak English.",
+ "nodes": {
+  "talk_open": {
+   "name": "talk_open",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "Hello, this is Freya Bank's digital assistant calling from Freya Bank. Please note that we record this call. Am I speaking with {{title}} {{last_name}}?"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "open_kind",
+     "type": "string",
+     "enum_values": [
+      "confirmed",
+      "third_party",
+      "wrong_number",
+      "deceased",
+      "robot",
+      "scam",
+      "purpose",
+      "human",
+      "not_talk",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: confirmed = the person confirms they are the customer: yes, that's me, speaking, or says the customer's own name; third_party = someone else answered (a relative, partner, colleague, child) or says the customer is not available; wrong_number = says this number does not belong to the customer or they do not know the customer; deceased = says the customer has died / passed away; robot = asks whether you are a robot, a machine or an AI; scam = asks whether this call is a scam or fraud, or doubts that you are the bank; purpose = asks what the call is about or who is calling, without confirming; human = asks to speak to a real person / a human agent; not_talk = says they do not want to talk / are not interested / asks you to stop; unclear = anything else: hello, go ahead, who is this, unclear or no answer; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "open_cut",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no"
+     ],
+     "min_confidence": 0.0,
+     "description": "yes = the customer's latest message stops in the middle of a sentence, ending on an unfinished phrase (e.g. '... I would like', '... I want to', '... sorry, I mean', '... on the'), so they have not finished; no = it is a complete thought."
+    },
+    {
+     "name": "open_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ],
+   "on_enter_first_entry_only": true
+  },
+  "talk_tp": {
+   "name": "talk_tp",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "tp_kind",
+     "type": "string",
+     "enum_values": [
+      "gives_time",
+      "no_time",
+      "customer_now",
+      "wrong_number",
+      "deceased",
+      "purpose",
+      "offers_pay",
+      "robot",
+      "scam",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: gives_time = gives a day and/or time when the customer can be reached; no_time = does not know when the customer can be reached, or will not say; customer_now = says the customer is coming to the phone or hands the phone over; wrong_number = says the number does not belong to the customer / does not know them; deceased = says the customer has died / passed away; purpose = asks what the call is about; offers_pay = offers to pay or to answer questions for the customer; robot = asks whether you are a robot or an AI; scam = asks whether this is a scam; unclear = anything else; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "tp_cut",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no"
+     ],
+     "min_confidence": 0.0,
+     "description": "yes = the customer's latest message stops in the middle of a sentence, ending on an unfinished phrase (e.g. '... I would like', '... I want to', '... sorry, I mean', '... on the'), so they have not finished; no = it is a complete thought."
+    },
+    {
+     "name": "tp_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    },
+    {
+     "name": "tp_text",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The day and time the customer can be reached, copied exactly as said in the latest message, e.g. 'tomorrow around eleven'. Empty if none."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "talk_id": {
+   "name": "talk_id",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "id_kind",
+     "type": "string",
+     "enum_values": [
+      "answer",
+      "refuses",
+      "asks_why",
+      "purpose",
+      "robot",
+      "scam",
+      "human",
+      "not_talk",
+      "wrong_person",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: answer = gives an answer to the security question (any date, number, digits or words), even partial; refuses = refuses or does not want to answer the security question; asks_why = asks why you need this information or why you ask, without answering; purpose = asks what the call is about or which account it concerns, without answering; robot = asks whether you are a robot or an AI; scam = asks whether this is a scam; human = asks to speak to a human; not_talk = says they do not want to talk; wrong_person = says they are not the customer after all; unclear = anything else; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "id_cut",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no"
+     ],
+     "min_confidence": 0.0,
+     "description": "yes = the customer's latest message stops in the middle of a sentence, ending on an unfinished phrase (e.g. '... I would like', '... I want to', '... sorry, I mean', '... on the'), so they have not finished; no = it is a complete thought."
+    },
+    {
+     "name": "id_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    },
+    {
+     "name": "id_text",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The customer's answer to the security question in their latest message, copied exactly as said (keep every digit and word, e.g. 'the fourteenth of March 1988' or 'four four seven one'). Empty if none."
+    },
+    {
+     "name": "id_norm",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The same answer normalised: a date as YYYY-MM-DD (day before month when only numbers are said), a number or code as its digits or characters only, without spaces. Empty if no answer."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "talk_nego": {
+   "name": "talk_nego",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "nego_kind",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no",
+      "proposes",
+      "too_much",
+      "vague",
+      "already_paid",
+      "dispute",
+      "hardship",
+      "restructure",
+      "human",
+      "robot",
+      "scam",
+      "not_talk",
+      "asks_amount",
+      "details",
+      "question",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: yes = agrees / accepts what was just offered or asked (yes, ok, fine, that works, I confirm); no = says no / cannot / will not, without giving a date or an amount; proposes = names a day, a date or an amount they can pay (the date of an unrelated event, e.g. a wedding or a trip, is not a proposal: use unclear); too_much = says the amount is too much / too high / cannot afford it, even if they also say 'you tell me'; vague = gives a vague time like next week, end of the month, when my salary comes, without an exact day; already_paid = says they already paid this amount; dispute = says the debt is not theirs, they never had this product, or it was closed or paid off in the past; hardship = mentions illness, a death in the family, or job loss; restructure = asks for a new payment plan, lower instalments, or restructuring; human = asks to speak to a human; robot = asks whether you are a robot or an AI; scam = asks whether this is a scam; not_talk = says they do not want to talk about this; asks_amount = asks how much they should or can pay, what the options are, or says 'you tell me', without refusing in the same message; details = asks which account or product this is, how much they owe, how late it is, or asks you to repeat the amount; question = asks another question; unclear = anything else; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "nego_cut",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no"
+     ],
+     "min_confidence": 0.0,
+     "description": "yes = the customer's latest message stops in the middle of a sentence, ending on an unfinished phrase (e.g. '... I would like', '... I want to', '... sorry, I mean', '... on the'), so they have not finished; no = it is a complete thought."
+    },
+    {
+     "name": "nego_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    },
+    {
+     "name": "nego_text",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The customer's latest message, copied exactly as written, including how it ends."
+    },
+    {
+     "name": "nego_date",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The day or date the customer OFFERS TO PAY on in the latest message (not dates of other events), copied exactly as said (e.g. 'this Friday', 'next Tuesday', 'the 23rd', '30 October', 'next week'). If they correct themselves, only the corrected value. Empty if no day is mentioned."
+    },
+    {
+     "name": "nego_amount",
+     "type": "float",
+     "min_confidence": 0.0,
+     "description": "An amount of money the customer offers or agrees to pay in the latest message, as a number (e.g. 'six hundred thirty-seven fifty' = 637.5). If they correct themselves, the corrected value. Empty if none."
+    },
+    {
+     "name": "nego_for",
+     "type": "string",
+     "enum_values": [
+      "credit_card",
+      "personal_loan",
+      "car_loan",
+      "all",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Which product the customer's date, amount or yes/no in the latest message is about. credit_card = the credit card; personal_loan = the personal loan; car_loan = the car loan; all = all of their products together (both, all three, everything); none = not stated. If they accept one product and refuse the others, give the product they accept."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "talk_hardship": {
+   "name": "talk_hardship",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "hardship_kind",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no",
+      "proposes",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: yes = accepts being connected / transferred; no = declines being connected / transferred; proposes = names a date or an amount they can pay themselves; unclear = anything else; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "hardship_cut",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no"
+     ],
+     "min_confidence": 0.0,
+     "description": "yes = the customer's latest message stops in the middle of a sentence, ending on an unfinished phrase (e.g. '... I would like', '... I want to', '... sorry, I mean', '... on the'), so they have not finished; no = it is a complete thought."
+    },
+    {
+     "name": "hardship_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    },
+    {
+     "name": "hardship_text",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The customer's latest message, copied exactly as written, including how it ends."
+    },
+    {
+     "name": "hardship_date",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The day or date the customer OFFERS TO PAY on in the latest message (not dates of other events), copied exactly as said (e.g. 'this Friday', 'next Tuesday', 'the 23rd', '30 October', 'next week'). If they correct themselves, only the corrected value. Empty if no day is mentioned."
+    },
+    {
+     "name": "hardship_amount",
+     "type": "float",
+     "min_confidence": 0.0,
+     "description": "An amount of money the customer offers or agrees to pay in the latest message, as a number (e.g. 'six hundred thirty-seven fifty' = 637.5). If they correct themselves, the corrected value. Empty if none."
+    },
+    {
+     "name": "hardship_for",
+     "type": "string",
+     "enum_values": [
+      "credit_card",
+      "personal_loan",
+      "car_loan",
+      "all",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Which product the customer's date, amount or yes/no in the latest message is about. credit_card = the credit card; personal_loan = the personal loan; car_loan = the car loan; all = all of their products together (both, all three, everything); none = not stated. If they accept one product and refuse the others, give the product they accept."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "talk_confirm": {
+   "name": "talk_confirm",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "confirm_kind",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no",
+      "proposes",
+      "too_much",
+      "already_paid",
+      "dispute",
+      "hardship",
+      "restructure",
+      "human",
+      "robot",
+      "scam",
+      "question",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: yes = confirms the read-back (yes, correct, I confirm); no = does not confirm / refuses; proposes = changes the date or the amount; too_much = now says the amount is too much; already_paid = says they already paid; dispute = says the debt is not theirs; hardship = mentions illness, a death in the family, or job loss; restructure = asks for a new payment plan or lower instalments; human = asks to speak to a human; robot = asks whether you are a robot or an AI; scam = asks whether this is a scam; question = asks another question; unclear = anything else; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "confirm_cut",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no"
+     ],
+     "min_confidence": 0.0,
+     "description": "yes = the customer's latest message stops in the middle of a sentence, ending on an unfinished phrase (e.g. '... I would like', '... I want to', '... sorry, I mean', '... on the'), so they have not finished; no = it is a complete thought."
+    },
+    {
+     "name": "confirm_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    },
+    {
+     "name": "confirm_text",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The customer's latest message, copied exactly as written, including how it ends."
+    },
+    {
+     "name": "confirm_date",
+     "type": "string",
+     "min_confidence": 0.0,
+     "description": "The day or date the customer OFFERS TO PAY on in the latest message (not dates of other events), copied exactly as said (e.g. 'this Friday', 'next Tuesday', 'the 23rd', '30 October', 'next week'). If they correct themselves, only the corrected value. Empty if no day is mentioned."
+    },
+    {
+     "name": "confirm_amount",
+     "type": "float",
+     "min_confidence": 0.0,
+     "description": "An amount of money the customer offers or agrees to pay in the latest message, as a number (e.g. 'six hundred thirty-seven fifty' = 637.5). If they correct themselves, the corrected value. Empty if none."
+    },
+    {
+     "name": "confirm_for",
+     "type": "string",
+     "enum_values": [
+      "credit_card",
+      "personal_loan",
+      "car_loan",
+      "all",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Which product the customer's date, amount or yes/no in the latest message is about. credit_card = the credit card; personal_loan = the personal loan; car_loan = the car loan; all = all of their products together (both, all three, everything); none = not stated. If they accept one product and refuse the others, give the product they accept."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "talk_after": {
+   "name": "talk_after",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "after_kind",
+     "type": "string",
+     "enum_values": [
+      "done",
+      "change",
+      "restructure",
+      "human",
+      "hardship",
+      "yes",
+      "question",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: done = nothing else / no thanks / goodbye / thanks; change = wants to change or cancel the promise just recorded (date or amount); restructure = asks for a new payment plan, lower instalments or restructuring; human = asks to speak to a human; hardship = mentions illness, a death in the family, or job loss; yes = says yes (accepts what was just offered); question = asks a question; unclear = anything else; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "after_cut",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no"
+     ],
+     "min_confidence": 0.0,
+     "description": "yes = the customer's latest message stops in the middle of a sentence, ending on an unfinished phrase (e.g. '... I would like', '... I want to', '... sorry, I mean', '... on the'), so they have not finished; no = it is a complete thought."
+    },
+    {
+     "name": "after_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "talk_open_again": {
+   "name": "talk_open_again",
+   "node_type": "conversation",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "task_message": "Repeat exactly this sentence and nothing else: {{say}}\nDo not call a tool in this turn.",
+   "extraction_schema": [
+    {
+     "name": "open_kind",
+     "type": "string",
+     "enum_values": [
+      "confirmed",
+      "third_party",
+      "wrong_number",
+      "deceased",
+      "robot",
+      "scam",
+      "purpose",
+      "human",
+      "not_talk",
+      "unclear",
+      "none"
+     ],
+     "description": "Classify ONLY the customer's latest message. Values: confirmed = the person confirms they are the customer: yes, that's me, speaking, or says the customer's own name; third_party = someone else answered (a relative, partner, colleague, child) or says the customer is not available; wrong_number = says this number does not belong to the customer or they do not know the customer; deceased = says the customer has died / passed away; robot = asks whether you are a robot, a machine or an AI; scam = asks whether this call is a scam or fraud, or doubts that you are the bank; purpose = asks what the call is about or who is calling, without confirming; human = asks to speak to a real person / a human agent; not_talk = says they do not want to talk / are not interested / asks you to stop; unclear = anything else: hello, go ahead, who is this, unclear or no answer; none = nothing new was said.",
+     "min_confidence": 0.0
+    },
+    {
+     "name": "open_cut",
+     "type": "string",
+     "enum_values": [
+      "yes",
+      "no"
+     ],
+     "min_confidence": 0.0,
+     "description": "yes = the customer's latest message stops in the middle of a sentence, ending on an unfinished phrase (e.g. '... I would like', '... I want to', '... sorry, I mean', '... on the'), so they have not finished; no = it is a complete thought."
+    },
+    {
+     "name": "open_side",
+     "type": "string",
+     "enum_values": [
+      "robot",
+      "scam",
+      "question",
+      "none"
+     ],
+     "min_confidence": 0.0,
+     "description": "Does the customer's latest message ALSO contain a side question, besides its main point? robot = asks if you are a robot, a machine or an AI; scam = asks if this is a scam or doubts you are the bank; question = asks another question you should answer; none = no side question."
+    }
+   ],
+   "max_node_turns": 30,
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_verify": {
+   "name": "api_verify",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "verify_identity",
+      "handler": "__function__:api_call",
+      "description": "verify_identity",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/verify_identity"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "field": {
+           "type": "string",
+           "default": "{{q_field}}"
+          },
+          "answer": {
+           "type": "string",
+           "default": "{{q_answer}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "api_account",
+     "description": "identity fully verified",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "api_verify_response.data.all_verified",
+        "operator": "equals",
+        "operand": "true"
+       },
+       {
+        "variable": "api_verify_response.data.all_verified",
+        "operator": "equals",
+        "operand": "True"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_account": {
+   "name": "api_account",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "get_account",
+      "handler": "__function__:api_call",
+      "description": "get_account",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/get_account"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_promise": {
+   "name": "api_promise",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "create_promise",
+      "handler": "__function__:api_call",
+      "description": "create_promise",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/create_promise"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "product_id": {
+           "type": "string",
+           "default": "{{p_product}}"
+          },
+          "amount": {
+           "type": "number",
+           "default": "{{p_amount}}"
+          },
+          "date": {
+           "type": "string",
+           "default": "{{p_date}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_note": {
+   "name": "api_note",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "add_note",
+      "handler": "__function__:api_call",
+      "description": "add_note",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/add_note"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "product_id": {
+           "type": "string",
+           "default": "{{n_product}}"
+          },
+          "reason": {
+           "type": "string",
+           "default": "{{n_reason}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_callback": {
+   "name": "api_callback",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "schedule_callback",
+      "handler": "__function__:api_call",
+      "description": "schedule_callback",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/schedule_callback"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "date": {
+           "type": "string",
+           "default": "{{cb_date}}"
+          },
+          "time": {
+           "type": "string",
+           "default": "{{cb_time}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_transfer": {
+   "name": "api_transfer",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "step",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "transfer_to_agent",
+      "handler": "__function__:api_call",
+      "description": "transfer_to_agent",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/transfer_to_agent"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "queue": {
+           "type": "string",
+           "default": "{{t_queue}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "step",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_close": {
+   "name": "api_close",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "end",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "close_call",
+      "handler": "__function__:api_call",
+      "description": "close_call",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/close_call"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "outcome": {
+           "type": "string",
+           "default": "{{c_outcome}}"
+          },
+          "reason": {
+           "type": "string",
+           "default": "{{c_reason}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "end",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "api_close_nr": {
+   "name": "api_close_nr",
+   "node_type": "api_request",
+   "passthrough": true,
+   "passthrough_default_transition": "end",
+   "on_enter": {
+    "type": "tts",
+    "text": "{{say}}"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "config": {
+      "timeoutMs": 12000,
+      "maxRetries": 0
+     },
+     "function": {
+      "name": "close_call",
+      "handler": "__function__:api_call",
+      "description": "close_call",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "url": {
+         "type": "string",
+         "default": "https://freya-bank-mock.freyavoice.workers.dev/v1/close_call"
+        },
+        "method": {
+         "type": "string",
+         "default": "POST"
+        },
+        "headers": {
+         "type": "object",
+         "properties": {
+          "Content-Type": {
+           "type": "string",
+           "default": "application/json"
+          }
+         }
+        },
+        "body": {
+         "type": "object",
+         "properties": {
+          "outcome": {
+           "type": "string",
+           "default": "{{c_outcome}}"
+          },
+          "customer_id": {
+           "type": "string",
+           "default": "{{customer_id}}"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "end",
+     "description": "always",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "step": {
+   "name": "step",
+   "node_type": "code",
+   "passthrough": true,
+   "passthrough_default_transition": "api_close",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "pre_actions": [
+    {
+     "type": "function",
+     "function": {
+      "name": "code_exec",
+      "handler": "__function__:code_exec",
+      "parameters": {
+       "type": "object",
+       "properties": {
+        "code": {
+         "type": "string",
+         "default": "_G = dict()\n_SRC = 'import json\\nP = json.loads(bytes.fromhex(\\'7b22776f726b64617973223a205b302c20312c20322c20332c20345d2c2022686f6c6964617973223a205b22323032362d31302d3236222c2022323032362d31312d3131222c2022323032362d31312d3236222c2022323032362d31322d3235222c2022323032372d30312d3031225d7d\\').decode())\\nS = json.loads(bytes.fromhex(\\'7b2263757272656e63795f776f7264223a2022646f6c6c617273222c202263616c656e646172223a207b22776f726b64617973223a205b302c20312c20322c20332c20345d2c2022686f6c6964617973223a205b22323032362d31302d3236222c2022323032362d31312d3131222c2022323032362d31312d3236222c2022323032362d31322d3235222c2022323032372d30312d3031225d7d2c2022646174655f72756c6573223a207b226e6578745f7765656b646179223a2022666f6c6c6f77696e675f7765656b227d2c2022636f6e6669726d223a207b226d61785f61736b73223a20327d2c202263616c6c6261636b223a207b2264617973223a205b22746f646179222c20226e6578745f627573696e6573735f646179225d2c20227374617274223a202231303a3030222c2022656e64223a202231393a3030222c202261667465725f6e6f77223a20747275652c20226d61785f61736b73223a20327d2c20226964656e74697479223a207b227175657374696f6e73223a205b7b226669656c64223a2022646174655f6f665f6269727468222c20226b696e64223a202264617465222c202261736b223a2022436f756c6420796f7520706c656173652074656c6c206d6520796f75722064617465206f662062697274683f227d2c207b226669656c64223a202270686f6e655f6c61737434222c20226b696e64223a2022646967697473222c20226c656e677468223a20342c202261736b223a2022416e6420776861742061726520746865206c61737420666f757220646967697473206f66207468652070686f6e65206e756d6265722077652068617665206f6e2066696c653f227d5d2c20226d61785f77726f6e67223a20332c2022646174655f6f72646572223a2022646d79222c202268696e7473223a207b226461795f6d6f6e74685f73776170706564223a20225468616e6b20796f752e20436f756c6420796f7520706c656173652073617920746865206d6f6e7468206f6620796f7572206269727468206173206120776f72643f227d2c20227175657374696f6e5f69735f6465636c696e65223a2066616c73652c2022726573706f6e7365223a207b226f6b223a20226f6b222c20227665726966696564223a20227665726966696564222c2022616c6c5f7665726966696564223a2022616c6c5f7665726966696564222c20226c656674223a202277726f6e675f616e73776572735f6c656674222c202268696e74223a202268696e74227d2c2022707572706f73655f69735f6465636c696e65223a20747275657d2c202270726f6475637473223a207b226e616d6573223a207b226372656469745f63617264223a2022637265646974206361726420656e64696e67207b636172645f6c617374347d222c2022706572736f6e616c5f6c6f616e223a2022706572736f6e616c206c6f616e222c20226361725f6c6f616e223a2022636172206c6f616e227d2c2022616d6f756e745f6669656c64223a2022706173745f647565222c2022666c6f6f725f6669656c64223a207b226372656469745f63617264223a20226d696e696d756d5f7061796d656e74222c2022706572736f6e616c5f6c6f616e223a2022696e7374616c6d656e745f616d6f756e74222c20226361725f6c6f616e223a2022696e7374616c6d656e745f616d6f756e74227d2c20226c6973745f6669656c64223a202270726f6475637473222c202269645f6669656c64223a202270726f647563745f6964222c2022747970655f6669656c64223a202274797065227d2c202262616e6473223a205b7b226e616d65223a20226561726c79222c20226d696e223a20312c20226d6178223a20372c2022646561646c696e65223a207b226b696e64223a2022627573696e6573735f646179735f6166746572222c20226e223a2031327d2c2022617474656d707473223a20317d2c207b226e616d65223a20226c617465222c20226d696e223a20382c20226d6178223a2034352c2022646561646c696e65223a207b226b696e64223a2022627573696e6573735f646179735f6166746572222c20226e223a20377d2c2022617474656d707473223a20327d5d2c20226c6164646572223a205b7b22616d6f756e74223a202266756c6c5f6f725f666c6f6f72222c202264617465223a20226c6173745f627573696e6573735f6461795f746869735f7765656b227d2c207b22616d6f756e74223a2022666c6f6f72222c202264617465223a2022646561646c696e65227d5d2c202272756c6573223a207b227265667573655f646561646c696e655f69735f7265667573616c223a20747275657d2c20226e6f746573223a207b22656e61626c6564223a2066616c73657d2c20226d756c7469223a207b22636c616d705f73696e676c655f64617465223a20747275652c2022636f6e74696e75655f61667465725f70616964223a20747275652c2022636f6e74696e75655f61667465725f64697370757465223a20747275657d2c202268756d616e223a207b2261736b5f6669727374223a20747275657d2c20226d61785f6e6f745f74616c6b223a20322c20226576656e7473223a207b2270726f6d697365223a207b226f7574636f6d65223a202270726f6d697365222c2022726561736f6e223a2022227d2c202270616964223a207b226f7574636f6d65223a202270616964222c2022726561736f6e223a2022222c20226e6f7465223a202270616964227d2c20227472616e736665725f72657374727563747572696e67223a207b226f7574636f6d65223a20227472616e73666572726564222c2022726561736f6e223a202272657374727563747572696e67222c20227175657565223a202272657374727563747572696e67227d2c20227472616e736665725f68756d616e223a207b226f7574636f6d65223a20227472616e73666572726564222c2022726561736f6e223a202268756d616e222c20227175657565223a202267656e6572616c227d2c20227472616e736665725f737570706f7274223a207b226f7574636f6d65223a20227472616e73666572726564222c2022726561736f6e223a2022737570706f7274222c20227175657565223a2022737570706f7274227d2c202272656675736564223a207b226f7574636f6d65223a20226e6f5f70726f6d697365222c2022726561736f6e223a202272656675736564222c20226e6f7465223a202272656675736564227d2c20226861726473686970223a207b226f7574636f6d65223a20226e6f5f70726f6d697365222c2022726561736f6e223a20226861726473686970222c20226e6f7465223a20226861726473686970227d2c202264697370757465223a207b226f7574636f6d65223a20226e6f5f70726f6d697365222c2022726561736f6e223a202264697370757465222c20226e6f7465223a202264697370757465227d2c2022736572766963655f6572726f72223a207b226f7574636f6d65223a20226e6f5f70726f6d697365222c2022726561736f6e223a2022736572766963655f6572726f72222c20226e6f7465223a2022736572766963655f6572726f72227d2c202269645f6661696c6564223a207b226f7574636f6d65223a20226e6f745f7665726966696564222c2022726561736f6e223a20226661696c6564227d2c202269645f6465636c696e6564223a207b226f7574636f6d65223a20226e6f745f7665726966696564222c2022726561736f6e223a20226465636c696e6564227d2c202263616c6c6261636b223a207b226f7574636f6d65223a20226e6f745f72656163686564222c2022726561736f6e223a202263616c6c6261636b227d2c20226e6f5f63616c6c6261636b223a207b226f7574636f6d65223a20226e6f745f72656163686564222c2022726561736f6e223a20226e6f5f63616c6c6261636b227d2c202277726f6e675f6e756d626572223a207b226f7574636f6d65223a20226e6f745f72656163686564222c2022726561736f6e223a202277726f6e675f6e756d626572227d2c20226465636561736564223a207b226f7574636f6d65223a20226e6f745f72656163686564222c2022726561736f6e223a20226465636561736564227d2c2022756e636c656172223a207b226f7574636f6d65223a20226e6f745f72656163686564222c2022726561736f6e223a2022756e636c656172227d7d2c20226c696e6573223a207b226f70656e696e67223a202248656c6c6f2c20746869732069732046726579612042616e6b2773206469676974616c20617373697374616e742063616c6c696e672066726f6d2046726579612042616e6b2e20506c65617365206e6f74652074686174207765207265636f726420746869732063616c6c2e222c2022636f6e6669726d5f61736b223a2022416d204920737065616b696e672077697468207b7469746c657d207b6c6173745f6e616d657d3f222c2022726f626f74223a20224920616d2046726579612042616e6b2773206469676974616c20617373697374616e742e222c20227363616d223a2022596f752063616e2076657269667920746869732063616c6c2062792070686f6e696e672046726579612042616e6b277320637573746f6d65722073657276696365206e756d6265722e222c2022707572706f73655f6265666f72655f766572696679223a2022492063616e206f6e6c7920646973637573732074686520726561736f6e20666f72206d792063616c6c207769746820746865206163636f756e7420686f6c6465722e222c20226e6f5f696e666f223a202249276d20736f7272792c204920646f6e27742068617665207468617420696e666f726d6174696f6e2e222c20226e6f745f74616c6b5f6f6e6365223a20224920756e6465727374616e642e20546869732077696c6c206f6e6c792074616b652061206d6f6d656e742e222c202274705f61736b223a20225768656e20776f756c64206265206120676f6f642074696d6520746f207265616368207468656d3f222c202274705f61736b5f74696d65223a2022576861742074696d6520776f756c6420737569742c206265747765656e20313020696e20746865206d6f726e696e6720616e64203720696e20746865206576656e696e673f222c202274705f6f7574736964655f77696e646f77223a202249276d20736f7272792c20492063616e206f6e6c7920617272616e676520612063616c6c20746f646179206f72206f6e20746865206e65787420627573696e657373206461792c206265747765656e20313020696e20746865206d6f726e696e6720616e64203720696e20746865206576656e696e672e20497320746865726520616e6f746865722074696d65207468617420776f726b733f222c202274705f6e6f5f696e666f223a202249276d20736f7272792c20492063616e206f6e6c7920737065616b207769746820746865206163636f756e7420686f6c6465722e222c202274705f626f6f6b6564223a20225468616e6b20796f752c2077652077696c6c2063616c6c206261636b206f6e207b646174657d206174207b74696d657d2e222c202277726f6e675f6e756d626572223a202249276d20736f72727920666f722074686520696e636f6e76656e69656e63652e222c2022636f6e646f6c656e6365223a20224920616d20736f72727920666f7220796f7572206c6f73732e222c202269645f696e74726f223a20224265666f726520776520636f6e74696e75652c2049206e65656420746f2061736b20796f752074776f207365637572697479207175657374696f6e732e222c202269645f776879223a20225468657365207175657374696f6e732070726f7465637420796f7572206163636f756e742e222c202269645f6578706c61696e223a20224920756e6465727374616e642e205468657365207175657374696f6e732070726f7465637420796f7572206163636f756e742c20616e642049206e656564207468656d206265666f726520492063616e20636f6e74696e75652e222c202269645f6465636c696e6564223a20224920756e6465727374616e642e20576974686f75742074686520736563757269747920636865636b20492063616e277420636f6e74696e75652e222c202269645f726570656174223a2022536f7272792c2049206469646e277420636174636820746861742e222c202269645f636f6e74696e7565223a2022506c6561736520676f206f6e2e222c202269645f77726f6e67223a202249276d20736f7272792c207468617420646f65736e2774206d61746368206f7572207265636f7264732e222c202269645f6661696c6564223a202249276d20736f7272792c204920636f756c646e27742076657269667920796f7572206964656e746974792e20506c6561736520757365207468652046726579612042616e6b206d6f62696c6520617070206f722076697369742061206272616e63682e222c2022646973636c6f73655f696e74726f223a20225468616e6b20796f752c20796f752772652076657269666965642e2049276d2063616c6c696e672066726f6d2074686520636f6c6c656374696f6e73207465616d2061626f75742061206c617465207061796d656e742e222c202270726f647563745f6c696e65223a2022596f7572207b6e616d657d20686173207b616d6f756e747d2070617374206475652c207b646179737d2064617973206c6174652e222c202261736b5f746f646179223a202243616e20796f75206d616b652074686973207061796d656e7420746f6461793f222c202261736b5f746f6461795f6d756c7469223a202243616e20796f752070617920616c6c206f66207468656d20746f6461793f222c20226e6578745f70726f64756374223a202241626f757420796f7572207b6e616d657d2c2077697468207b616d6f756e747d2070617374206475652e222c20226f66666572223a2022436f756c6420796f7520706179207b616d6f756e747d206f6e207b646174657d3f222c20226f666665725f666c6f6f725f64617465223a20224920756e6465727374616e642e20436f756c6420796f752070617920746865206d696e696d756d206f66207b616d6f756e747d206f6e207b646174657d3f205468652072657374207374617973206f7665726475652e222c20226f666665725f666c6f6f72223a20224920756e6465727374616e642e20492063616e2061636365707420746865206d696e696d756d206f66207b616d6f756e747d3b207468652072657374207374617973206f7665726475652e222c202262656c6f775f666c6f6f72223a202249276d20736f7272792c20492063616e2774207265636f7264206c657373207468616e207b616d6f756e747d2e20436f756c6420796f7520706179207b616d6f756e747d3f205468652072657374207374617973206f7665726475652e222c202262656c6f775f666c6f6f725f616761696e223a20224920756e6465727374616e642e222c2022646174655f70617374223a202254686174206461746520686173207061737365642e205768696368206461792066726f6d20746f6461792063616e20796f75207061793f222c20226e6f745f627573696e6573735f646179223a20225468617420646179206973206e6f74206120627573696e657373206461792e20546865206e65787420627573696e65737320646179206973207b646174657d2e2043616e20796f7520706179207468656e3f222c202261667465725f646561646c696e65223a2022546865206c6174657374206461746520492063616e207265636f7264206973207b646174657d2e2043616e20796f7520706179206279207468656e3f222c202276616775655f61736b223a20225768696368206578616374206461792063616e20796f75207061793f222c202270726f706f73655f646561646c696e65223a2022436f756c6420796f7520706179207b616d6f756e747d206f6e207b646174657d3f222c202261736b5f646174655f666f725f616d6f756e74223a20224f6e207768696368206461792063616e20796f7520706179207b616d6f756e747d3f222c20227265706561745f6f66666572223a2022436f756c6420796f7520706179207b616d6f756e747d206f6e207b646174657d3f222c2022726561646261636b5f696e74726f223a20224c6574206d6520726561642074686174206261636b2e222c2022726561646261636b5f6974656d223a2022596f7572207b6e616d657d3a207b616d6f756e747d206f6e207b646174657d2e222c2022636c616d7065645f6e6f7465223a20225468617420697320746865206c6174657374206461746520492063616e207265636f726420666f722074686973206f6e652e222c2022636f6e6669726d5f71223a2022446f20796f7520636f6e6669726d3f222c20227265636f72646564223a2022596f75722070726f6d697365206973207265636f726465642e222c2022736d735f6c696e65223a2022596f752077696c6c207265636569766520612074657874206d65737361676520636f6e6669726d696e6720746869732070726f6d6973652e222c20227265636f72645f6661696c6564223a202249276d20736f7272792c204920636f756c64206e6f74207265636f7264207468652070726f6d6973652e222c2022706169645f6c696e65223a20225468616e6b20796f752e205061796d656e74732063616e2074616b65206f6e6520627573696e6573732064617920746f206170706561722e222c2022646973707574655f6c696e65223a20224920756e6465727374616e642e20492068617665206e6f746564207468617420796f75206469737075746520746869732e222c20226861726473686970223a202249276d20736f72727920746f206865617220746861742e20576f756c6420796f75206c696b65206d6520746f20636f6e6e65637420796f752077697468206f757220637573746f6d657220737570706f7274207465616d3f222c202268617264736869705f6465636c696e6564223a20224920756e6465727374616e642e222c202272657374727563747572655f6c696e65223a202249276c6c207472616e7366657220796f7520746f206f75722072657374727563747572696e67207465616d2e222c202268756d616e5f61736b5f68656c70223a2022492063616e2068656c7020796f75207769746820746869732e20497320746865726520736f6d657468696e6720492063616e20646f20666f7220796f752066697273743f222c20227472616e73666572223a202249276c6c207472616e7366657220796f75206e6f772e222c2022676f6f64627965223a20225468616e6b20796f7520666f7220796f75722074696d652e20476f6f646279652e222c202269645f666f726d61745f68696e74223a2022436f756c6420796f7520736179206974206173206461792c206d6f6e746820616e6420796561722c20666f72206578616d706c6520746865206669727374206f66204d6179206e696e657465656e206569676874793f222c202268617264736869705f6f666665725f616761696e223a2022576f756c6420796f75206c696b65206d6520746f20636f6e6e65637420796f752077697468206f757220637573746f6d657220737570706f7274207465616d3f222c20226f666665725f73686f7274223a2022576f756c64207468617420776f726b20666f7220796f753f222c20226f666665725f73686f72745f64617465223a20225468617420776f756c64206265206f6e207b646174657d2e222c2022616e797468696e675f656c7365223a2022497320746865726520616e797468696e6720656c736520492063616e2068656c7020796f7520776974683f222c202270726f6d6973655f6368616e6765223a20225468652070726f6d6973652063616e6e6f74206265206368616e676564206f6e20746869732063616c6c2c2062757420796f752063616e206368616e676520697420696e20746865206d6f62696c65206170702e222c2022676f5f6f6e223a2022536f7272792c20706c6561736520676f206f6e2e227d2c2022746f6f6c5f626f64696573223a207b227665726966795f6964656e74697479223a207b226669656c64223a2022715f6669656c64222c2022616e73776572223a2022715f616e73776572227d2c20226765745f6163636f756e74223a207b7d2c20226372656174655f70726f6d697365223a207b2270726f647563745f6964223a2022705f70726f64756374222c2022616d6f756e74223a2022705f616d6f756e74222c202264617465223a2022705f64617465227d2c20226164645f6e6f7465223a207b2270726f647563745f6964223a20226e5f70726f64756374222c2022726561736f6e223a20226e5f726561736f6e227d2c20227363686564756c655f63616c6c6261636b223a207b2264617465223a202263625f64617465222c202274696d65223a202263625f74696d65227d2c20227472616e736665725f746f5f6167656e74223a207b227175657565223a2022745f7175657565227d2c2022636c6f73655f63616c6c223a207b226f7574636f6d65223a2022635f6f7574636f6d65222c2022726561736f6e223a2022635f726561736f6e227d7d2c2022726573706f6e736573223a207b226164645f6e6f7465223a207b226669656c64223a20226f6b222c202276616c756573223a205b2274727565225d7d2c2022636c6f73655f63616c6c223a207b226669656c64223a20226f6b222c202276616c756573223a205b2274727565225d7d2c20226372656174655f70726f6d697365223a207b226669656c64223a20226f6b222c202276616c756573223a205b2274727565225d7d2c20226765745f6163636f756e74223a207b226669656c64223a20226f6b222c202276616c756573223a205b2274727565225d7d2c20227363686564756c655f63616c6c6261636b223a207b226669656c64223a20226f6b222c202276616c756573223a205b2274727565225d7d2c20227472616e736665725f746f5f6167656e74223a207b226669656c64223a20226f6b222c202276616c756573223a205b2274727565225d7d2c20227665726966795f6964656e74697479223a207b226669656c64223a20226f6b222c202276616c756573223a205b2274727565225d7d7d7d\\').decode())\\n\"\"\"Calendar arithmetic that runs INSIDE the phone agent (Freya code nodes / hooks).\\n\\nConstraints of the Freya sandbox: only `json`, `re`, `datetime` are known to import; the source must not\\ncontain the two-character brace sequences used by Freya templating. Every brief-specific value comes from P,\\na dict the compiler injects (hex-encoded JSON). Keep this file self-contained and free of other imports.\\n\"\"\"\\nimport datetime\\nimport json\\nimport re\\n\\n# Injected by the compiler. Defaults keep the module importable for local tests.\\n\\n\\nWEEKDAYS = [\"monday\", \"tuesday\", \"wednesday\", \"thursday\", \"friday\", \"saturday\", \"sunday\"]\\nMONTHS = [\"january\", \"february\", \"march\", \"april\", \"may\", \"june\", \"july\", \"august\",\\n          \"september\", \"october\", \"november\", \"december\"]\\n\\n\\ndef parse_now(now):\\n    s = str(now or \"\").strip().replace(\" \", \"T\")\\n    try:\\n        return datetime.datetime.fromisoformat(s[:16])\\n    except Exception:\\n        return datetime.datetime.fromisoformat(s[:10] + \"T00:00\")\\n\\n\\ndef iso(d):\\n    return d.isoformat()\\n\\n\\ndef is_business_day(d):\\n    return d.weekday() in P[\"workdays\"] and iso(d) not in P[\"holidays\"]\\n\\n\\ndef next_business_day(d, include_self=True):\\n    if not include_self:\\n        d = d + datetime.timedelta(days=1)\\n    while not is_business_day(d):\\n        d = d + datetime.timedelta(days=1)\\n    return d\\n\\n\\ndef add_business_days(d, n):\\n    \"\"\"The n-th business day after d (d itself not counted). n=0 returns d.\"\"\"\\n    k = 0\\n    while k < n:\\n        d = d + datetime.timedelta(days=1)\\n        if is_business_day(d):\\n            k += 1\\n    return d\\n\\n\\ndef add_calendar_days(d, n):\\n    return d + datetime.timedelta(days=n)\\n\\n\\ndef end_of_month(d):\\n    nxt = (d.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)\\n    return nxt - datetime.timedelta(days=1)\\n\\n\\ndef week_bounds(d, offset_weeks=0):\\n    monday = d - datetime.timedelta(days=d.weekday()) + datetime.timedelta(weeks=offset_weeks)\\n    return monday, monday + datetime.timedelta(days=6)\\n\\n\\ndef last_business_day_of_week(d, offset_weeks=0):\\n    monday, sunday = week_bounds(d, offset_weeks)\\n    x = sunday\\n    while x >= monday:\\n        if is_business_day(x):\\n            return x\\n        x = x - datetime.timedelta(days=1)\\n    return None\\n\\n\\ndef weekday_in_week(today, weekday, which):\\n    \"\"\"which=\\'this\\' -> that weekday in the current Mon-Sun week; \\'next\\' -> in the following week.\"\"\"\\n    monday, _ = week_bounds(today, 1 if which == \"next\" else 0)\\n    return monday + datetime.timedelta(days=weekday)\\n\\n\\ndef upcoming_weekday(today, weekday, include_today=False):\\n    delta = (weekday - today.weekday()) % 7\\n    if delta == 0 and not include_today:\\n        delta = 7\\n    return today + datetime.timedelta(days=delta)\\n\\n\\ndef deadline(today, rule):\\n    \"\"\"rule: dict(kind=..., n=...). kinds: business_days_after, calendar_days_after, end_of_month,\\n    end_of_next_month, last_business_day_of_month, fixed_date (value=YYYY-MM-DD).\"\"\"\\n    kind, n = rule.get(\"kind\"), int(rule.get(\"n\") or 0)\\n    if kind == \"business_days_after\":\\n        return add_business_days(today, n)\\n    if kind == \"calendar_days_after\":\\n        return add_calendar_days(today, n)\\n    if kind == \"end_of_month\":\\n        return end_of_month(today)\\n    if kind == \"end_of_next_month\":\\n        return end_of_month(end_of_month(today) + datetime.timedelta(days=1))\\n    if kind == \"last_business_day_of_month\":\\n        x = end_of_month(today)\\n        while not is_business_day(x):\\n            x = x - datetime.timedelta(days=1)\\n        return x\\n    if kind == \"fixed_date\":\\n        return datetime.date.fromisoformat(rule[\"value\"])\\n    if kind == \"end_of_week\":           # last business day of the current week (next week\\'s if today is it)\\n        d = last_business_day_of_week(today, 0)\\n        return d if d is not None and d >= today else last_business_day_of_week(today, 1)\\n    if kind == \"end_of_next_week\":\\n        return last_business_day_of_week(today, 1)\\n    if kind == \"day_of_next_month\":     # the n-th calendar day of next month\\n        first = end_of_month(today) + datetime.timedelta(days=1)\\n        return first.replace(day=min(max(n, 1), 28))\\n    if kind == \"business_days_after_or_end_of_month\":   # whichever comes first\\n        return min(add_business_days(today, n), end_of_month(today))\\n    raise ValueError(\"unknown deadline kind \" + str(kind))\\n\\n\\n# ---------------------------------------------------------------- spoken-language parsing\\nNUM_WORDS = {\\n    \"zero\": 0, \"oh\": 0, \"o\": 0, \"one\": 1, \"two\": 2, \"three\": 3, \"four\": 4, \"five\": 5, \"six\": 6, \"seven\": 7,\\n    \"eight\": 8, \"nine\": 9, \"ten\": 10, \"eleven\": 11, \"twelve\": 12, \"thirteen\": 13, \"fourteen\": 14,\\n    \"fifteen\": 15, \"sixteen\": 16, \"seventeen\": 17, \"eighteen\": 18, \"nineteen\": 19, \"twenty\": 20,\\n    \"thirty\": 30, \"forty\": 40, \"fifty\": 50, \"sixty\": 60, \"seventy\": 70, \"eighty\": 80, \"ninety\": 90,\\n}\\nORD_WORDS = {\\n    \"first\": 1, \"second\": 2, \"third\": 3, \"fourth\": 4, \"fifth\": 5, \"sixth\": 6, \"seventh\": 7, \"eighth\": 8,\\n    \"ninth\": 9, \"tenth\": 10, \"eleventh\": 11, \"twelfth\": 12, \"thirteenth\": 13, \"fourteenth\": 14,\\n    \"fifteenth\": 15, \"sixteenth\": 16, \"seventeenth\": 17, \"eighteenth\": 18, \"nineteenth\": 19,\\n    \"twentieth\": 20, \"thirtieth\": 30,\\n}\\n\\n\\ndef words_to_number(text):\\n    \"\"\"\\'four hundred and fifty-five point five\\' -> 455.5 ; \\'six three three oh\\' -> 6330 (digit run).\\n    Returns None when nothing numeric is found.\"\"\"\\n    t = str(text or \"\").lower().replace(\"-\", \" \").replace(\",\", \"\")\\n    m = re.search(r\"\\\\d+(?:\\\\.\\\\d+)?\", t)\\n    if m and not re.search(r\"[a-z]\", t.replace(\"point\", \"\").replace(\"and\", \"\").replace(\"dollars\", \"\").replace(\"euros\", \"\").replace(\"pounds\", \"\")):\\n        return float(m.group())\\n    toks = [w for w in re.findall(r\"[a-z]+|\\\\d+(?:\\\\.\\\\d+)?\", t) if w not in (\"and\", \"a\", \"dollars\", \"dollar\", \"euros\", \"euro\", \"pounds\", \"pound\", \"cents\", \"lira\")]\\n    if not toks:\\n        return None\\n    # pure digit run spoken one by one: \"six six three zero\"\\n    if all(w in NUM_WORDS and NUM_WORDS[w] < 10 or re.fullmatch(r\"\\\\d\", w) for w in toks) and len(toks) >= 2:\\n        return float(\"\".join(str(NUM_WORDS.get(w, w)) for w in toks))\\n    total, cur, frac, in_frac, seen = 0.0, 0.0, \"\", False, False\\n    for w in toks:\\n        if w == \"point\":\\n            in_frac = True\\n            continue\\n        if in_frac:\\n            if w in NUM_WORDS and NUM_WORDS[w] < 10:\\n                frac += str(NUM_WORDS[w]); continue\\n            if re.fullmatch(r\"\\\\d+\", w):\\n                frac += w; continue\\n            v = NUM_WORDS.get(w)\\n            if v is not None:\\n                frac += str(v); continue\\n            continue\\n        if re.fullmatch(r\"\\\\d+(?:\\\\.\\\\d+)?\", w):\\n            cur += float(w); seen = True\\n        elif w in NUM_WORDS:\\n            cur += NUM_WORDS[w]; seen = True\\n        elif w == \"hundred\":\\n            cur = (cur or 1) * 100; seen = True\\n        elif w == \"thousand\":\\n            total += (cur or 1) * 1000; cur = 0; seen = True\\n    if not seen:\\n        return None\\n    val = total + cur\\n    if frac:\\n        val += float(\"0.\" + frac)\\n    return val\\n\\n\\nHOUR_WORDS = dict(one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9, ten=10, eleven=11, twelve=12)\\nMIN_WORDS = dict(oclock=0, fifteen=15, thirty=30, fortyfive=45, five=5, ten=10, twenty=20, twentyfive=25, fifty=50)\\n\\n\\ndef spoken_time(text):\\n    \"\"\"Last time of day mentioned -> \\'HH:MM\\' or None. Handles 11:30, 3pm, 3 o\\'clock, eleven in the morning,\\n    half past two, quarter to five, noon. Hours 1-7 without am/pm are read as afternoon (business hours).\"\"\"\\n    t = str(text or \"\").lower().replace(\"-\", \" \").replace(\"o\\'clock\", \"oclock\").replace(\"o clock\", \"oclock\")\\n    t = re.sub(r\"forty five\", \"fortyfive\", t)\\n    t = re.sub(r\"twenty five\", \"twentyfive\", t)\\n    cands = []\\n    W = \"|\".join(HOUR_WORDS)\\n    for m in re.finditer(r\"\\\\b(noon|midday)\\\\b\", t):\\n        cands.append((m.start(), 12, 0, \"pm\"))\\n    for m in re.finditer(r\"\\\\b(\\\\d{1,2})[:.](\\\\d{2})\\\\s*(am|pm|a\\\\.m\\\\.|p\\\\.m\\\\.)?\", t):\\n        cands.append((m.start(), int(m.group(1)), int(m.group(2)), m.group(3) or \"\"))\\n    for m in re.finditer(r\"\\\\b(\\\\d{1,2})\\\\s*(am|pm|a\\\\.m\\\\.|p\\\\.m\\\\.|oclock)\\\\b\", t):\\n        cands.append((m.start(), int(m.group(1)), 0, m.group(2)))\\n    for m in re.finditer(r\"\\\\b(?:at|around|about|after|by|before|from|until|till)\\\\s+(\\\\d{1,2})\\\\b(?!\\\\s*(?:st|nd|rd|th|dollars?|days?|weeks?|[:.]\\\\d))\", t):\\n        cands.append((m.start(1), int(m.group(1)), 0, \"\"))\\n    for m in re.finditer(r\"\\\\b(half|quarter)\\\\s+(past|to)\\\\s+(\" + W + r\"|\\\\d{1,2})\\\\b\", t):\\n        h = HOUR_WORDS.get(m.group(3)) or int(m.group(3))\\n        mi = 30 if m.group(1) == \"half\" else 15\\n        if m.group(2) == \"to\":\\n            h, mi = h - 1, 60 - mi\\n        cands.append((m.start(), h, mi, \"\"))\\n    for m in re.finditer(r\"\\\\b(\" + W + r\")(?:\\\\s+(oclock|fifteen|thirty|fortyfive|twentyfive|twenty|fifty|oh five|five))?\\\\b\", t):\\n        before = t[max(0, m.start() - 12):m.start()]\\n        after = t[m.end():m.end() + 12]\\n        if re.search(r\"(past|to)\\\\s*$\", before) or re.search(r\"^\\\\s*(of|th|st|nd|rd|days?|weeks?|months?|years?|dollars?|hundred|thousand)\\\\b\", after):\\n            continue\\n        timeish = m.group(2) or re.search(r\"(at|around|about|by|after|before|from|until|till)\\\\s*$\", before) or \\\\\\n            re.search(r\"^\\\\s*(in the|this|tonight|am|pm|a\\\\.m|p\\\\.m)\", after)\\n        if not timeish:\\n            continue\\n        mi = MIN_WORDS.get((m.group(2) or \"oclock\").replace(\" \", \"\"), 5 if m.group(2) == \"oh five\" else 0)\\n        cands.append((m.start(), HOUR_WORDS[m.group(1)], mi, \"\"))\\n    if not cands:\\n        return None\\n    pos, h, mi, ap = sorted(cands)[-1]\\n    tail = t[pos:pos + 40]\\n    if ap.startswith(\"p\") and h < 12:\\n        h += 12\\n    elif ap.startswith(\"a\") and h == 12:\\n        h = 0\\n    elif not ap:\\n        if re.search(r\"afternoon|evening|tonight\", tail) and h < 12:\\n            h += 12\\n        elif not re.search(r\"morning\", tail) and 1 <= h <= 7:\\n            h += 12\\n    if h > 23 or mi > 59:\\n        return None\\n    return \"%02d:%02d\" % (h, mi)\\n\\n\\nCORRECTION = re.compile(r\"\\\\b(sorry|i mean|i meant|actually|make that|no wait|wait no|rather|correction|let me correct)\\\\b[,.]?\", re.I)\\n\\n\\ndef after_correction(text):\\n    \"\"\"\\'the 21st, sorry, I mean the 20th\\' -> \\'the 20th\\' (the part after the last correction marker).\"\"\"\\n    t = str(text or \"\")\\n    parts = CORRECTION.split(t)\\n    if len(parts) > 1:\\n        tail = parts[-1].strip(\" ,.\")\\n        if re.search(r\"\\\\d|[a-z]\", tail, re.I):\\n            return tail\\n    return t\\n\\n\\ndef parse_spoken_date(text, today, rules=None):\\n    corrected = after_correction(text)\\n    if corrected != str(text or \"\"):\\n        d = _parse_spoken_date(corrected, today, rules)\\n        if d is not None:\\n            return d\\n    return _parse_spoken_date(text, today, rules)\\n\\n\\nSMALL_N = dict(a=1, an=1, one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9, ten=10, couple=2)\\nMONTH_RE = r\"\\\\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\\\\b\"\\n\\n\\nWEEKDAY_RE = r\"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\"\\nNEG_RE = r\"\\\\b(not|can\\'t|cannot|can not|won\\'t|wont|couldn\\'t)\\\\s+\"\\n\\n\\ndef _month_next_to(t, s, e):\\n    \"\"\"A month word right before (\\'october 5\\') or right after (\\'5 october\\', \\'5th of may\\') t[s:e].\"\"\"\\n    return bool(re.search(MONTH_RE + r\"\\\\s+$\", t[:s]) or re.match(r\"\\\\s+(?:of\\\\s+)?\" + MONTH_RE, t[e:]))\\n\\n\\ndef _parse_spoken_date(text, today, rules=None):\\n    \"\"\"Best-effort spoken payment date -> datetime.date or None (relative to `today`, never the real clock).\\n    Handles ISO, today/tomorrow/day after tomorrow, \\'in 3 days\\', \\'a week from today\\', \\'(this|next) <weekday>\\',\\n    \\'<weekday> next week\\', \\'the <weekday> after next\\', bare weekday (next occurrence), \\'<day> <month>\\',\\n    \\'<month> <day>\\', \\'the 23rd\\', ordinal words. Negated mentions (\\'not today\\', \\'not Friday\\') are ignored; the\\n    last weekday mentioned wins; today/tomorrow beat a bare stray number. Never raises.\"\"\"\\n    try:\\n        return _parse_spoken_date_x(text, today, rules)\\n    except Exception:\\n        return None\\n\\n\\ndef _parse_spoken_date_x(text, today, rules=None):\\n    rules = rules if isinstance(rules, dict) else dict()\\n    t = \" \" + str(text or \"\").lower().replace(\"-\", \" \").replace(\",\", \" \") + \" \"\\n    m = re.search(r\"(\\\\d{4}) (\\\\d{2}) (\\\\d{2})\", t) or re.search(r\"(\\\\d{4})/(\\\\d{2})/(\\\\d{2})\", t)\\n    if m:\\n        try:\\n            return datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))\\n        except ValueError:\\n            pass\\n    t = re.sub(NEG_RE + r\"(?:pay\\\\s+|do\\\\s+it\\\\s+|make\\\\s+it\\\\s+)?(today|tomorrow|now|right now|this week)\\\\b\", \" \", t)\\n    t = re.sub(NEG_RE + r\"(?:pay\\\\s+|do\\\\s+it\\\\s+|make\\\\s+it\\\\s+)?(?:on\\\\s+)?(?:this\\\\s+(?:coming\\\\s+)?|next\\\\s+)?\" + WEEKDAY_RE + r\"s?\\\\b\", \" \", t)\\n    # relative offsets\\n    m = re.search(r\"\\\\b(?:in|within)\\\\s+(a|an|one|two|three|four|five|six|seven|eight|nine|ten|couple of|\\\\d+)\\\\s+(day|days|week|weeks)\\\\b\", t) or \\\\\\n        re.search(r\"\\\\b(a|an|one|two|three|four|five|six|seven|\\\\d+)\\\\s+(day|days|week|weeks)\\\\s+from\\\\s+(?:today|now)\\\\b\", t)\\n    if m:\\n        n = m.group(1).replace(\" of\", \"\")\\n        n = int(n) if n.isdigit() else SMALL_N.get(n, 1)\\n        return today + datetime.timedelta(days=n * (7 if m.group(2).startswith(\"week\") else 1))\\n    month = None\\n    for mm in re.finditer(MONTH_RE, t):\\n        w = mm.group(1)\\n        if w == \"may\":   # \\'may\\' is a month only next to a day number / ordinal\\n            ctx = t[max(0, mm.start() - 15):mm.end() + 15]\\n            if not re.search(r\"\\\\d|\\\\b(first|second|third|[a-z]+th|twenty|thirty)\\\\b\", ctx):\\n                continue\\n        month = [i for i, mn in enumerate(MONTHS) if mn.startswith(w[:3])][0] + 1\\n    # day number; `strong` = ordinal suffix, \\'the\\' before it, or a month next to it\\n    day, day_pos, strong = None, -1, False\\n    for mm in re.finditer(r\"\\\\b(\\\\d{1,2})(st|nd|rd|th)?\\\\b(?!\\\\s*(?::|am|pm|a\\\\.m|p\\\\.m|o\\'clock|oclock|dollars?|euros?|pounds?|days?|weeks?|hundred))\", t):\\n        before = t[max(0, mm.start() - 8):mm.start()]\\n        if re.search(r\"\\\\b(at|around|about|after|before|by)\\\\s+$\", before) and not month:\\n            continue\\n        if 1 <= int(mm.group(1)) <= 31:\\n            day, day_pos = int(mm.group(1)), mm.start()\\n            strong = bool(mm.group(2)) or bool(re.search(r\"\\\\bthe\\\\s+$\", t[:mm.start()])) or \\\\\\n                _month_next_to(t, mm.start(), mm.end())\\n    if day is None:\\n        for w, v in sorted(ORD_WORDS.items(), key=lambda kv: -len(kv[0])):\\n            mm = re.search(r\"\\\\b(twenty|thirty)\\\\s+\" + w + r\"\\\\b\", t)\\n            if mm:\\n                day, day_pos, strong = NUM_WORDS[mm.group(1)] + v, mm.start(), True\\n                break\\n            mm = re.search(r\"\\\\b\" + w + r\"\\\\b\", t)\\n            if mm and not re.search(r\"\\\\b\" + w + r\"\\\\s+(week|time|attempt|thing|things|of all|payment|instal?ment|place|choice|option)\", t) \\\\\\n                    and not (w == \"second\" and re.search(r\"\\\\b(a|one|just a)\\\\s+second\\\\b\", t)):\\n                day, day_pos = v, mm.start()\\n                strong = w not in (\"first\", \"second\", \"third\") or bool(re.search(r\"\\\\bthe\\\\s+$\", t[:mm.start()])) or \\\\\\n                    _month_next_to(t, mm.start(), mm.end())\\n                break\\n    if day is None and month:\\n        toks = [x for x in t.split() if x]\\n        d0, _ = spoken_day([x for x in toks if not re.fullmatch(MONTH_RE.strip(\"\\\\\\\\b\"), x)])\\n        if d0:\\n            day, strong = d0, True\\n            mm = re.search(MONTH_RE, t)\\n            day_pos = mm.start() if mm else 0\\n    # explicit relative words beat a bare stray number (\\'tomorrow, I get paid on 5\\'), not a real date\\n    # (\\'tomorrow, sorry, the 20th\\'); a correction marker between them makes the later one win\\n    rel, rel_pos = None, -1\\n    for pat, n in ((r\"\\\\bday after tomorrow\\\\b\", 2), (r\"\\\\btomorrow\\\\b\", 1), (r\"\\\\b(today|tonight|this afternoon|this evening)\\\\b\", 0)):\\n        mm = re.search(pat, t)\\n        if mm:\\n            rel, rel_pos = n, mm.start()\\n            break\\n    if rel is not None and day is not None:\\n        lo, hi = sorted((rel_pos, day_pos))\\n        marker = CORRECTION.search(t[lo:hi]) is not None\\n        keep = (strong or marker) if day_pos > rel_pos else (strong and not marker)\\n        if not keep:\\n            day = None\\n    if rel == 2 and day is None:\\n        return today + datetime.timedelta(days=2)\\n    nxt = rules.get(\"next_weekday\", \"following_week\")\\n    hits = [(mm.start(), mm.end(), WEEKDAYS.index(mm.group(1))) for mm in re.finditer(r\"\\\\b\" + WEEKDAY_RE + r\"s?\\\\b\", t)]\\n    if hits:\\n        s0, e0, i = max(hits)          # the last weekday mentioned wins (\\'Friday, no, Thursday\\')\\n        before, after = t[:s0], t[e0:]\\n        if re.match(r\"\\\\s+after\\\\s+next\\\\b\", after):\\n            return weekday_in_week(today, i, \"this\") + datetime.timedelta(weeks=2)\\n        if re.match(r\"\\\\s+(?:next\\\\s+)?week\\\\b\", after) or re.search(r\"\\\\ba\\\\s+week\\\\s+on\\\\s+$\", before) or \\\\\\n                re.search(r\"\\\\bnext\\\\s+week\\\\s+(?:on\\\\s+|maybe\\\\s+|probably\\\\s+|say\\\\s+)*$\", before):\\n            return weekday_in_week(today, i, \"next\")\\n        if re.search(r\"\\\\bnext\\\\s+$\", before):\\n            return weekday_in_week(today, i, \"next\") if nxt == \"following_week\" else upcoming_weekday(today, i)\\n        if re.search(r\"\\\\bthis\\\\s+(coming\\\\s+)?$\", before):\\n            d = weekday_in_week(today, i, \"this\")\\n            return d if d >= today else upcoming_weekday(today, i)\\n        if day is None:\\n            return upcoming_weekday(today, i, include_today=False)\\n        # \"Monday the 26th\" -> use the day number below\\n    if day is not None:\\n        y = today.year\\n        mth = month or today.month\\n        try:\\n            d = datetime.date(y, mth, day)\\n        except ValueError:\\n            return None\\n        if month is None and d < today:\\n            mth = mth % 12 + 1\\n            y = y + (1 if mth == 1 else 0)\\n            try:\\n                d = datetime.date(y, mth, day)\\n            except ValueError:\\n                return None\\n        elif d < today - datetime.timedelta(days=180):\\n            d = datetime.date(y + 1, mth, day)\\n        return d\\n    if rel == 1:\\n        return today + datetime.timedelta(days=1)\\n    if rel == 0 or re.search(r\"\\\\b(now|right away|immediately)\\\\b\", t):\\n        return today\\n    return None\\n\\n\\ndef _tokens(text):\\n    t = str(text or \"\").lower()\\n    t = re.sub(r\"(\\\\d)(st|nd|rd|th)\\\\b\", r\"\\\\1\", t)\\n    t = re.sub(r\"[-,./]\", \" \", t)\\n    return [w for w in t.split() if w not in (\"the\", \"of\", \"and\", \"a\", \"um\", \"uh\", \"er\", \"its\", \"it\\'s\", \"is\", \"my\")]\\n\\n\\nUNITS = dict(zero=0, oh=0, o=0, one=1, two=2, three=3, four=4, five=5, six=6, seven=7, eight=8, nine=9)\\nTEENS = dict(ten=10, eleven=11, twelve=12, thirteen=13, fourteen=14, fifteen=15, sixteen=16, seventeen=17,\\n             eighteen=18, nineteen=19)\\nTENS = dict(twenty=20, thirty=30, forty=40, fifty=50, sixty=60, seventy=70, eighty=80, ninety=90)\\n\\n\\ndef digit_groups(tokens):\\n    \"\"\"Spoken digit string -> digits, keeping leading zeros: \\'oh three five eight\\' -> \\'0358\\',\\n    \\'forty four seventy one\\' -> \\'4471\\', \\'double seven two one\\' -> \\'7721\\'.\"\"\"\\n    out, i = \"\", 0\\n    while i < len(tokens):\\n        w = tokens[i]\\n        if re.fullmatch(r\"\\\\d+\", w):\\n            out += w\\n        elif w in (\"double\", \"triple\") and i + 1 < len(tokens) and tokens[i + 1] in UNITS:\\n            out += str(UNITS[tokens[i + 1]]) * (2 if w == \"double\" else 3)\\n            i += 1\\n        elif w in UNITS:\\n            out += str(UNITS[w])\\n        elif w in TEENS:\\n            out += str(TEENS[w])\\n        elif w in TENS:\\n            if i + 1 < len(tokens) and tokens[i + 1] in UNITS and UNITS[tokens[i + 1]] > 0 and tokens[i + 1] not in (\"oh\", \"o\"):\\n                out += str(TENS[w] + UNITS[tokens[i + 1]])\\n                i += 1\\n            else:\\n                out += str(TENS[w])\\n        elif w == \"hundred\" and out:\\n            out += \"00\"\\n        i += 1\\n    return out\\n\\n\\ndef cardinal(tokens):\\n    \"\"\"\\'four thousand four hundred seventy one\\' -> 4471 ; None if no number words.\"\"\"\\n    total, cur, seen = 0, 0, False\\n    for w in tokens:\\n        if re.fullmatch(r\"\\\\d+\", w):\\n            cur += int(w); seen = True\\n        elif w in UNITS:\\n            cur += UNITS[w]; seen = True\\n        elif w in TEENS:\\n            cur += TEENS[w]; seen = True\\n        elif w in TENS:\\n            cur += TENS[w]; seen = True\\n        elif w == \"hundred\":\\n            cur = (cur or 1) * 100; seen = True\\n        elif w == \"thousand\":\\n            total += (cur or 1) * 1000; cur = 0; seen = True\\n    return total + cur if seen else None\\n\\n\\ndef digits_only(text):\\n    toks = _tokens(text)\\n    if any(w in (\"hundred\", \"thousand\") for w in toks):\\n        n = cardinal(toks)\\n        return str(n) if n is not None else \"\"\\n    return digit_groups(toks)\\n\\n\\nNATO = dict(alpha=\"A\", alfa=\"A\", bravo=\"B\", charlie=\"C\", delta=\"D\", echo=\"E\", foxtrot=\"F\", golf=\"G\", hotel=\"H\",\\n            india=\"I\", juliet=\"J\", juliett=\"J\", kilo=\"K\", lima=\"L\", mike=\"M\", november=\"N\", oscar=\"O\", papa=\"P\",\\n            quebec=\"Q\", romeo=\"R\", sierra=\"S\", tango=\"T\", uniform=\"U\", victor=\"V\", whiskey=\"W\", whisky=\"W\",\\n            xray=\"X\", yankee=\"Y\", zulu=\"Z\")\\nCODE_FILLER = (\"it\\'s\", \"its\", \"it\", \"my\", \"postcode\", \"post\", \"code\", \"zip\", \"is\", \"the\", \"number\", \"and\", \"uh\", \"um\",\\n               \"er\", \"erm\", \"hmm\", \"reference\", \"ref\", \"that\\'s\", \"thats\", \"space\", \"dash\", \"hyphen\", \"slash\", \"then\",\\n               \"yes\", \"yeah\", \"ok\", \"okay\", \"so\", \"please\")\\nCODE_NOUNS = (\"postcode\", \"post\", \"code\", \"zip\", \"number\", \"reference\", \"ref\")\\n\\n\\ndef _code_char(tok):\\n    \"\"\"One spoken character of a code -> \\'A\\'..\\'Z\\' / \\'0\\'..\\'9\\', or None.\"\"\"\\n    w = tok.lower()\\n    if w in UNITS:\\n        return str(UNITS[w])\\n    if w in NATO:\\n        return NATO[w]\\n    if re.fullmatch(r\"[a-z0-9]\", w):\\n        return w.upper()\\n    return None\\n\\n\\ndef spoken_code(text):\\n    \"\"\"Alphanumeric code said aloud (postcode, reference) -> uppercase letters and digits only, \\'\\' if none.\\n    \"it\\'s SW1A 1AA\", \\'S W one A one A A\\', \\'sierra whiskey one alpha, one alpha alpha\\' -> \\'SW1A1AA\\';\\n    \\'double one\\' -> \\'11\\'; \\'S for Sugar\\' -> \\'S\\'. Unknown lowercase words are dropped.\"\"\"\\n    try:\\n        return _spoken_code(text)\\n    except Exception:\\n        return \"\"\\n\\n\\ndef _spoken_code(text):\\n    raw = re.sub(r\"(?i)\\\\bx[\\\\s-]?ray\\\\b\", \"xray\", str(text or \"\"))\\n    toks = re.findall(r\"[A-Za-z0-9]+(?:[\\'\u2019][A-Za-z]+)?\", raw)\\n    low = [w.lower() for w in toks]\\n\\n    def known(j):\\n        w = low[j]\\n        return w in UNITS or w in TEENS or w in TENS or w in NATO or w in (\"double\", \"triple\", \"hundred\") or \\\\\\n            bool(re.fullmatch(r\"[a-z0-9]\", w)) or bool(re.search(r\"\\\\d\", w)) or (toks[j].isupper() and len(w) <= 4)\\n\\n    def word_like(j):      # a word of the sentence around the code (\\'I think\\', \\'a postcode\\')\\n        return j < len(toks) and (low[j] in CODE_NOUNS or (\"\\'\" in low[j] or \"\u2019\" in low[j]) or\\n                                  (low[j] not in CODE_FILLER and not known(j)))\\n\\n    out, i = [], 0\\n    while i < len(toks):\\n        tok, w = toks[i], low[i]\\n        nx = low[i + 1] if i + 1 < len(toks) else \"\"\\n        if re.fullmatch(r\"[a-z]\", w) and i + 2 < len(toks) and (nx == \"for\" or (nx == \"as\" and low[i + 2] == \"in\")):\\n            k = i + 2 if nx == \"for\" else i + 3                 # \\'S for Sugar\\', \\'B as in Bravo\\'\\n            if k < len(toks) and low[k][:1] == w and len(low[k]) > 1:\\n                out.append(w.upper())\\n                i = k + 1\\n                continue\\n        if \"\\'\" in w or \"\u2019\" in w or w in CODE_FILLER:\\n            i += 1\\n            continue\\n        if w in (\"double\", \"triple\"):\\n            c = _code_char(toks[i + 1]) if i + 1 < len(toks) else None\\n            if c:\\n                out.append(c * (2 if w == \"double\" else 3))\\n                i += 2\\n            else:\\n                i += 1\\n            continue\\n        if w in (\"a\", \"i\") and word_like(i + 1):            # article / pronoun, not a letter\\n            i += 1\\n            continue\\n        if w in TENS:\\n            if nx in UNITS and UNITS[nx] > 0:\\n                out.append(str(TENS[w] + UNITS[nx]))\\n                i += 2\\n                continue\\n            out.append(str(TENS[w]))\\n        elif w in TEENS:\\n            out.append(str(TEENS[w]))\\n        elif w == \"hundred\":\\n            if out:\\n                out.append(\"00\")\\n        elif _code_char(tok):\\n            out.append(_code_char(tok))\\n        elif re.fullmatch(r\"[a-z0-9]+\", w) and (re.search(r\"\\\\d\", w) or (tok.isupper() and len(w) <= 4)):\\n            out.append(tok.upper())                         # \\'SW1A\\', \\'1AA\\', \\'EC\\' as written by the transcriber\\n        i += 1\\n    return \"\".join(out)\\n\\n\\ndef _btokens(text):\\n    \"\"\"Tokens for birth dates / years: like _tokens but ordinal suffixes stay (\\'3rd\\'), so a day said as an\\n    ordinal is never read as part of a year.\"\"\"\\n    t = str(text or \"\").lower()\\n    t = re.sub(r\"[^a-z0-9\\' ]\", \" \", t)\\n    return [w for w in t.split() if w not in (\"the\", \"of\", \"and\", \"a\", \"um\", \"uh\", \"er\", \"erm\", \"its\", \"it\\'s\", \"is\",\\n                                              \"my\", \"on\", \"in\", \"born\", \"was\")]\\n\\n\\ndef _is_num_tok(w):\\n    return w in UNITS or w in TEENS or w in TENS or w in (\"hundred\", \"thousand\") or bool(re.fullmatch(r\"\\\\d{1,4}\", w))\\n\\n\\ndef _is_ord_tok(w):\\n    return w in ORD_WORDS or bool(re.fullmatch(r\"\\\\d{1,2}(st|nd|rd|th)\", w))\\n\\n\\ndef _num_toks(tokens):\\n    if isinstance(tokens, str):\\n        tokens = _btokens(tokens)\\n    return [str(w).lower() for w in (tokens or []) if _is_num_tok(str(w).lower())]\\n\\n\\ndef year_is_prefix(text):\\n    \"\"\"True when the only year words are a century prefix still waiting for the rest: \\'nineteen\\', \\'twenty\\',\\n    \\'two thousand\\', \\'one nine\\', \\'two zero\\', \\'nineteen oh\\' (the caller treats it as a partial answer).\"\"\"\\n    try:\\n        nt = _num_toks(text)\\n        if not nt:\\n            return False\\n        if \"thousand\" in nt or \"hundred\" in nt:\\n            return nt[-1] in (\"thousand\", \"hundred\") and cardinal(nt) in (1900, 2000)\\n        return digit_groups(nt) in (\"19\", \"20\", \"190\", \"200\")\\n    except Exception:\\n        return False\\n\\n\\ndef _year_exact(nt):\\n    \"\"\"(year, kind) when ALL the number tokens `nt` form one year phrase; kind \\'full\\' (four-digit style:\\n    1984, nineteen eighty-four, one nine eight four, two thousand and one) or \\'short\\' (eighty-six -> 1986).\\n    (None, \\'\\') otherwise, and for a bare century prefix.\"\"\"\\n    if not nt or year_is_prefix(nt):\\n        return None, \"\"\\n    if len(nt) == 1 and re.fullmatch(r\"(19|20)\\\\d\\\\d\", nt[0]):\\n        return int(nt[0]), \"full\"\\n    if \"thousand\" in nt or \"hundred\" in nt:\\n        n = cardinal(nt)\\n        return (n, \"full\") if n and 1900 <= n <= 2099 else (None, \"\")\\n    if nt[0] in (\"nineteen\", \"twenty\", \"19\", \"20\") and len(nt) >= 2:\\n        if not (nt[0] == \"twenty\" and len(nt) == 2 and nt[1] in UNITS and UNITS[nt[1]] > 0):  # \\'twenty-one\\' = \\'21\\n            rest = digit_groups(nt[1:])\\n            if rest.isdigit() and 1 <= len(rest) <= 2 and rest != \"0\":\\n                return (1900 if nt[0] in (\"nineteen\", \"19\") else 2000) + int(rest), \"full\"\\n    g = digit_groups(nt)\\n    if len(g) == 4 and g[:2] in (\"19\", \"20\"):\\n        return int(g), \"full\"\\n    if len(g) == 2:\\n        y = int(g)\\n        return (1900 + y if y > 30 else 2000 + y), \"short\"\\n    return None, \"\"\\n\\n\\ndef spoken_year(tokens):\\n    \"\"\"Year from the tokens left after month/day are removed (a list, or a text). None when there is no year\\n    or only a century prefix (\\'nineteen\\', \\'two thousand\\' ...: see year_is_prefix).\"\"\"\\n    try:\\n        nt = _num_toks(tokens)\\n        for w in nt:\\n            if re.fullmatch(r\"(19|20)\\\\d\\\\d\", w):\\n                return int(w)\\n        y, _ = _year_exact(nt)\\n        if y is None and len(nt) > 2 and nt[0] in (\"oh\", \"o\"):     # \"oh, nineteen eighty-eight\"\\n            y, _ = _year_exact(nt[1:])\\n        return y\\n    except Exception:\\n        return None\\n\\n\\ndef spoken_day(tokens):\\n    \"\"\"(day, tokens_without_day)\"\"\"\\n    for i, w in enumerate(tokens):\\n        if w in (\"twenty\", \"thirty\") and i + 1 < len(tokens) and tokens[i + 1] in ORD_WORDS and ORD_WORDS[tokens[i + 1]] < 10:\\n            return TENS[w] + ORD_WORDS[tokens[i + 1]], tokens[:i] + tokens[i + 2:]\\n    for i, w in enumerate(tokens):\\n        if w in ORD_WORDS:\\n            return ORD_WORDS[w], tokens[:i] + tokens[i + 1:]\\n    for i, w in enumerate(tokens):\\n        if re.fullmatch(r\"\\\\d{1,2}\", w) and 1 <= int(w) <= 31:\\n            return int(w), tokens[:i] + tokens[i + 1:]\\n    for i, w in enumerate(tokens):   # \"January eight 1991\", \"twenty-one August\", \"thirty January\"\\n        if w in (\"twenty\", \"thirty\"):\\n            nx = tokens[i + 1] if i + 1 < len(tokens) else \"\"\\n            if nx in UNITS and UNITS[nx] > 0 and nx not in (\"oh\", \"o\") and TENS[w] + UNITS[nx] <= 31:\\n                return TENS[w] + UNITS[nx], tokens[:i] + tokens[i + 2:]\\n            return TENS[w], tokens[:i] + tokens[i + 1:]\\n        if w in UNITS and UNITS[w] > 0:\\n            return UNITS[w], tokens[:i] + tokens[i + 1:]\\n        if w in TEENS and i + 1 < len(tokens) and tokens[i + 1] in TENS:\\n            continue\\n        if w in TEENS:\\n            return TEENS[w], tokens[:i] + tokens[i + 1:]\\n    return None, tokens\\n\\n\\ndef _day_opts(toks, i):\\n    \"\"\"Day expressions starting at toks[i], longest first: [(day, n_tokens, is_ordinal)].\"\"\"\\n    if i >= len(toks):\\n        return []\\n    w = toks[i]\\n    nx = toks[i + 1] if i + 1 < len(toks) else \"\"\\n    out = []\\n    m = re.fullmatch(r\"(\\\\d{1,2})(st|nd|rd|th)?\", w)\\n    if m:\\n        if 1 <= int(m.group(1)) <= 31:\\n            out.append((int(m.group(1)), 1, bool(m.group(2))))\\n    elif w in (\"twenty\", \"thirty\"):\\n        if nx in ORD_WORDS and ORD_WORDS[nx] < 10 and TENS[w] + ORD_WORDS[nx] <= 31:\\n            out.append((TENS[w] + ORD_WORDS[nx], 2, True))\\n        elif nx in UNITS and UNITS[nx] > 0 and TENS[w] + UNITS[nx] <= 31:\\n            out.append((TENS[w] + UNITS[nx], 2, False))\\n        out.append((TENS[w], 1, False))\\n    elif w in ORD_WORDS:\\n        out.append((ORD_WORDS[w], 1, True))\\n    elif w in TEENS:\\n        out.append((TEENS[w], 1, False))\\n    elif w in UNITS and UNITS[w] > 0:\\n        out.append((UNITS[w], 1, False))\\n    return out\\n\\n\\ndef _last_day(toks):\\n    \"\"\"The last day expression in toks (scanned left to right) -> (day, start, n) or None.\"\"\"\\n    best, i = None, 0\\n    while i < len(toks):\\n        o = _day_opts(toks, i)\\n        if o:\\n            best = (o[0][0], i, o[0][1])\\n            i += o[0][1]\\n        else:\\n            i += 1\\n    return best\\n\\n\\ndef _ymd(y, m, d):\\n    try:\\n        return datetime.date(int(y), int(m), int(d)).isoformat()\\n    except Exception:\\n        return \"\"\\n\\n\\ndef _month_day_year(after, month):\\n    \"\"\"\\'<month> <day> <year>\\': the day is the first day expression right after the month, the year the\\n    rest. A month followed only by a year phrase (\\'March nineteen eighty-eight\\') has no day -> \\'\\'.\"\"\"\\n    k = 0\\n    while k < len(after) and not (_is_num_tok(after[k]) or _is_ord_tok(after[k])):\\n        k += 1\\n    if k >= len(after):\\n        return \"\"\\n    tail = [w for w in after[k:] if _is_num_tok(w) or _is_ord_tok(w)]\\n    if not any(_is_ord_tok(w) for w in tail) and _year_exact(tail)[1] == \"full\":\\n        return \"\"\\n    for d, n, _ in _day_opts(after, k):\\n        y = spoken_year(after[:k] + after[k + n:])\\n        if y:\\n            return _ymd(y, month, d)\\n    if re.fullmatch(r\"(19|20)\\\\d\\\\d\", after[k]):               # \"March 1988, the 14th\"\\n        for d, n, _ in _day_opts(after, k + 1):\\n            return _ymd(after[k], month, d)\\n    return \"\"\\n\\n\\ndef _find_month(toks):\\n    hits = []\\n    for i, w in enumerate(toks):\\n        for j, mn in enumerate(MONTHS):\\n            if len(w) >= 3 and mn.startswith(w[:3]) and (w == mn or w == mn[:3] or w == mn[:4] or mn.startswith(w)):\\n                hits.append((i, j + 1, w))\\n                break\\n    if not hits:\\n        return None, None\\n    for i, mth, w in hits:              # \\'it may be March 3rd ...\\': the modal \\'may\\' gives way to another month\\n        if w != \"may\":\\n            return mth, i\\n    return hits[0][1], hits[0][0]\\n\\n\\ndef _birth_with_month(toks, month, mi):\\n    before, after = toks[:mi], toks[mi + 1:]\\n    nb = [w for w in before if _is_num_tok(w)]\\n    if nb and not any(_is_ord_tok(w) for w in before) and _year_exact(nb)[1] == \"full\":   # \"1988 March 14\"\\n        y = _year_exact(nb)[0]\\n        k = 0\\n        while k < len(after) and not _day_opts(after, k):\\n            k += 1\\n        o = _day_opts(after, k)\\n        return _ymd(y, month, o[0][0]) if o else \"\"\\n    bd = _last_day(before)\\n    if bd is None:\\n        return _month_day_year(after, month)\\n    # \"<day> <month> <year>\": day before the month, year after it. An ordinal right after the month with a\\n    # year behind it (\"forty two, March 3rd 1984\") is the day instead.\\n    k = 0\\n    while k < len(after) and not (_is_num_tok(after[k]) or _is_ord_tok(after[k])):\\n        k += 1\\n    o = _day_opts(after, k)\\n    if o and o[0][2]:\\n        y = spoken_year(after[:k] + after[k + o[0][1]:])\\n        if y:\\n            return _ymd(y, month, o[0][0])\\n    day, s, n = bd\\n    y = spoken_year(after)\\n    if y is None:                       # \"1988, the 14th of March\": a full year phrase before the day\\n        rest = [w for w in before[:s] + before[s + n:] if _is_num_tok(w)]\\n        y = _year_exact(rest)[0] if _year_exact(rest)[1] == \"full\" else None\\n    return _ymd(y, month, day) if y else \"\"\\n\\n\\ndef parse_birth_date(text, order=\"dmy\"):\\n    \"\"\"Spoken or numeric birth date -> \\'YYYY-MM-DD\\' or \\'\\'. Numeric-only dates use `order` (dmy or mdy).\\n    Spoken dates are split around the month word: \\'<day> <month> <year>\\' or \\'<month> <day> <year>\\'.\"\"\"\\n    try:\\n        return _parse_birth_date(text, order)\\n    except Exception:\\n        return \"\"\\n\\n\\ndef _parse_birth_date(text, order=\"dmy\"):\\n    raw = str(text or \"\").lower()\\n    m = re.search(r\"(\\\\d{4})-(\\\\d{1,2})-(\\\\d{1,2})\", raw)\\n    if m:\\n        return _ymd(m.group(1), m.group(2), m.group(3))\\n    toks = _btokens(raw)\\n    month, mi = _find_month(toks)\\n    if month:\\n        return _birth_with_month(toks, month, mi)\\n    nums = re.findall(r\"\\\\d+\", raw)\\n    if len(nums) >= 3:\\n        a, b, c = int(nums[0]), int(nums[1]), int(nums[2])\\n        if len(nums[0]) == 4:\\n            return _ymd(a, b, c)\\n        if c < 100:\\n            c += 1900 if c > 30 else 2000\\n        d, mth = (a, b) if order == \"dmy\" else (b, a)\\n        if 1 <= mth <= 12 and 1 <= d <= 31:\\n            return _ymd(c, mth, d)\\n    return \"\"\\n\\n\\ndef speak_date(d):\\n    return d.strftime(\"%A \") + str(d.day) + d.strftime(\" %B\")\\n\\n\\ndef speak_amount(x):\\n    x = round(float(x), 2)\\n    return (\"%d\" % x) if x == int(x) else (\"%.2f\" % x)\\n\\n\\ndef calendar_text(today, days=21):\\n    rows = []\\n    for i in range(days):\\n        d = today + datetime.timedelta(days=i)\\n        tag = \"business day\" if is_business_day(d) else (\"holiday\" if iso(d) in P[\"holidays\"] else \"weekend\")\\n        rows.append(iso(d) + \" \" + d.strftime(\"%A\") + \" (\" + tag + \")\")\\n    return \"\\\\n\".join(rows)\\n\\n\\ndef dumps(x):\\n    return json.dumps(x, ensure_ascii=False)\\n\\n\"\"\"Call state machine that runs INSIDE the phone agent, in the `step` code node, after every customer turn\\nand after every bank call.\\n\\nContract with the workflow (built by builder/compile.py):\\n  in : V (the Freya `vars` dict). Customer input arrives in u_kind / u_text / u_date / u_amount / u_scope,\\n       extracted by the talk node that just ran. Bank results arrive as flattened keys\\n       \\'<api node>_response.data.<field>\\' (e.g. \\'api_verify_response.data.verified\\').\\n  out: V[\\'say\\'] (spoken verbatim by the next node), V[\\'next\\'] (node key to route to),\\n       slot variables baked into the next bank call (q_field, q_answer, p_product, ...).\\nEverything brief-specific lives in S (the spec), injected by the compiler. The weak agent model never\\ndecides anything here; it only classifies what the customer said.\\n\\nSandbox rules: imports limited to json/re/datetime; the source must never contain a double brace pair.\\n\"\"\"\\nimport datetime\\nimport json\\nimport re\\n\\n\\n\\n\\n\\n# ----------------------------------------------------------------------------------------------- helpers\\nCTX = dict()   # customer names, filled once per step from the call variables\\n\\n\\ndef L(key, **kw):\\n    \"\"\"Spec line with {placeholders} filled (customer names always available). Never raises.\"\"\"\\n    t = S.get(\"lines\", dict()).get(key, \"\")\\n    for k, v in list(kw.items()) + [(k, v) for k, v in CTX.items() if k not in kw]:\\n        v = str(v)\\n        if k == \"amount\" and v.startswith(\"the \") and \" of \" in v and \"{amount}\" in t:\\n            before = t.split(\"{amount}\")[0][-30:].lower()\\n            label_words = v[4:].split(\" of \")[0].split()\\n            if re.search(r\"minimum|lowest|least|floor\", before) or any(w in before for w in label_words):\\n                v = v.split(\" of \", 1)[1]          # the line already names the floor\\n        t = t.replace(\"{\" + k + \"}\", v)\\n    t = re.sub(r\"\\\\{[a-z_0-9]+\\\\}\", \"\", t)       # never speak an unfilled placeholder\\n    return re.sub(r\"\\\\s+\", \" \", t).strip()\\n\\n\\ndef money(x):\\n    s = speak_amount(x)\\n    w = S.get(\"currency_word\", \"\")\\n    return (s + \" \" + w).strip()\\n\\n\\ndef floor_label(p):\\n    \"\"\"\\'minimum payment\\' / \\'instalment amount\\': what the floor is called, so offers say \\'the minimum payment of 126 dollars\\'.\"\"\"\\n    lab = by_type(S[\"products\"].get(\"floor_names\"), p[\"type\"])\\n    if not lab:\\n        ff = by_type(S[\"products\"].get(\"floor_field\"), p[\"type\"])\\n        lab = ff.replace(\"_\", \" \") if ff else \"\"\\n    return lab\\n\\n\\ndef pay(p, amt):\\n    \"\"\"Spoken amount for an offer: names the floor when the amount is the floor.\"\"\"\\n    if p and abs(float(amt) - p[\"floor\"]) < 0.005 and p[\"floor\"] < p[\"full\"] - 0.005 and floor_label(p):\\n        return \"the \" + floor_label(p) + \" of \" + money(amt)\\n    return money(amt)\\n\\n\\ndef say(V, *parts):\\n    pre = V.pop(\"_prefix\", \"\") if \"_prefix\" in V else \"\"\\n    V[\"say\"] = \" \".join(p.strip() for p in (pre,) + parts if p and p.strip())\\n\\n\\ndef jget(V, key, default=None):\\n    v = V.get(key)\\n    if v is None or v == \"\":\\n        return default\\n    if isinstance(v, str):\\n        try:\\n            return json.loads(v)\\n        except Exception:\\n            return v\\n    return v\\n\\n\\ndef st(V):\\n    return jget(V, \"_state\", None) or dict()\\n\\n\\ndef put(V, state):\\n    V[\"_state\"] = json.dumps(state)\\n\\n\\ndef truthy(x):\\n    return str(x).strip().lower() in (\"true\", \"1\", \"yes\")\\n\\n\\ndef resp(V, node, field):\\n    v = V.get(node + \"_response.data.\" + field)\\n    if v is None:\\n        d = V.get(node + \"_response.data\")\\n        if isinstance(d, dict):\\n            v = d.get(field)\\n    return v\\n\\n\\nTOOL_OF = dict(api_verify=\"verify_identity\", api_account=\"get_account\", api_promise=\"create_promise\", api_note=\"add_note\",\\n               api_callback=\"schedule_callback\", api_transfer=\"transfer_to_agent\", api_close=\"close_call\", api_close_nr=\"close_call\")\\nPASS_WORDS = (\"true\", \"1\", \"yes\", \"ok\", \"success\", \"successful\", \"succeeded\", \"pass\", \"passed\", \"verified\", \"match\", \"matched\",\\n              \"correct\", \"valid\", \"created\", \"recorded\", \"scheduled\", \"booked\", \"done\", \"accepted\", \"transferred\", \"queued\",\\n              \"added\", \"saved\", \"confirmed\")\\n\\n\\ndef http_failed(V, node):\\n    \"\"\"The call itself failed (HTTP error, timeout, no body).\"\"\"\\n    code = str(V.get(node + \"_response.status_code\") or V.get(node + \"_status_code\") or \"\").strip()\\n    if code and not code.startswith(\"2\"):\\n        return True\\n    has_data = any(k.startswith(node + \"_response.data\") and V[k] not in (None, \"\") for k in V)\\n    return not has_data\\n\\n\\ndef succeeded(V, node):\\n    \"\"\"Did the bank accept the call? The success flag comes from the spec (read from the tool API file);\\n    without one, HTTP 2xx with no error field counts as success.\"\"\"\\n    if http_failed(V, node):\\n        return False\\n    R_ = S.get(\"responses\", dict()).get(TOOL_OF.get(node, \"\"), dict()) or dict()\\n    f = R_.get(\"field\", \"ok\")\\n    v = resp(V, node, f) if f else None\\n    if v is None or v == \"\":\\n        return not resp(V, node, \"error\")\\n    vals = [str(x).strip().lower() for x in (R_.get(\"values\") or [])]\\n    if vals:\\n        return str(v).strip().lower() in vals\\n    return truthy(v)\\n\\n\\ndef passed(v):\\n    \"\"\"A verify answer matched: a boolean true, or one of the spec\\'s pass values for a string field.\"\"\"\\n    pv = [str(x).strip().lower() for x in S.get(\"identity\", dict()).get(\"response\", dict()).get(\"pass_values\", []) or []]\\n    sv = str(v).strip().lower()\\n    if pv:\\n        return sv in pv or truthy(v)\\n    return sv in PASS_WORDS\\n\\n\\ndef num(x):\\n    try:\\n        if x is None or x == \"\":\\n            return None\\n        return float(x)\\n    except Exception:\\n        return None\\n\\n\\ndef today_of(V):\\n    return parse_now(V.get(\"now\")).date()\\n\\n\\ndef ev(name):\\n    \"\"\"Event -> dict(outcome, reason, queue, note).\"\"\"\\n    return S.get(\"events\", dict()).get(name, dict())\\n\\n\\n# ----------------------------------------------------------------------------------------------- products\\ndef read_products(V):\\n    P_ = S.get(\"products\", dict())\\n    lf, idf, tf = P_.get(\"list_field\", \"products\"), P_.get(\"id_field\", \"product_id\"), P_.get(\"type_field\", \"type\")\\n    out = read_products_raw(V, lf, idf)\\n    for p in out:                       # normalise to the engine\\'s own keys\\n        p[\"product_id\"] = p.get(idf, p.get(\"product_id\"))\\n        t = p.get(tf, p.get(\"type\"))\\n        p[\"type\"] = \"\" if t is None else str(t)\\n    return out\\n\\n\\ndef read_products_raw(V, lf, idf):\\n    out, i = [], 0\\n    while True:\\n        base = \"api_account_response.data.\" + lf + \".\" + str(i) + \".\"\\n        pid = V.get(base + idf)\\n        if pid is None or pid == \"\":\\n            break\\n        p = dict()\\n        for k in list(V.keys()):\\n            if k.startswith(base):\\n                p[k[len(base):]] = V[k]\\n        out.append(p)\\n        i += 1\\n    if not out:\\n        raw = V.get(\"api_account_response.data.\" + lf)\\n        if isinstance(raw, str):\\n            try:\\n                raw = json.loads(raw)\\n            except Exception:\\n                raw = None\\n        if isinstance(raw, list):\\n            out = [x for x in raw if isinstance(x, dict)]\\n        elif isinstance(raw, dict) and raw.get(idf) not in (None, \"\"):\\n            out = [raw]\\n    if not out:                         # one product as an object (data.<list_field>.<field>, or data.<field>)\\n        for base in (\"api_account_response.data.\" + lf + \".\", \"api_account_response.data.\"):\\n            if V.get(base + idf) not in (None, \"\"):\\n                p = dict()\\n                for k in list(V.keys()):\\n                    if k.startswith(base) and \".\" not in k[len(base):]:\\n                        p[k[len(base):]] = V[k]\\n                out = [p]\\n                break\\n    return out\\n\\n\\ndef band_for(days_late):\\n    for b in S[\"bands\"]:\\n        lo, hi = b.get(\"min\", -10 ** 9), b.get(\"max\", 10 ** 9)\\n        if lo <= days_late <= hi:\\n            return b\\n    return S[\"bands\"][-1]\\n\\n\\ndef by_type(m, typ, default=None):\\n    \"\"\"Per-product-type spec value: the type\\'s own entry, else \\'*\\', else the only entry.\"\"\"\\n    m = m or dict()\\n    if typ in m:\\n        return m[typ]\\n    if \"*\" in m:\\n        return m[\"*\"]\\n    if len(m) == 1:\\n        return list(m.values())[0]\\n    return default\\n\\n\\ndef product_facts(V, raw):\\n    today = today_of(V)\\n    typ = raw.get(\"type\")\\n    typ = \"\" if typ is None else str(typ)\\n    names = S[\"products\"][\"names\"]\\n    name = by_type(names, typ) or (typ.replace(\"_\", \" \") if typ else \"account\")\\n    for k, v in raw.items():\\n        name = name.replace(\"{\" + k + \"}\", str(v))\\n    name = re.sub(r\"\\\\{[a-z_0-9]+\\\\}\", \"\", name).strip()\\n    scale = float(S[\"products\"].get(\"amount_scale\") or 1)\\n    full = (num(raw.get(S[\"products\"].get(\"amount_field\", \"past_due\"))) or 0.0) / scale\\n    ff = by_type(S[\"products\"].get(\"floor_field\"), typ)\\n    floor = num(raw.get(ff)) / scale if ff and num(raw.get(ff)) is not None else None\\n    if floor is None and S[\"products\"].get(\"floor_pct\") is not None:\\n        floor = round(full * float(S[\"products\"][\"floor_pct\"]) / 100.0, 2)\\n    if floor is None:\\n        floor = full\\n    dl = int(num(raw.get(S[\"products\"].get(\"days_field\", \"days_late\"))) or 0)\\n    b = band_for(dl)\\n    deadline = cal_deadline(today, b[\"deadline\"])\\n    adj = b[\"deadline\"].get(\"adjust\", S.get(\"rules\", dict()).get(\"deadline_adjust\", \"previous_business_day\"))\\n    if adj != \"none\" and not is_business_day(deadline):\\n        if adj == \"next_business_day\":\\n            deadline = next_business_day(deadline)\\n        else:\\n            x = deadline\\n            while not is_business_day(x) and x > today:\\n                x = x - datetime.timedelta(days=1)\\n            deadline = x if is_business_day(x) else next_business_day(deadline)\\n    return dict(id=str(raw.get(\"product_id\")), type=typ, name=name, full=full, floor=floor, days_late=dl,\\n                band=b.get(\"name\", \"\"), deadline=iso(deadline), attempts=int(b.get(\"attempts\", 1)), ladder=b.get(\"ladder\") or None,\\n                used=0, too_much=False, floor_offered=False, vague_asked=False, offer=None,\\n                agreed=None, status=\"open\", reason=\"\", refused_offers=[], raw=raw)\\n\\n\\ndef cal_deadline(today, rule):\\n    return deadline(today, rule)\\n\\n\\n# ----------------------------------------------------------------------------------------------- dates\\ndef ladder_date(today, which, p):\\n    if which == \"today\":\\n        return today\\n    if which == \"deadline\":\\n        return datetime.date.fromisoformat(p[\"deadline\"])\\n    if which == \"last_business_day_this_week\":\\n        d = last_business_day_of_week(today, 0)\\n        if d is None or d <= today:\\n            d = last_business_day_of_week(today, 1)\\n        return d\\n    if which == \"last_business_day_next_week\":\\n        return last_business_day_of_week(today, 1)\\n    if which.startswith(\"business_days_after:\"):\\n        return add_business_days(today, int(which.split(\":\")[1]))\\n    if which == \"tomorrow\":\\n        return today + datetime.timedelta(days=1)\\n    if which == \"next_business_day\":\\n        return next_business_day(today, include_self=False)\\n    if which.startswith(\"calendar_days_after:\"):\\n        return today + datetime.timedelta(days=int(which.split(\":\")[1]))\\n    return datetime.date.fromisoformat(p[\"deadline\"])\\n\\n\\ndef check_date(V, p, d):\\n    \"\"\"-> (status, date). status: ok | past | after_deadline | not_business (date = proposal to offer).\"\"\"\\n    today = today_of(V)\\n    dl = datetime.date.fromisoformat(p[\"deadline\"])\\n    if d < today:\\n        return \"past\", None\\n    if d > dl:\\n        return \"after_deadline\", dl\\n    if not is_business_day(d):\\n        nb = next_business_day(d)\\n        if nb > dl:\\n            return \"after_deadline\", dl\\n        return \"not_business\", nb\\n    return \"ok\", d\\n\\n\\ndef check_amount(p, a):\\n    if a is None:\\n        return \"none\", None\\n    a = round(float(a), 2)\\n    if a > p[\"full\"] + 0.005:\\n        return \"ok\", p[\"full\"]\\n    if a + 0.005 < p[\"floor\"]:\\n        return \"below_floor\", p[\"floor\"]\\n    return \"ok\", a\\n\\n\\ndef spoken(d):\\n    if isinstance(d, str):\\n        d = datetime.date.fromisoformat(d)\\n    return speak_date(d)\\n\\n\\n# ----------------------------------------------------------------------------------------------- input\\ndef take_input(V, stage):\\n    \"\"\"Extracted values of the talk node that just ran (variables are named per stage: <stage>_kind ...).\"\"\"\\n    g = lambda f: V.get(stage + \"_\" + f)\\n    k = str(g(\"kind\") or \"none\").strip().lower()\\n    t = str(g(\"text\") or \"\").strip()\\n    dt = str(g(\"date\") or \"\").strip()\\n    a = num(g(\"amount\"))\\n    sc = str(g(\"scope\") or \"none\").strip().lower()\\n    fr = str(g(\"for\") or \"none\").strip().lower()\\n    if (stage + \"_for\") in V:\\n        V[stage + \"_for\"] = \"none\"\\n    if fr == \"all\":\\n        sc = \"all\"\\n    elif fr not in (\"\", \"none\") and fr in S.get(\"products\", dict()).get(\"names\", dict()):\\n        sc = \"type:\" + fr\\n    V[\"_cut\"] = str(g(\"cut\") or \"no\").strip().lower()\\n    if (stage + \"_cut\") in V:\\n        V[stage + \"_cut\"] = \"no\"\\n    side = str(g(\"side\") or \"none\").strip().lower()\\n    V[\"_side\"] = side\\n    if (stage + \"_side\") in V:\\n        V[stage + \"_side\"] = \"none\"\\n    if side != k and side in (\"robot\", \"scam\") and not (stage in (\"open\", \"tp\") and k == \"unclear\"):\\n        V[\"_prefix\"] = L(side)\\n    elif side == \"question\" and k not in (\"question\", \"purpose\", \"asks_why\", \"unclear\", \"none\") and stage not in (\"open\", \"tp\", \"id\"):\\n        V[\"_prefix\"] = L(\"no_info\")\\n    V[\"_norm\"] = str(g(\"norm\") or \"\").strip()\\n    for f in (\"text\", \"date\", \"norm\"):\\n        if (stage + \"_\" + f) in V:\\n            V[stage + \"_\" + f] = \"\"\\n    if (stage + \"_amount\") in V:\\n        V[stage + \"_amount\"] = 0\\n    if (stage + \"_kind\") in V:\\n        V[stage + \"_kind\"] = \"none\"\\n    if (stage + \"_scope\") in V:\\n        V[stage + \"_scope\"] = \"none\"\\n    if a == 0:\\n        a = None\\n    return k, t, dt, a, sc\\n\\n\\ndef go(V, node):\\n    V[\"next\"] = node\\n\\n\\ndef talk(V, stage, s):\\n    if not str(V.get(\"say\", \"\")).strip():\\n        V[\"say\"] = L(\"go_on\") or \"Sorry, could you say that again?\"\\n    s[\"await\"] = \"talk\"\\n    s[\"stage\"] = stage\\n    put(V, s)\\n    go(V, \"talk_open_again\" if stage == \"open\" else \"talk_\" + stage)\\n\\n\\ndef call(V, s, api, **slots):\\n    for k in list(V.keys()):            # stale results of an earlier call to the same node\\n        if k.startswith(api + \"_response\") or k == api + \"_status_code\":\\n            V[k] = \"\"\\n    for k, v in slots.items():\\n        V[k] = v\\n    s[\"await\"] = api\\n    put(V, s)\\n    go(V, api)\\n\\n\\n# ----------------------------------------------------------------------------------------------- closing\\ndef close(V, s, event, pre=\"\"):\\n    e = ev(event)\\n    s[\"close_event\"] = event\\n    V[\"c_outcome\"] = e.get(\"outcome\", \"\")\\n    V[\"c_reason\"] = e.get(\"reason\", \"\") or \"\"\\n    s[\"stage\"] = \"closing\"\\n    say(V, pre, L(\"goodbye\"))\\n    node = \"api_close\" if V[\"c_reason\"] else \"api_close_nr\"\\n    s[\"await\"] = node\\n    put(V, s)\\n    go(V, node)\\n\\n\\ndef finish(V, s, pre=\"\"):\\n    \"\"\"End of a verified call: notes (if the brief uses them), then the outcome from the product states.\"\"\"\\n    prods = s.get(\"products\", [])\\n    s[\"pre\"] = (s.get(\"pre\", \"\") + \" \" + (pre or \"\")).strip()     # lines to say before goodbye, kept across note calls\\n    if S.get(\"notes\", dict()).get(\"enabled\") and (not s.get(\"transferred\") or s.get(\"no_queue\")):\\n        for p in prods:\\n            stt = p[\"status\"]\\n            if s.get(\"transferred\") and stt == \"open\":\\n                stt = \"transfer_\" + s[\"transferred\"]\\n            if (stt in (\"refused\", \"hardship\", \"dispute\", \"paid\", \"service_error\") or stt.startswith(\"transfer_\")) and not p.get(\"noted\"):\\n                p[\"noted\"] = True\\n                note_reason = ev(stt).get(\"note\")\\n                if not note_reason:            # the brief keeps no note for this outcome\\n                    continue\\n                return call(V, s, \"api_note\", n_product=p[\"id\"], n_reason=note_reason)\\n    pre = s.pop(\"pre\", \"\")\\n    if s.get(\"transferred\"):\\n        return close(V, s, \"transfer_\" + s[\"transferred\"], pre)\\n    if any(p[\"status\"] == \"recorded\" for p in prods):\\n        return close(V, s, \"promise\", pre)\\n    reasons = [p[\"status\"] for p in prods]\\n    if reasons and all(r == \"paid\" for r in reasons):\\n        return close(V, s, \"paid\", pre)\\n    for r in reasons:\\n        if r != \"paid\" and r in S.get(\"events\", dict()):\\n            return close(V, s, r, pre)\\n    return close(V, s, \"refused\", pre)\\n\\n\\n# ----------------------------------------------------------------------------------------------- stages\\ndef transfer(V, s, kind, line):\\n    \"\"\"kind: human | restructuring | support. A transfer happens only when the brief names a queue for it;\\n    otherwise the call ends with that event (and its note, if the brief keeps notes).\"\"\"\\n    s[\"transferred\"] = kind\\n    q = ev(\"transfer_\" + kind).get(\"queue\")\\n    if not q:\\n        s[\"no_queue\"] = True\\n        return finish(V, s, line)\\n    s[\"say_after_transfer\"] = line\\n    return call(V, s, \"api_transfer\", t_queue=q)\\n\\n\\ndef stage_init(V, s):\\n    s.update(stage=\"open\", asks=1, questions=0, not_talk=0)\\n    say(V, L(\"opening\"), L(\"confirm_ask\", **names(V)))\\n    talk(V, \"open\", s)\\n\\n\\ndef names(V):\\n    return dict(title=V.get(\"title\", \"\"), first_name=V.get(\"first_name\", \"\"), last_name=V.get(\"last_name\", \"\"))\\n\\n\\ndef common_intents(V, s, k, again, verified):\\n    \"\"\"Robot / scam / human / no-talk handled the same in every stage. Returns True if handled.\"\"\"\\n    if k == \"robot\":\\n        say(V, L(\"robot\"), again)\\n        talk(V, s[\"stage\"], s)\\n        return True\\n    if k == \"scam\":\\n        say(V, L(\"scam\"), again)\\n        talk(V, s[\"stage\"], s)\\n        return True\\n    if k == \"human\":\\n        if not s.get(\"human_asked\") and S.get(\"human\", dict()).get(\"ask_first\", True):\\n            s[\"human_asked\"] = True\\n            s[\"human_pending\"] = True\\n            say(V, L(\"human_ask_help\"))\\n            talk(V, s[\"stage\"], s)\\n            return True\\n        transfer(V, s, \"human\", L(\"transfer\"))\\n        return True\\n    if k in (\"not_talk\", \"refuse_talk\"):\\n        s[\"not_talk\"] = s.get(\"not_talk\", 0) + 1\\n        if s[\"not_talk\"] >= S.get(\"max_not_talk\", 2):\\n            if verified:\\n                for p in s.get(\"products\", []):\\n                    if p[\"status\"] in (\"open\", \"agreed\"):\\n                        p[\"status\"] = \"refused\"\\n                finish(V, s)\\n            else:\\n                close(V, s, \"id_declined\")\\n            return True\\n        say(V, L(\"not_talk_once\"), again)\\n        talk(V, s[\"stage\"], s)\\n        return True\\n    return False\\n\\n\\ndef stage_open(V, s, k, t):\\n    again = L(\"confirm_ask\", **names(V))\\n    if k in (\"unclear\", \"none\") and V.get(\"_side\") in (\"robot\", \"scam\"):\\n        k = V[\"_side\"]\\n    if k == \"confirmed\":\\n        return start_identity(V, s)\\n    if k == \"third_party\":\\n        s[\"stage\"] = \"tp\"\\n        s[\"tp_tries\"] = 0\\n        say(V, L(\"tp_ask\"))\\n        return talk(V, \"tp\", s)\\n    if k == \"wrong_number\":\\n        return close(V, s, \"wrong_number\", L(\"wrong_number\"))\\n    if k == \"deceased\":\\n        return close(V, s, \"deceased\", L(\"condolence\"))\\n    if k in (\"robot\", \"scam\", \"purpose\", \"question\"):\\n        s[\"asks\"] = s.get(\"asks\", 1) + 1\\n        line = dict(robot=L(\"robot\"), scam=L(\"scam\"), purpose=L(\"purpose_before_verify\")).get(k, L(\"no_info\"))\\n        if s[\"asks\"] > S[\"confirm\"][\"max_asks\"] + 1:\\n            return close(V, s, \"unclear\")\\n        say(V, line, again)\\n        return talk(V, \"open\", s)\\n    if common_intents(V, s, k, again, False):\\n        return\\n    # unclear / hello / anything else\\n    if s.get(\"asks\", 1) >= S[\"confirm\"][\"max_asks\"]:\\n        return close(V, s, \"unclear\")\\n    s[\"asks\"] = s.get(\"asks\", 1) + 1\\n    say(V, again)\\n    return talk(V, \"open\", s)\\n\\n\\ndef stage_tp(V, s, k, t, dtxt):\\n    today = today_of(V)\\n    if k == \"wrong_number\":\\n        return close(V, s, \"wrong_number\", L(\"wrong_number\"))\\n    if k == \"deceased\":\\n        return close(V, s, \"deceased\", L(\"condolence\"))\\n    if k == \"customer_now\":   # the customer came to the phone\\n        s[\"asks\"] = 1\\n        say(V, L(\"confirm_ask\", **names(V)))\\n        return talk(V, \"open\", s)\\n    if k in (\"purpose\", \"offers_pay\", \"question\", \"robot\", \"scam\"):\\n        line = L(\"robot\") if k == \"robot\" else (L(\"scam\") if k == \"scam\" else L(\"tp_no_info\"))\\n        say(V, line, L(\"tp_ask\"))\\n        return talk(V, \"tp\", s)\\n    if k in (\"gives_time\", \"unclear\", \"none\") and (dtxt or t):\\n        d, hm = parse_callback(dtxt + \" \" + t, today, V)\\n        if d is None and s.get(\"cb_day\"):\\n            d = datetime.date.fromisoformat(s[\"cb_day\"])      # day said in an earlier turn\\n        if hm is None and s.get(\"cb_time\"):\\n            hm = s[\"cb_time\"]\\n        if d is None and hm is not None and callback_ok(V, today, hm):\\n            d = today                                          # a time alone means today when that is allowed\\n        if d is not None and hm is None:                       # ask for the missing time without using a try\\n            s[\"cb_day\"] = iso(d)\\n            if not s.get(\"cb_asked_time\"):\\n                s[\"cb_asked_time\"] = True\\n                say(V, L(\"tp_ask_time\"))\\n                return talk(V, \"tp\", s)\\n        if hm is not None and d is None:\\n            s[\"cb_time\"] = hm\\n            if not s.get(\"cb_asked_day\"):\\n                s[\"cb_asked_day\"] = True\\n                say(V, L(\"tp_ask\"))\\n                return talk(V, \"tp\", s)\\n        if d is None and hm is None:                 # small talk, no day or time: ask again without using a try\\n            s[\"tp_empty\"] = s.get(\"tp_empty\", 0) + 1\\n            if s[\"tp_empty\"] >= 5:\\n                return no_callback(V, s)\\n            say(V, L(\"tp_ask\"))\\n            return talk(V, \"tp\", s)\\n        ok = d is not None and hm is not None and callback_ok(V, d, hm)\\n        if ok:\\n            s[\"cb\"] = [iso(d), hm]\\n            s[\"cb_booked\"] = L(\"tp_booked\", date=spoken(d), time=hm)     # said only after the bank confirms the booking\\n            return call(V, s, \"api_callback\", cb_date=iso(d), cb_time=hm, cb_datetime=iso(d) + \"T\" + hm)\\n        s[\"tp_tries\"] = s.get(\"tp_tries\", 0) + 1\\n        s.pop(\"cb_day\", None)\\n        s.pop(\"cb_time\", None)\\n        if s[\"tp_tries\"] >= S[\"callback\"].get(\"max_asks\", 2):\\n            return no_callback(V, s)\\n        say(V, L(\"tp_outside_window\"))\\n        return talk(V, \"tp\", s)\\n    if k in (\"no_time\", \"declines\"):\\n        return no_callback(V, s)\\n    say(V, L(\"cb_ask\") if s.get(\"cb_event\") else L(\"tp_ask\"))\\n    return talk(V, \"tp\", s)\\n\\n\\ndef no_callback(V, s, pre=\"\"):\\n    if s.get(\"cb_event\") and s.get(\"products\"):     # a verified customer gave no usable time: no promise today\\n        s.pop(\"cb_event\", None)\\n        for p in s[\"products\"]:\\n            if p[\"status\"] in (\"open\", \"agreed\"):\\n                p[\"status\"] = \"refused\"\\n        return finish(V, s, pre)\\n    return close(V, s, \"no_callback\", pre)\\n\\n\\ndef parse_callback(text, today, V):\\n    \"\"\"(date, \\'HH:MM\\') of a callback request; a correction (\\'ten, sorry, eleven\\') wins.\"\"\"\\n    full = str(text or \"\").lower()\\n    corr = after_correction(full).lower()\\n    hm = spoken_time(corr) if corr != full else None\\n    if hm is None and corr != full:      # \"at ten, sorry, eleven\": a bare hour replaces the time it corrects\\n        m = re.fullmatch(r\"\\\\s*(?:at\\\\s+)?(\\\\d{1,2}|\" + \"|\".join(HOUR_WORDS) + r\")(\\\\s+.*)?\", corr)\\n        if m and spoken_time(CORRECTION.split(full)[0]):\\n            hm = spoken_time(\"at \" + corr)\\n    hm = hm or spoken_time(full)\\n    d = None\\n    explicit = r\"\\\\b(today|tomorrow|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\\\\d{1,2}(st|nd|rd|th)?\\\\s+[a-z]{3,}|next|this)\\\\b\"\\n    def strip_times(x):\\n        x = re.sub(r\"\\\\b\\\\d{1,2}[:.]\\\\d{2}\\\\s*(am|pm|a\\\\.m\\\\.|p\\\\.m\\\\.)?\", \" \", x)\\n        x = re.sub(r\"\\\\b\\\\d{1,2}\\\\s*(am|pm|a\\\\.m\\\\.|p\\\\.m\\\\.|o\\'clock|oclock)\\\\b\", \" \", x)\\n        x = re.sub(r\"\\\\b(at|around|about|after|before|by|from|until|till)\\\\s+\\\\d{1,2}\\\\b(?!\\\\s*(st|nd|rd|th))\", \" \", x)\\n        return x\\n    full_d, corr_d = strip_times(full), strip_times(corr)\\n    for part in ([corr_d] if corr != full and re.search(explicit, corr) else []) + [full_d]:\\n        d = _parse_spoken_date(part, today, S.get(\"date_rules\"))     # the correction was already applied above\\n        if d is None and re.search(r\"\\\\b(this )?(morning|afternoon|evening|later|tonight)\\\\b\", part) and not re.search(r\"tomorrow\", part):\\n            d = today\\n        if d is not None:\\n            break\\n    return d, hm\\n\\n\\ndef callback_ok(V, d, hm):\\n    c = S[\"callback\"]\\n    now = parse_now(V.get(\"now\"))\\n    today = now.date()\\n    allowed = []\\n    for k in c.get(\"days\", [\"today\", \"next_business_day\"]):\\n        if k == \"today\":\\n            allowed.append(today)\\n        elif k == \"next_business_day\":\\n            allowed.append(next_business_day(today, include_self=False))\\n        elif k == \"tomorrow\":\\n            allowed.append(today + datetime.timedelta(days=1))\\n        elif k.startswith(\"within_business_days:\"):\\n            n = int(k.split(\":\")[1])\\n            x = today\\n            for _ in range(n):\\n                x = next_business_day(x, include_self=False)\\n                allowed.append(x)\\n        elif k.startswith(\"within_days:\"):\\n            for i in range(1, int(k.split(\":\")[1]) + 1):\\n                allowed.append(today + datetime.timedelta(days=i))\\n    if d not in allowed:\\n        return False\\n    if c.get(\"business_days_only\") and not is_business_day(d):\\n        return False\\n    if not (c.get(\"start\", \"00:00\") <= hm <= c.get(\"end\", \"23:59\")):\\n        return False\\n    if c.get(\"after_now\", True) and d == today and hm <= now.strftime(\"%H:%M\"):\\n        return False\\n    return True\\n\\n\\ndef start_identity(V, s):\\n    s.update(stage=\"id\", qi=0, wrong=0, declined=0, partial=\"\", id_explained=False)\\n    q = S[\"identity\"][\"questions\"][0]\\n    say(V, L(\"id_intro\"), q[\"ask\"])\\n    return talk(V, \"id\", s)\\n\\n\\ndef stage_id(V, s, k, t):\\n    qs = S[\"identity\"][\"questions\"]\\n    q = qs[s[\"qi\"]]\\n    if k == \"asks_why\" and not s.get(\"why_answered\"):\\n        s[\"why_answered\"] = True          # explaining why the questions are needed is not a refusal\\n        say(V, L(\"id_why\"), q[\"ask\"])\\n        return talk(V, \"id\", s)\\n    purpose_declines = S[\"identity\"].get(\"purpose_is_decline\", S[\"identity\"].get(\"why_is_decline\", True))\\n    if k in (\"refuses\", \"asks_why\") or (k == \"purpose\" and purpose_declines) or (k == \"question\" and S[\"identity\"].get(\"question_is_decline\")):\\n        s[\"declined\"] = s.get(\"declined\", 0) + 1\\n        if s[\"declined\"] >= 2:\\n            return close(V, s, \"id_declined\", L(\"id_declined\"))\\n        say(V, L(\"id_explain\"), q[\"ask\"])\\n        return talk(V, \"id\", s)\\n    if k in (\"robot\", \"scam\", \"human\", \"not_talk\"):\\n        if common_intents(V, s, k, q[\"ask\"], False):\\n            return\\n    if k in (\"wrong_person\", \"third_party\"):      # not the customer after all: someone else is on the line\\n        s[\"stage\"] = \"tp\"\\n        s[\"tp_tries\"] = 0\\n        say(V, L(\"tp_ask\"))\\n        return talk(V, \"tp\", s)\\n    kind = q.get(\"kind\")\\n    ans = normalize_answer(q, t)                           # 1. the latest turn on its own\\n    if kind == \"upper\":\\n        nf0 = norm_fallback(q, V.get(\"_norm\", \"\"))\\n        if nf0 and re.fullmatch(r\"[A-Z0-9]{3,}\", nf0) and (not q.get(\"length\") or len(nf0) == int(q[\"length\"])):\\n            ans = nf0\\n    if kind in (\"text\", \"email\"):\\n        nf0 = norm_fallback(q, V.get(\"_norm\", \"\"))         # words: the extractor\\'s clean value beats the raw sentence\\n        if nf0:\\n            ans = nf0\\n    if ans in (\"\", \"partial\"):\\n        nf = norm_fallback(q, V.get(\"_norm\", \"\"))          # 2. the extractor\\'s normalised value\\n        if nf:\\n            ans = nf\\n    if ans in (\"\", \"partial\") and s.get(\"partial\") and kind in (\"digits\", \"date\", \"year\"):\\n        both = normalize_answer(q, (s[\"partial\"] + \" \" + t).strip())   # 3. the earlier fragment + this turn\\n        if both and both != \"partial\":\\n            ans = both\\n    looks_partial = t and not re.search(r\"(19|20)\\\\d\\\\d|\\\\b(nineteen|two thousand)\\\\b\", t.lower()) and kind in (\"date\", \"year\")\\n    if (ans == \"partial\" or (not ans and looks_partial)) and len((s.get(\"partial\", \"\") + \" \" + t).split()) < 14 and not s.get(\"partial_used\"):\\n        s[\"partial\"] = (s.get(\"partial\", \"\") + \" \" + t).strip()\\n        if ans != \"partial\":\\n            s[\"partial_used\"] = True       # one \\'go on\\' for a date/year with the year still to come\\n        say(V, L(\"id_continue\"))\\n        return talk(V, \"id\", s)\\n    s[\"partial\"] = \"\"\\n    s[\"partial_used\"] = False\\n    if ans == \"partial\":\\n        ans = \"\"\\n    if not ans:\\n        s[\"repeats\"] = s.get(\"repeats\", 0) + 1\\n        if s[\"repeats\"] >= 4:\\n            return close(V, s, \"id_failed\", L(\"id_failed\"))\\n        say(V, L(\"id_repeat\"), q[\"ask\"] if s[\"repeats\"] < 2 else (L(\"id_format_hint\") or q[\"ask\"]))\\n        return talk(V, \"id\", s)\\n    s[\"repeats\"] = 0\\n    s[\"last_answer\"] = ans\\n    return call(V, s, \"api_verify\", q_field=q[\"field\"], q_answer=format_answer(q, ans))\\n\\n\\ndef format_answer(q, ans):\\n    \"\"\"A date in the format the verify tool wants (identity.questions[].format, default YYYY-MM-DD).\"\"\"\\n    fmt = q.get(\"format\")\\n    if q.get(\"kind\") == \"date\" and fmt and re.fullmatch(r\"\\\\d{4}-\\\\d\\\\d-\\\\d\\\\d\", ans):\\n        try:\\n            return datetime.date.fromisoformat(ans).strftime(fmt)\\n        except Exception:\\n            return ans\\n    return ans\\n\\n\\ndef norm_fallback(q, norm):\\n    \"\"\"The extractor\\'s own normalisation, used only when our parser found nothing.\"\"\"\\n    norm = str(norm or \"\").strip()\\n    if not norm:\\n        return \"\"\\n    kind = q.get(\"kind\", \"text\")\\n    if kind == \"date\":\\n        return norm if re.fullmatch(r\"(19|20)\\\\d\\\\d-\\\\d\\\\d-\\\\d\\\\d\", norm) else \"\"\\n    if kind == \"digits\":\\n        d = re.sub(r\"\\\\D\", \"\", norm)\\n        n = int(q.get(\"length\") or 0)\\n        return d if d and (not n or len(d) == n) else \"\"\\n    if kind == \"year\":\\n        return norm if re.fullmatch(r\"(19|20)\\\\d\\\\d\", norm) else \"\"\\n    if kind == \"upper\":\\n        return re.sub(r\"[^A-Za-z0-9]\", \"\", norm).upper()\\n    if kind == \"email\":\\n        return spoken_email(norm)\\n    return strip_lead_in(norm)\\n\\n\\nLEAD_IN = r\"^(?:(?:yes|yeah|sure|ok|okay|well|so|um+|uh+)[,.\\\\s]+)*(?:it\\'?s|it is|that\\'?s|that is|my [a-z\\' ]{1,40}? is|i think it\\'?s)\\\\s+\"\\n\\n\\ndef strip_lead_in(t):\\n    t = after_correction(str(t or \"\")).strip(\" .,!\")\\n    return re.sub(LEAD_IN, \"\", t, flags=re.I).strip(\" .,!\")\\n\\n\\ndef spoken_email(t):\\n    t = strip_lead_in(t).lower()\\n    t = re.sub(r\"\\\\s+(at)\\\\s+\", \"@\", t)\\n    t = re.sub(r\"\\\\s+(dot)\\\\s+\", \".\", t)\\n    t = re.sub(r\"\\\\s+(underscore)\\\\s+\", \"_\", t)\\n    t = re.sub(r\"\\\\s+(dash|hyphen)\\\\s+\", \"-\", t)\\n    return re.sub(r\"\\\\s+\", \"\", t)\\n\\n\\ndef normalize_answer(q, text):\\n    kind = q.get(\"kind\", \"text\")\\n    if not text:\\n        return \"\"\\n    if kind == \"date\":\\n        return parse_birth_date(text, S[\"identity\"].get(\"date_order\", \"dmy\"))\\n    if kind == \"digits\":\\n        d = digits_only(text)\\n        n = int(q.get(\"length\") or 0)\\n        if n and 0 < len(d) < n:\\n            return \"partial\"\\n        if n and len(d) > n:\\n            d = d[-n:]\\n        return d\\n    if kind == \"year\":\\n        m = re.search(r\"\\\\b(19\\\\d\\\\d|20\\\\d\\\\d)\\\\b\", text)\\n        if m:\\n            return m.group(1)\\n        if year_is_prefix(text):\\n            return \"partial\"           # \"nineteen...\" with the rest still to come\\n        n = words_to_number(text)\\n        if n and 1900 <= n <= 2100:\\n            return str(int(n))\\n        if not re.search(r\"nineteen|twenty|two thousand|\\\\b\\\\d{2}\\\\b\", text.lower()):\\n            return \"\"\\n        b = parse_birth_date(\"1 january \" + text)\\n        return b[:4] if b else \"\"\\n    if kind == \"upper\":\\n        code = spoken_code(after_correction(text))\\n        n = int(q.get(\"length\") or 0)\\n        if n and 0 < len(code) < n:\\n            return \"partial\"\\n        return code\\n    if kind == \"email\":\\n        return spoken_email(text)\\n    return strip_lead_in(text)\\n\\n\\ndef after_verify(V, s):\\n    node = \"api_verify\"\\n    if s.get(\"qi\", 0) + 1 >= len(S[\"identity\"][\"questions\"]) and read_products(V):\\n        return after_account(V, s)          # the workflow went straight on to the account lookup\\n    qs = S[\"identity\"][\"questions\"]\\n    R = S[\"identity\"].get(\"response\", dict())\\n    ok = resp(V, node, R.get(\"ok\", \"ok\"))\\n    verified = resp(V, node, R.get(\"verified\", \"verified\"))\\n    allv = resp(V, node, R.get(\"all_verified\", \"all_verified\"))\\n    left = resp(V, node, R.get(\"left\", \"wrong_answers_left\"))\\n    hint = resp(V, node, R.get(\"hint\", \"hint\"))\\n    V[\"api_verify_response.data.hint\"] = \"\"\\n    q = qs[s[\"qi\"]]\\n    if http_failed(V, node):                       # HTTP error / timeout: nothing was checked, ask the bank again once\\n        s[\"verify_http\"] = s.get(\"verify_http\", 0) + 1\\n        if s[\"verify_http\"] <= 1:\\n            return call(V, s, \"api_verify\")\\n        return close(V, s, \"service_error\", L(\"system_error\") or \"I\\'m sorry, our system is not responding right now. Please call us back later.\")\\n    s[\"verify_http\"] = 0\\n    vstr = str(verified).strip().lower()\\n    locked_words = (\"locked\", \"blocked\", \"exhausted\", \"too_many\", \"too many\", \"ended\")\\n    if any(w in vstr for w in locked_words):\\n        return close(V, s, \"id_failed\", L(\"id_failed\"))\\n    if ok not in (None, \"\") and not truthy(ok) and not passed(verified):\\n        err = str(resp(V, node, \"error\") or \"\").lower()       # rejected without counting (e.g. unreadable answer)\\n        s[\"verify_rejects\"] = s.get(\"verify_rejects\", 0) + 1\\n        if any(w in err for w in locked_words) or s[\"verify_rejects\"] >= 3:\\n            return close(V, s, \"id_failed\", L(\"id_failed\"))\\n        say(V, L(\"id_repeat\"), q[\"ask\"])\\n        return talk(V, \"id\", s)\\n    if passed(allv) or (passed(verified) and s[\"qi\"] + 1 >= len(qs)):\\n        return call(V, s, \"api_account\")\\n    if passed(verified):\\n        s[\"qi\"] += 1\\n        say(V, qs[s[\"qi\"]][\"ask\"])\\n        return talk(V, \"id\", s)\\n    if hint and str(hint) in S[\"identity\"].get(\"hints\", dict()):\\n        say(V, S[\"identity\"][\"hints\"][str(hint)])\\n        return talk(V, \"id\", s)\\n    s[\"wrong\"] = s.get(\"wrong\", 0) + 1\\n    lv = num(left)\\n    if (lv is not None and lv <= 0) or s[\"wrong\"] >= S[\"identity\"].get(\"max_wrong\", 3):\\n        return close(V, s, \"id_failed\", L(\"id_failed\"))\\n    say(V, L(\"id_wrong\"), q[\"ask\"])\\n    return talk(V, \"id\", s)\\n\\n\\ndef after_account(V, s):\\n    raws = read_products(V)\\n    if not raws:\\n        n = s.get(\"acct_tries\", 0) + 1\\n        s[\"acct_tries\"] = n\\n        if n < 2:\\n            return call(V, s, \"api_account\")\\n        return close(V, s, \"service_error\", L(\"no_info\"))\\n    prods = [product_facts(V, r) for r in raws]\\n    s[\"products\"] = prods\\n    s[\"ci\"] = -1\\n    s[\"stage\"] = \"nego\"\\n    lines = [L(\"disclose_intro\")]\\n    for p in prods:\\n        lines.append(L(\"product_line\", name=p[\"name\"], amount=money(p[\"full\"]), days=p[\"days_late\"]))\\n    if len(prods) > 1:\\n        lines.append(L(\"ask_today_multi\"))\\n    else:\\n        focus(prods[0])\\n        lines.append(L(\"ask_today\", name=prods[0][\"name\"], amount=money(prods[0][\"full\"]), date=spoken(prods[0][\"deadline\"])))\\n    s[\"phase\"] = \"today\"\\n    say(V, *lines)\\n    return talk(V, \"nego\", s)\\n\\n\\ndef focus(p):\\n    \"\"\"Make the product\\'s fields available to every line until the next step.\"\"\"\\n    if p:\\n        cur_amt = p[\"offer\"][0] if p.get(\"offer\") and p[\"offer\"][0] else p[\"full\"]\\n        CTX.update(name=p[\"name\"], amount=money(cur_amt), days=p[\"days_late\"], deadline=spoken(p[\"deadline\"]),\\n                   floor=money(p[\"floor\"]), full=money(p[\"full\"]))\\n\\n\\ndef cur(s):\\n    ci = s.get(\"ci\", -1)\\n    if 0 <= ci < len(s[\"products\"]):\\n        return s[\"products\"][ci]\\n    return None\\n\\n\\ndef next_open(s):\\n    for i, p in enumerate(s[\"products\"]):\\n        if p[\"status\"] == \"open\":\\n            return i\\n    return None\\n\\n\\ndef ladder_of(p):\\n    return (p.get(\"ladder\") if p else None) or S[\"ladder\"]\\n\\n\\ndef make_offer(V, s, p, step_idx, pre=\"\"):\\n    \"\"\"Persuasion attempt number step_idx (1-based).\"\"\"\\n    focus(p)\\n    today = today_of(V)\\n    ladder = ladder_of(p)\\n    st_ = ladder[min(step_idx, len(ladder)) - 1]\\n    amt = p[\"full\"]\\n    if st_.get(\"amount\") == \"floor\" or (st_.get(\"amount\") == \"full_or_floor\" and p[\"too_much\"]):\\n        amt = p[\"floor\"]\\n    elif str(st_.get(\"amount\", \"\")).startswith(\"pct:\"):\\n        amt = max(p[\"floor\"], round(p[\"full\"] * float(st_[\"amount\"][4:]) / 100.0, 2))\\n    d = ladder_date(today, st_.get(\"date\", \"deadline\"), p)\\n    dl = datetime.date.fromisoformat(p[\"deadline\"])\\n    if not is_business_day(d):\\n        d = next_business_day(d)\\n    if d > dl:\\n        d = dl\\n    offer = [round(amt, 2), iso(d)]\\n    if offer in p[\"refused_offers\"]:\\n        if step_idx < p[\"attempts\"]:\\n            return make_offer(V, s, p, step_idx + 1, pre)\\n        p[\"used\"] = step_idx                 # rule: never repeat an offer the customer already refused\\n        p[\"status\"] = \"refused\"\\n        p[\"offer\"] = None\\n        return advance(V, s, pre)\\n    p[\"used\"] = step_idx\\n    p[\"offer\"] = offer\\n    floor_first = amt == p[\"floor\"] and amt < p[\"full\"] and not p.get(\"floor_note_said\")\\n    if floor_first:\\n        p[\"floor_note_said\"] = True\\n        p[\"floor_offered\"] = True\\n    line = L(\"offer_floor_date\" if floor_first else \"offer\", name=p[\"name\"], amount=pay(p, amt), date=spoken(d))\\n    say(V, pre, line)\\n    return talk(V, \"nego\", s)\\n\\n\\ndef refusal(V, s, p, pre=\"\"):\\n    \"\"\"A flat refusal / non-answer on product p: consume one persuasion attempt or give up.\"\"\"\\n    if p.get(\"offer\"):\\n        p[\"refused_offers\"].append(p[\"offer\"])\\n    if s.get(\"hardship_offered\"):            # no persuasion after a hardship disclosure\\n        p[\"status\"] = \"hardship\"\\n        p[\"offer\"] = None\\n        return advance(V, s, pre)\\n    if p[\"used\"] < p[\"attempts\"]:\\n        return make_offer(V, s, p, p[\"used\"] + 1, pre)\\n    p[\"status\"] = \"refused\"\\n    p[\"offer\"] = None\\n    return advance(V, s, pre)\\n\\n\\ndef advance(V, s, pre=\"\"):\\n    \"\"\"Move to the next open product, or to the read-back, or finish.\"\"\"\\n    i = next_open(s)\\n    if i is not None:\\n        s[\"ci\"] = i\\n        p = s[\"products\"][i]\\n        intro = L(\"next_product\", name=p[\"name\"], amount=money(p[\"full\"])) if len(s[\"products\"]) > 1 else \"\"\\n        return make_offer(V, s, p, 1, (pre + \" \" + intro).strip())\\n    agreed = [p for p in s[\"products\"] if p[\"status\"] == \"agreed\"]\\n    if agreed:\\n        return readback(V, s, pre)\\n    return finish(V, s, pre)\\n\\n\\ndef readback_parts(s):\\n    parts = []\\n    for p in [p for p in s[\"products\"] if p[\"status\"] == \"agreed\"]:\\n        focus(p)\\n        extra = L(\"clamped_note\", date=spoken(p[\"agreed\"][1]), name=p[\"name\"]) if p.get(\"clamped\") else \"\"\\n        parts.append((L(\"readback_item\", name=p[\"name\"], amount=money(p[\"agreed\"][0]), date=spoken(p[\"agreed\"][1])) + \" \" + extra).strip())\\n    return parts\\n\\n\\ndef readback(V, s, pre=\"\"):\\n    parts = readback_parts(s)\\n    s[\"stage\"] = \"confirm\"\\n    s[\"confirm_unclear\"] = 0\\n    say(V, pre, L(\"readback_intro\"), \" \".join(parts), L(\"confirm_q\"))\\n    return talk(V, \"confirm\", s)\\n\\n\\ndef agree(p, amount, date, clamped=False):\\n    p[\"agreed\"] = [round(float(amount), 2), date]\\n    p[\"status\"] = \"agreed\"\\n    p[\"offer\"] = None\\n    p[\"clamped\"] = clamped\\n\\n\\ndef apply_proposal(V, s, p, dtxt, a, scope_all=False):\\n    \"\"\"Customer proposed a date and/or an amount for p. Returns (handled, pre_line).\"\"\"\\n    focus(p)\\n    today = today_of(V)\\n    amount = None\\n    if a is not None:\\n        a = snap_amount(p, a)\\n        stt, val = check_amount(p, a)\\n        if stt == \"below_floor\":\\n            if p[\"floor_offered\"]:\\n                return \"refuse\", \"\"\\n            p[\"floor_offered\"] = True\\n            p[\"floor_note_said\"] = True\\n            p[\"too_much\"] = True\\n            d0 = p[\"offer\"][1] if p.get(\"offer\") else None\\n            if dtxt:                                           # keep the customer\\'s own date if it is allowed\\n                dd = parse_spoken_date(dtxt, today, S.get(\"date_rules\"))\\n                if dd is not None:\\n                    st2, v2 = check_date(V, p, dd)\\n                    if st2 in (\"ok\", \"not_business\"):\\n                        d0 = iso(v2)\\n            if d0 is None:\\n                d0 = iso(ladder_date(today, ladder_of(p)[0].get(\"date\", \"deadline\"), p))\\n            p[\"offer\"] = [p[\"floor\"], d0]\\n            return \"ask\", (L(\"below_floor\", amount=pay(p, p[\"floor\"]), name=p[\"name\"]) + \" \" +\\n                           L(\"offer_short_date\", date=spoken(d0))).strip()\\n        amount = val\\n    date = None\\n    if dtxt:\\n        d = parse_spoken_date(dtxt, today, S.get(\"date_rules\"))\\n        if d is None:\\n            vague = True\\n        else:\\n            vague = False\\n            stt, val = check_date(V, p, d)\\n            if stt == \"ok\":\\n                date = iso(val)\\n            elif stt == \"past\":\\n                return \"ask\", L(\"date_past\")\\n            elif stt == \"not_business\":\\n                p[\"offer\"] = [amount if amount is not None else default_amount(p), iso(val)]\\n                return \"ask\", L(\"not_business_day\", date=spoken(val))\\n            elif stt == \"after_deadline\":\\n                if scope_all and S.get(\"multi\", dict()).get(\"clamp_single_date\", True) and len(s[\"products\"]) > 1:\\n                    date = iso(val)\\n                    p[\"clamped\"] = True\\n                else:\\n                    p[\"after_deadline_offered\"] = True\\n                    p[\"offer\"] = [amount if amount is not None else default_amount(p), iso(val)]\\n                    return \"ask\", L(\"after_deadline\", date=spoken(val))\\n        if vague:\\n            if not p[\"vague_asked\"]:\\n                p[\"vague_asked\"] = True\\n                p[\"vague_pending\"] = True\\n                return \"ask\", L(\"vague_ask\")\\n            dl = datetime.date.fromisoformat(p[\"deadline\"])\\n            p[\"offer\"] = [amount if amount is not None else default_amount(p), iso(dl)]\\n            return \"ask\", L(\"propose_deadline\", date=spoken(dl), amount=pay(p, p[\"offer\"][0]))\\n    if amount is not None and date is not None:\\n        agree(p, amount, date, p.get(\"clamped\", False))\\n        return \"agreed\", \"\"\\n    if date is not None:\\n        agree(p, p[\"offer\"][0] if p.get(\"offer\") and p[\"offer\"][0] else default_amount(p), date, p.get(\"clamped\", False))\\n        return \"agreed\", \"\"\\n    if amount is not None:\\n        if p.get(\"offer\") and p[\"offer\"][1]:\\n            agree(p, amount, p[\"offer\"][1])\\n            return \"agreed\", \"\"\\n        p[\"offer\"] = [amount, None]\\n        return \"ask\", L(\"ask_date_for_amount\", amount=money(amount))\\n    return \"none\", \"\"\\n\\n\\ndef snap_amount(p, a):\\n    \"\"\"Spoken amounts lose cents (\\'six hundred thirty-seven\\' for 637.50): within 1 unit of the pending offer\\n    or of the floor/full amount, take that exact figure.\"\"\"\\n    try:\\n        a = float(a)\\n    except Exception:\\n        return a\\n    targets = [p[\"offer\"][0]] if p.get(\"offer\") and p[\"offer\"][0] else []\\n    targets += [p[\"floor\"], p[\"full\"]]\\n    for x in targets:\\n        if x and abs(a - float(x)) < 1.0:\\n            return float(x)\\n    return a\\n\\n\\ndef default_amount(p):\\n    return p[\"floor\"] if p[\"too_much\"] and p[\"floor_offered\"] else p[\"full\"]\\n\\n\\ndef special(V, s, k, p, scope=\"none\"):\\n    \"\"\"Paid / dispute / hardship / restructure / call-me-later on product p (or the call). Returns True if handled.\"\"\"\\n    focus(p)\\n    if k == \"call_later\" and ev(\"callback_requested\").get(\"outcome\"):\\n        s[\"stage\"] = \"tp\"                  # the verified customer wants a callback: book one in the callback window\\n        s[\"cb_event\"] = \"callback_requested\"\\n        s[\"tp_tries\"] = 0\\n        say(V, L(\"cb_ask\") or \"When would be a good time to call you back?\")\\n        talk(V, \"tp\", s)\\n        return True\\n    multi = len(s[\"products\"]) > 1\\n    if multi and scope == \"all\" and k in (\"already_paid\", \"dispute\"):\\n        for q in s[\"products\"]:\\n            if q[\"status\"] in (\"open\", \"agreed\"):\\n                q[\"status\"] = \"paid\" if k == \"already_paid\" else \"dispute\"\\n        advance(V, s, L(\"paid_line\") if k == \"already_paid\" else L(\"dispute_line\"))\\n        return True\\n    if k == \"already_paid\":\\n        if multi and S.get(\"multi\", dict()).get(\"continue_after_paid\", True):\\n            p[\"status\"] = \"paid\"\\n            return advance(V, s, L(\"paid_line\")) or True\\n        p[\"status\"] = \"paid\"\\n        for q in s[\"products\"]:\\n            if q[\"status\"] == \"open\":\\n                q[\"status\"] = \"paid\"\\n        finish(V, s, L(\"paid_line\"))\\n        return True\\n    if k == \"dispute\":\\n        p[\"status\"] = \"dispute\"\\n        if multi and S.get(\"multi\", dict()).get(\"continue_after_dispute\", True):\\n            advance(V, s, L(\"dispute_line\"))\\n            return True\\n        for q in s[\"products\"]:\\n            if q[\"status\"] == \"open\":\\n                q[\"status\"] = \"dispute\"\\n        finish(V, s, L(\"dispute_line\"))\\n        return True\\n    if k == \"hardship\":\\n        s[\"hardship_offered\"] = True\\n        if not ev(\"transfer_support\").get(\"queue\"):        # the brief offers no support transfer\\n            for q in s[\"products\"]:\\n                if q[\"status\"] == \"open\":\\n                    q[\"status\"] = \"hardship\"\\n            if any(q[\"status\"] == \"agreed\" for q in s[\"products\"]):\\n                readback(V, s, L(\"hardship\"))\\n            else:\\n                finish(V, s, L(\"hardship\"))\\n            return True\\n        s[\"stage\"] = \"hardship\"\\n        say(V, L(\"hardship\"))\\n        talk(V, \"hardship\", s)\\n        return True\\n    if k == \"restructure\":\\n        for q in s[\"products\"]:\\n            if q[\"status\"] == \"agreed\":\\n                q[\"status\"] = \"open\"\\n        transfer(V, s, \"restructuring\", L(\"restructure_line\"))\\n        return True\\n    return False\\n\\n\\ndef product_target(s, scope, text=\"\"):\\n    \"\"\"Index of the product a statement names (\\'type:<product type>\\'), or None. Several products of the same\\n    type are told apart by words or digits of their spoken names that the customer said.\"\"\"\\n    if not scope.startswith(\"type:\"):\\n        return None\\n    cands = [i for i, p in enumerate(s[\"products\"]) if p[\"type\"] == scope[5:] and p[\"status\"] in (\"open\", \"agreed\")]\\n    if len(cands) > 1 and text:\\n        low = text.lower()\\n        digits = digits_only(text)\\n        toks = dict()\\n        for i in cands:\\n            toks[i] = set(re.findall(r\"[a-z]+|\\\\d+\", s[\"products\"][i][\"name\"].lower()))\\n        for i in cands:\\n            mine = toks[i] - set().union(*[toks[j] for j in cands if j != i])\\n            if any((x.isdigit() and x in digits) or (not x.isdigit() and len(x) > 2 and re.search(r\"\\\\b\" + x + r\"\\\\b\", low)) for x in mine):\\n                return i\\n    return cands[0] if cands else None\\n\\n\\ndef stage_nego(V, s, k, t, dtxt, a, scope):\\n    prods = s[\"products\"]\\n    multi = len(prods) > 1\\n    pv = cur(s) if s.get(\"phase\") != \"today\" else None\\n    if k in (\"unclear\", \"none\") and not dtxt and a is None and not (pv is not None and pv.get(\"vague_pending\")):\\n        if s.get(\"unclear_n\", 0) < S.get(\"max_unclear\", 3):\\n            s[\"unclear_n\"] = s.get(\"unclear_n\", 0) + 1     # small talk / a fragment is not an answer yet: re-ask the open question\\n            s[\"reask\"] = True\\n            if pv is not None and pv.get(\"offer\") and pv[\"offer\"][1]:\\n                say(V, L(\"offer_short\") or \"Would that work for you?\")\\n            else:\\n                say(V, L(\"ask_today_multi\") if multi else L(\"ask_today\"))\\n            return talk(V, \"nego\", s)\\n    else:\\n        s[\"unclear_n\"] = 0\\n    target = product_target(s, scope, t) if multi else None\\n    if target is not None and prods[target][\"status\"] == \"agreed\" and k not in (\"no\", \"refuses\"):\\n        tp = prods[target]\\n        dd = parse_spoken_date(dtxt, today_of(V), S.get(\"date_rules\")) if dtxt else None\\n        same = (dd is None or iso(dd) == tp[\"agreed\"][1]) and (a is None or abs(snap_amount(tp, a) - tp[\"agreed\"][0]) < 0.005)\\n        if same:                  # restating what was already agreed for that product: not about the current one\\n            target, dtxt, a, scope = None, \"\", None, \"none\"\\n    if target is not None:\\n        s[\"ci\"] = target\\n        scope = \"one\"\\n        if prods[target][\"status\"] == \"agreed\" and (dtxt or a is not None or k in (\"no\", \"refuses\")):\\n            prods[target][\"status\"] = \"open\"\\n            prods[target][\"offer\"] = list(prods[target][\"agreed\"])\\n    if s.get(\"phase\") == \"today\" and k in (\"robot\", \"scam\", \"question\", \"purpose\", \"human\", \"not_talk\", \"asks_amount\", \"details\") \\\\\\n            and not dtxt and a is None and target is None:\\n        ask = L(\"ask_today_multi\") if multi else L(\"ask_today\")\\n        if k == \"details\":\\n            say(V, \" \".join(L(\"product_line\", name=q[\"name\"], amount=money(q[\"full\"]), days=q[\"days_late\"]) for q in prods), ask)\\n            return talk(V, \"nego\", s)\\n        if k in (\"question\", \"purpose\"):\\n            say(V, L(\"no_info\"), ask)\\n            return talk(V, \"nego\", s)\\n        if k == \"asks_amount\":\\n            say(V, ask)\\n            return talk(V, \"nego\", s)\\n        if common_intents(V, s, k, ask, True):\\n            return\\n    if s.get(\"phase\") == \"today\":\\n        s[\"phase\"] = \"items\"\\n        if k in (\"yes\", \"agrees\", \"pay_today\") and target is None and not dtxt:\\n            by_deadline = S.get(\"rules\", dict()).get(\"first_ask\") == \"deadline\"\\n            for p in prods:\\n                agree(p, p[\"full\"], p[\"deadline\"] if by_deadline else iso(today_of(V)))\\n            return readback(V, s)\\n        if target is not None:\\n            pass\\n        elif k in (\"proposes\", \"gives_date\", \"gives_amount\", \"too_much\", \"vague\") or dtxt or a is not None:\\n            s[\"ci\"] = next_open(s)\\n            if multi and (scope == \"all\" or (dtxt and a is None and scope != \"one\")):\\n                return propose_all(V, s, dtxt, a, k)\\n        elif k == \"asks_amount\":\\n            s[\"phase\"] = \"today\"\\n            say(V, L(\"ask_today_multi\") if multi else L(\"ask_today\"))\\n            return talk(V, \"nego\", s)\\n        elif k in (\"no\", \"refuses\", \"cannot\", \"none\", \"unclear\"):\\n            s[\"ci\"] = next_open(s)\\n            p = cur(s)\\n            intro = L(\"next_product\", name=p[\"name\"], amount=money(p[\"full\"])) if multi else \"\"\\n            return make_offer(V, s, p, 1, intro)\\n        else:\\n            s[\"ci\"] = next_open(s)\\n    p = cur(s)\\n    if p is None:\\n        s[\"ci\"] = next_open(s)\\n        p = cur(s)\\n        if p is None:\\n            return advance(V, s)\\n    again = L(\"repeat_offer\", name=p[\"name\"], amount=pay(p, p[\"offer\"][0]), date=spoken(p[\"offer\"][1])) if p.get(\"offer\") and p[\"offer\"][1] else L(\"ask_today\")\\n    # after a side turn the offer was already spoken: re-prompt without naming the amount again\\n    short = (L(\"offer_short\") or \"Would that work for you?\") if p.get(\"offer\") and p[\"offer\"][1] else again\\n    vague_pending = p.pop(\"vague_pending\", False)\\n    if vague_pending and k not in special_kinds() and k not in (\"yes\", \"agrees\") and \\\\\\n            (not dtxt or parse_spoken_date(dtxt, today_of(V), S.get(\"date_rules\")) is None) and a is None:\\n        dl = datetime.date.fromisoformat(p[\"deadline\"])          # rule: no exact day after asking once -> propose the deadline\\n        p[\"offer\"] = [default_amount(p), iso(dl)]\\n        say(V, L(\"propose_deadline\", date=spoken(dl), amount=pay(p, p[\"offer\"][0])))\\n        return talk(V, \"nego\", s)\\n    if special(V, s, k, p, scope):\\n        return\\n    if common_intents(V, s, k, short, True):\\n        return\\n    if k == \"details\":                # \"which account?\", \"how much was it?\": answer from what we know, then re-prompt\\n        focus(p)\\n        line = L(\"product_line\", name=p[\"name\"], amount=money(p[\"full\"]), days=p[\"days_late\"])\\n        say(V, line, short if p.get(\"offer\") and p[\"offer\"][1] else L(\"ask_today\"))\\n        return talk(V, \"nego\", s)\\n    if k == \"asks_amount\":            # \"you tell me\" / \"how much?\": the agent always proposes the amount\\n        if p.get(\"offer\") and p[\"offer\"][1] and abs(p[\"offer\"][0] - p[\"floor\"]) < 0.005 and p.get(\"floor_note_said\"):\\n            if p.get(\"floor_restated\"):\\n                k = \"too_much\"            # asked again: treat as not accepting the floor\\n            else:\\n                p[\"floor_restated\"] = True\\n                say(V, short)             # the floor was just named: do not name it again\\n                return talk(V, \"nego\", s)\\n        else:\\n            say(V, again)\\n            return talk(V, \"nego\", s)\\n    if k in (\"question\", \"purpose\"):\\n        say(V, L(\"no_info\"), short)\\n        return talk(V, \"nego\", s)\\n    if multi and scope == \"all\" and (dtxt or a is not None or k in (\"yes\", \"agrees\")):\\n        return propose_all(V, s, dtxt, a, k)\\n    if k == \"too_much\" and a is not None:     # \"too much, I could manage three hundred\": the amount wins over the label\\n        p[\"too_much\"] = True\\n        res, pre = apply_proposal(V, s, p, dtxt, a)\\n        if res == \"agreed\":\\n            return advance(V, s)\\n        if res == \"ask\":\\n            say(V, pre)\\n            return talk(V, \"nego\", s)\\n        return refusal(V, s, p, L(\"below_floor_again\", amount=pay(p, p[\"floor\"])))\\n    if k == \"too_much\":\\n        if p[\"floor_offered\"]:\\n            return refusal(V, s, p)\\n        p[\"too_much\"] = True\\n        if dtxt:                                  # \"too much, but I could pay something on Friday\"\\n            p[\"floor_offered\"] = True\\n            p[\"floor_note_said\"] = True\\n            p[\"offer\"] = [p[\"floor\"], None]\\n            res, pre = apply_proposal(V, s, p, dtxt, None)\\n            if res == \"agreed\":\\n                p[\"agreed\"][0] = p[\"floor\"]\\n                return advance(V, s, L(\"offer_floor\", amount=pay(p, p[\"floor\"])))\\n            say(V, L(\"offer_floor\", amount=pay(p, p[\"floor\"])), pre)\\n            return talk(V, \"nego\", s)\\n        if p[\"used\"] == 0:\\n            return make_offer(V, s, p, 1)          # attempt 1 = the floor on the attempt-1 date, said once with its note\\n        d = p[\"offer\"][1] if p.get(\"offer\") and p[\"offer\"][1] else iso(ladder_date(today_of(V), ladder_of(p)[0].get(\"date\", \"deadline\"), p))\\n        p[\"offer\"] = [p[\"floor\"], d]\\n        p[\"floor_offered\"] = True\\n        p[\"floor_note_said\"] = True\\n        say(V, L(\"offer_floor_date\", amount=pay(p, p[\"floor\"]), date=spoken(d)))\\n        return talk(V, \"nego\", s)\\n    if k in (\"yes\", \"agrees\", \"pay_today\") and s.pop(\"all_pending\", False) and not dtxt and a is None:\\n        for q in prods:\\n            if q[\"status\"] == \"open\" and q.get(\"offer\") and q[\"offer\"][1]:\\n                agree(q, q[\"offer\"][0], q[\"offer\"][1])\\n        return advance(V, s)\\n    if k in (\"yes\", \"agrees\", \"pay_today\") and p.get(\"offer\") and p[\"offer\"][1] and not dtxt and \\\\\\n            (a is None or snap_amount(p, a) <= p[\"offer\"][0] + 0.005):\\n        agree(p, p[\"offer\"][0], p[\"offer\"][1])          # \"yes, I can pay six hundred and thirty...\" = yes to the offer\\n        return advance(V, s)\\n    if dtxt or a is not None or k in (\"proposes\", \"gives_date\", \"gives_amount\", \"vague\"):\\n        res, pre = apply_proposal(V, s, p, dtxt if dtxt else (\"__vague__\" if k == \"vague\" else \"\"), a)\\n        if res == \"agreed\":\\n            return advance(V, s)\\n        if res == \"ask\":\\n            say(V, pre)\\n            return talk(V, \"nego\", s)\\n        if res == \"refuse\":\\n            return refusal(V, s, p, L(\"below_floor_again\", amount=pay(p, p[\"floor\"])))\\n    if k in (\"yes\", \"agrees\", \"pay_today\"):\\n        if p.get(\"offer\") and p[\"offer\"][1]:\\n            agree(p, p[\"offer\"][0], p[\"offer\"][1])\\n            return advance(V, s)\\n        if p.get(\"offer\") and not p[\"offer\"][1]:\\n            agree(p, p[\"offer\"][0], iso(today_of(V)))\\n            return advance(V, s)\\n        agree(p, default_amount(p), iso(today_of(V)))\\n        return advance(V, s)\\n    if k in (\"no\", \"refuses\", \"cannot\", \"none\", \"unclear\"):\\n        if p.get(\"after_deadline_offered\") and S.get(\"rules\", dict()).get(\"refuse_deadline_is_refusal\", True):\\n            p[\"after_deadline_offered\"] = False\\n        return refusal(V, s, p)\\n    say(V, short)                     # nothing new in the turn: re-prompt without restating the amount\\n    return talk(V, \"nego\", s)\\n\\n\\ndef propose_all(V, s, dtxt, a, k):\\n    \"\"\"One date (and maybe amount) for every open product.\"\"\"\\n    pre_lines = []\\n    for p in s[\"products\"]:\\n        if p[\"status\"] != \"open\":\\n            continue\\n        if k in (\"yes\", \"agrees\") and not dtxt and a is None and p.get(\"offer\"):\\n            agree(p, p[\"offer\"][0], p[\"offer\"][1])\\n            continue\\n        res, pre = apply_proposal(V, s, p, dtxt, a if len(s[\"products\"]) == 1 else None, scope_all=True)\\n        if res != \"agreed\":\\n            s[\"ci\"] = s[\"products\"].index(p)\\n            if p.get(\"offer\") and p[\"offer\"][1]:          # e.g. a weekend date: offer the adjusted day for every open product\\n                for q in s[\"products\"]:\\n                    if q is not p and q[\"status\"] == \"open\" and not q.get(\"offer\"):\\n                        dq = min(datetime.date.fromisoformat(p[\"offer\"][1]), datetime.date.fromisoformat(q[\"deadline\"]))\\n                        q[\"offer\"] = [default_amount(q), iso(dq)]\\n                s[\"all_pending\"] = True\\n            say(V, pre)\\n            return talk(V, \"nego\", s)\\n    return advance(V, s)\\n\\n\\ndef stage_hardship(V, s, k, t, dtxt, a):\\n    p = cur(s) or (s[\"products\"][0] if s[\"products\"] else None)\\n    if k in (\"restructure\",) and p is not None:\\n        return special(V, s, k, p) and None\\n    if k in (\"human\",):\\n        k = \"yes\"\\n    if k in (\"unclear\", \"none\", \"question\") and not dtxt and a is None and not s.get(\"hardship_reasked\"):\\n        s[\"hardship_reasked\"] = True\\n        say(V, L(\"no_info\") if k == \"question\" else \"\", L(\"hardship_offer_again\") or L(\"go_on\") or \"Sorry, I did not catch that.\")\\n        return talk(V, \"hardship\", s)\\n    if k in (\"yes\", \"agrees\"):\\n        return transfer(V, s, \"support\", L(\"transfer\"))\\n    if (dtxt or a is not None) and p is not None:\\n        s[\"stage\"] = \"nego\"\\n        res, pre = apply_proposal(V, s, p, dtxt, a)\\n        if res == \"agreed\":\\n            return advance(V, s)\\n        say(V, pre)\\n        return talk(V, \"nego\", s)\\n    for q in s[\"products\"]:\\n        if q[\"status\"] in (\"open\",):\\n            q[\"status\"] = \"hardship\"\\n    if any(q[\"status\"] == \"agreed\" for q in s[\"products\"]):\\n        return readback(V, s, L(\"hardship_declined\"))        # promises agreed before the hardship stay\\n    return finish(V, s, L(\"hardship_declined\"))\\n\\n\\ndef stage_confirm(V, s, k, t, dtxt, a, scope):\\n    agreed = [p for p in s[\"products\"] if p[\"status\"] == \"agreed\"]\\n    ti = product_target(s, scope, t)\\n    named_change = False\\n    if ti is not None and s[\"products\"][ti] in agreed and (dtxt or a is not None):\\n        kp0 = s[\"products\"][ti]\\n        dd = parse_spoken_date(dtxt, today_of(V), S.get(\"date_rules\")) if dtxt else None\\n        named_change = (dd is not None and iso(dd) != kp0[\"agreed\"][1]) or (a is not None and abs(snap_amount(kp0, a) - kp0[\"agreed\"][0]) > 0.005)\\n    if ti is not None and len(agreed) > 1 and named_change and k not in special_kinds():\\n        kp = s[\"products\"][ti]                    # \"make the card Monday\": re-check that product only, keep the others\\n        kp[\"status\"] = \"open\"\\n        kp[\"offer\"] = list(kp[\"agreed\"])\\n        res, pre = apply_proposal(V, s, kp, dtxt, a)\\n        if res == \"agreed\":\\n            return readback(V, s)\\n        s[\"stage\"] = \"nego\"\\n        s[\"ci\"] = ti\\n        say(V, pre or L(\"offer_short\") or \"Would that work for you?\")\\n        return talk(V, \"nego\", s)\\n    if ti is not None and len(agreed) > 1 and s[\"products\"][ti] in agreed and k not in special_kinds():\\n        # \"I only confirm the credit card\": keep that one, the others go back to negotiation as refused offers\\n        kp = s[\"products\"][ti]\\n        for p in agreed:\\n            if p is not kp:\\n                p[\"status\"] = \"open\"\\n                p[\"refused_offers\"].append(list(p[\"agreed\"]))\\n                p[\"agreed\"] = None\\n        if dtxt or a is not None:\\n            kp[\"status\"] = \"open\"\\n            kp[\"offer\"] = list(kp[\"agreed\"])\\n            res, pre = apply_proposal(V, s, kp, dtxt, a)\\n            if res != \"agreed\":\\n                s[\"stage\"] = \"nego\"\\n                s[\"ci\"] = ti\\n                say(V, pre)\\n                return talk(V, \"nego\", s)\\n        s[\"stage\"] = \"nego\"\\n        s[\"ci\"] = next_open(s)\\n        if cur(s) is None:\\n            return readback(V, s)\\n        return refusal(V, s, cur(s), L(\"next_product\", name=cur(s)[\"name\"], amount=money(cur(s)[\"full\"])))\\n    changed = False\\n    if (dtxt or a is not None) and len(agreed) == 1:     # \"yes, but make it Monday\": re-check the new value first\\n        p0 = agreed[0]\\n        dd = parse_spoken_date(dtxt, today_of(V), S.get(\"date_rules\")) if dtxt else None\\n        changed = (dd is not None and iso(dd) != p0[\"agreed\"][1]) or (a is not None and abs(snap_amount(p0, a) - p0[\"agreed\"][0]) > 0.005)\\n    if k in (\"yes\", \"agrees\", \"confirm\") and not changed:\\n        s[\"rec_queue\"] = [p[\"id\"] for p in agreed]\\n        return record_next(V, s)\\n    if k == \"too_much\" and agreed:\\n        p0 = agreed[0]\\n        for p in agreed:\\n            p[\"status\"] = \"open\"\\n            p[\"offer\"] = list(p[\"agreed\"])\\n        s[\"stage\"] = \"nego\"\\n        s[\"ci\"] = s[\"products\"].index(p0)\\n        return stage_nego(V, s, \"too_much\", t, dtxt, a, \"none\")\\n    if dtxt or a is not None:\\n        target = agreed[0] if len(agreed) == 1 else None\\n        if target is None:\\n            for p in agreed:\\n                p[\"status\"] = \"open\"\\n            return propose_all(V, s, dtxt, a, \"proposes\")\\n        target[\"status\"] = \"open\"\\n        target[\"offer\"] = [target[\"agreed\"][0], target[\"agreed\"][1]]\\n        res, pre = apply_proposal(V, s, target, dtxt, a)\\n        if res == \"agreed\":\\n            return readback(V, s)\\n        s[\"stage\"] = \"nego\"\\n        s[\"ci\"] = s[\"products\"].index(target)\\n        say(V, pre)\\n        return talk(V, \"nego\", s)\\n    if special(V, s, k, agreed[0] if agreed else s[\"products\"][0]):\\n        return\\n    if common_intents(V, s, k, L(\"confirm_q\"), True):\\n        return\\n    if k in (\"unclear\", \"none\", \"question\") and not dtxt and a is None:\\n        n = s.get(\"confirm_unclear\", 0) + 1         # no answer yet (small talk, a fragment): ask again, more plainly\\n        s[\"confirm_unclear\"] = n\\n        if n <= 4:\\n            s[\"reask\"] = True\\n            if k == \"question\":                     # \"what was the date again?\": read it back once more\\n                say(V, \" \".join(readback_parts(s)), L(\"confirm_q\"))\\n            else:\\n                say(V, L(\"confirm_q\") if n == 1 else (L(\"confirm_again\") or \"Sorry, I did not catch that. Do you confirm, yes or no?\"))\\n            return talk(V, \"confirm\", s)\\n        k = \"no\"\\n    if k in (\"no\", \"refuses\"):\\n        for p in agreed:\\n            p[\"status\"] = \"open\"\\n            p[\"refused_offers\"].append(list(p[\"agreed\"]))\\n        s[\"stage\"] = \"nego\"\\n        s[\"ci\"] = next_open(s)\\n        return refusal(V, s, cur(s))\\n    say(V, L(\"confirm_q\"))\\n    return talk(V, \"confirm\", s)\\n\\n\\ndef special_kinds():\\n    return (\"already_paid\", \"dispute\", \"hardship\", \"restructure\", \"human\", \"robot\", \"scam\", \"not_talk\", \"call_later\")\\n\\n\\ndef record_next(V, s):\\n    q = s.get(\"rec_queue\", [])\\n    if not q:\\n        rec = [p for p in s[\"products\"] if p[\"status\"] == \"recorded\"]\\n        failed = [p for p in s[\"products\"] if p[\"status\"] == \"service_error\"]\\n        lines = []\\n        if rec:\\n            lines.append(L(\"recorded\"))\\n            lines.append(L(\"sms_line\"))\\n        if failed:\\n            lines.append(L(\"record_failed\"))\\n        if rec and S.get(\"after_promise\", dict()).get(\"ask_anything_else\", True):\\n            s[\"stage\"] = \"after\"                    # give the customer a turn (change requests, transfers after a promise)\\n            say(V, \" \".join(lines), L(\"anything_else\") or \"Is there anything else I can help you with?\")\\n            return talk(V, \"after\", s)\\n        return finish(V, s, \" \".join(lines))\\n    pid = q[0]\\n    p = [x for x in s[\"products\"] if x[\"id\"] == pid][0]\\n    s[\"rec_try\"] = s.get(\"rec_try\", 0)\\n    return call(V, s, \"api_promise\", p_product=p[\"id\"], p_amount=promise_amount(p), p_date=p[\"agreed\"][1])\\n\\n\\ndef promise_amount(p):\\n    scale = float(S[\"products\"].get(\"amount_scale\") or 1)\\n    a = round(p[\"agreed\"][0] * scale, 2)\\n    return int(round(a)) if scale != 1 else a\\n\\n\\ndef after_promise(V, s):\\n    q = s.get(\"rec_queue\", [])\\n    pid = q[0]\\n    p = [x for x in s[\"products\"] if x[\"id\"] == pid][0]\\n    ok = succeeded(V, \"api_promise\")\\n    if ok:\\n        p[\"status\"] = \"recorded\"\\n        q.pop(0)\\n        s[\"rec_try\"] = 0\\n        return record_next(V, s)\\n    s[\"rec_try\"] = s.get(\"rec_try\", 0) + 1\\n    if s[\"rec_try\"] < 2:\\n        return call(V, s, \"api_promise\", p_product=p[\"id\"], p_amount=promise_amount(p), p_date=p[\"agreed\"][1])\\n    p[\"status\"] = \"service_error\"\\n    q.pop(0)\\n    s[\"rec_try\"] = 0\\n    return record_next(V, s)\\n\\n\\n# ----------------------------------------------------------------------------------------------- entry\\ndef run(V):\\n    s = st(V)\\n    aw = s.get(\"await\", \"\")\\n    if not s:   # the initial talk_open node already spoke the opening and the first identity ask\\n        s = dict(stage=\"open\", asks=1, questions=0, not_talk=0)\\n    if aw == \"api_verify\":\\n        return after_verify(V, s)\\n    if aw == \"api_account\":\\n        return after_account(V, s)\\n    if aw == \"api_promise\":\\n        return after_promise(V, s)\\n    if aw in (\"api_note\", \"api_callback\", \"api_transfer\"):\\n        ok = succeeded(V, aw)\\n        if not ok and not s.get(\"retried_\" + aw):\\n            s[\"retried_\" + aw] = True                 # HTTP 500 / failure: try once more with the same values\\n            return call(V, s, aw)\\n        s.pop(\"retried_\" + aw, None)\\n        if aw == \"api_note\":\\n            return finish(V, s)\\n        if aw == \"api_callback\":\\n            if ok:\\n                return close(V, s, s.pop(\"cb_event\", \"callback\"), s.pop(\"cb_booked\", \"\"))\\n            return no_callback(V, s, L(\"callback_failed\") or \"I\\'m sorry, I could not book the callback. Please call us back.\")\\n        line = s.get(\"say_after_transfer\", \"\") if ok else (L(\"transfer_failed\") or \"I\\'m sorry, I could not connect you right now. Please call us back.\")\\n        return close(V, s, \"transfer_\" + s.get(\"transferred\", \"human\"), line)\\n    if aw in (\"api_close\", \"api_close_nr\"):\\n        go(V, \"end\")\\n        return\\n    stage = s.get(\"stage\", \"open\")\\n    k, t, dtxt, a, scope = take_input(V, stage)\\n    if s.pop(\"human_pending\", False) and k in (\"no\", \"refuses\", \"not_talk\", \"human\", \"unclear\", \"none\", \"asks_why\"):\\n        k = \"human\"                                    # still wants a person after being asked once: transfer\\n    if V.get(\"_cut\") != \"yes\" and t and k in (\"too_much\", \"no\", \"cannot\", \"unclear\", \"none\") and not dtxt and a is None and \\\\\\n            not re.search(r\"[.?!]\\\\s*$\", t) and re.search(r\"\\\\b(to|like|want|mean|i|the|a|an|on|and|but|because|would|can|pay|just|so|my)\\\\s*$\", t.lower()):\\n        V[\"_cut\"] = \"yes\"                              # text backup: the message ends on an unfinished phrase\\n    if V.get(\"_cut\") == \"yes\" and stage in (\"open\", \"tp\", \"id\", \"nego\", \"confirm\", \"hardship\") and not dtxt and a is None \\\\\\n            and k in (\"unclear\", \"none\", \"too_much\", \"cannot\") \\\\\\n            and s.get(\"cut_waits\", 0) < 2 and k not in (\"wrong_number\", \"deceased\", \"dispute\", \"already_paid\", \"hardship\", \"restructure\"):\\n        s[\"cut_waits\"] = s.get(\"cut_waits\", 0) + 1     # the customer stopped mid-sentence: let them finish\\n        s[\"reask\"] = True\\n        say(V, L(\"go_on\") or \"Sorry, please go on.\")\\n        return talk(V, stage, s)\\n    if V.get(\"_cut\") == \"yes\" and (dtxt or a is not None) and stage in (\"nego\", \"confirm\", \"hardship\") \\\\\\n            and k not in (\"yes\", \"agrees\", \"confirm\") and not s.get(\"cut_value_waited\"):\\n        s[\"cut_value_waited\"] = True                   # \"I can pay six hundred and...\" : let them finish the number\\n        s[\"reask\"] = True\\n        say(V, L(\"go_on\") or \"Sorry, please go on.\")\\n        return talk(V, stage, s)\\n    if V.get(\"_cut\") != \"yes\":\\n        s[\"cut_value_waited\"] = False\\n    s[\"cut_waits\"] = 0\\n    if s.get(\"same\", 0) >= (2 if stage == \"nego\" else 4) and stage in (\"nego\", \"confirm\") \\\\\\n            and k in (\"unclear\", \"none\", \"question\", \"asks_amount\", \"proposes\") and not dtxt and a is None:\\n        k, scope = \"no\", \"none\"     # the same line three times and still nothing new: stop looping, count a non-answer\\n    prev = V.get(\"say\", \"\")\\n    dispatch(V, s, stage, k, t, dtxt, a, scope)\\n    s2 = st(V)\\n    if s2:\\n        if s2.pop(\"reask\", False):\\n            pass                                   # a content-free re-ask is not an engine loop\\n        else:\\n            s2[\"same\"] = (s2.get(\"same\", 0) + 1) if V.get(\"say\", \"\") == prev and s2.get(\"stage\") in (\"nego\", \"confirm\") else 0\\n        put(V, s2)\\n\\n\\ndef stage_after(V, s, k, t):\\n    \"\"\"After a recorded promise: \\'can I change it?\\', a transfer request, or goodbye.\"\"\"\\n    if k == \"change\":\\n        return finish(V, s, L(\"promise_change\"))\\n    if k == \"restructure\":\\n        return transfer(V, s, \"restructuring\", L(\"restructure_line\"))\\n    if k == \"human\":\\n        return transfer(V, s, \"human\", L(\"transfer\"))\\n    if k == \"hardship\":\\n        if not ev(\"transfer_support\").get(\"queue\"):\\n            return finish(V, s, L(\"hardship\"))\\n        s[\"stage\"] = \"hardship_after\"\\n        say(V, L(\"hardship\"))\\n        return talk(V, \"after\", s)\\n    if k == \"question\" and not s.get(\"after_q\"):\\n        s[\"after_q\"] = True\\n        say(V, L(\"no_info\"), L(\"anything_else\") or \"Is there anything else I can help you with?\")\\n        return talk(V, \"after\", s)\\n    if s.get(\"stage\") == \"hardship_after\" and k in (\"yes\", \"agrees\"):\\n        return transfer(V, s, \"support\", L(\"transfer\"))\\n    return finish(V, s)\\n\\n\\ndef dispatch(V, s, stage, k, t, dtxt, a, scope):\\n    if stage in (\"after\", \"hardship_after\"):\\n        return stage_after(V, s, k, t)\\n    if stage == \"open\":\\n        return stage_open(V, s, k, t)\\n    if stage == \"tp\":\\n        return stage_tp(V, s, k, t, dtxt)\\n    if stage == \"id\":\\n        return stage_id(V, s, k, t)\\n    if stage == \"nego\":\\n        return stage_nego(V, s, k, t, dtxt, a, scope)\\n    if stage == \"hardship\":\\n        return stage_hardship(V, s, k, t, dtxt, a)\\n    if stage == \"confirm\":\\n        return stage_confirm(V, s, k, t, dtxt, a, scope)\\n    go(V, \"end\")\\n\\n\\ndef main(V):\\n    CTX.update(names(V))\\n    try:\\n        run(V)\\n    except Exception as e:  # never let the call die: apologise and close safely\\n        V[\"engine_error\"] = (type(e).__name__ + \": \" + str(e))[:300]\\n        s = st(V)\\n        if s.get(\"stage\") == \"closing\":\\n            go(V, \"end\")\\n            return\\n        if s.get(\"products\"):\\n            try:\\n                return finish(V, s, L(\"no_info\"))\\n            except Exception:\\n                pass\\n        V[\"c_outcome\"] = S.get(\"events\", dict()).get(\"refused\", dict()).get(\"outcome\", \"\")\\n        V[\"c_reason\"] = S.get(\"events\", dict()).get(\"refused\", dict()).get(\"reason\", \"\")\\n        say(V, L(\"goodbye\"))\\n        V[\"_state\"] = json.dumps(dict(stage=\"closing\"))\\n        go(V, \"api_close\")\\n\\n'\nexec(_SRC, _G)\n_G['main'](vars)\n"
+        },
+        "timeout_ms": {
+         "type": "number",
+         "default": 20000
+        }
+       }
+      }
+     }
+    }
+   ],
+   "transitions": [
+    {
+     "target_node": "talk_tp",
+     "description": "engine routes to talk_tp",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_tp"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "talk_id",
+     "description": "engine routes to talk_id",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_id"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "talk_nego",
+     "description": "engine routes to talk_nego",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_nego"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "talk_hardship",
+     "description": "engine routes to talk_hardship",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_hardship"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "talk_confirm",
+     "description": "engine routes to talk_confirm",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_confirm"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "talk_after",
+     "description": "engine routes to talk_after",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_after"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "talk_open_again",
+     "description": "engine routes to talk_open_again",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "talk_open_again"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_verify",
+     "description": "engine routes to api_verify",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_verify"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_account",
+     "description": "engine routes to api_account",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_account"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_promise",
+     "description": "engine routes to api_promise",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_promise"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_note",
+     "description": "engine routes to api_note",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_note"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_callback",
+     "description": "engine routes to api_callback",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_callback"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_transfer",
+     "description": "engine routes to api_transfer",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_transfer"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_close",
+     "description": "engine routes to api_close",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_close"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_close_nr",
+     "description": "engine routes to api_close_nr",
+     "condition": {
+      "logic": "or",
+      "conditions": [
+       {
+        "variable": "next",
+        "operator": "equals",
+        "operand": "api_close_nr"
+       }
+      ]
+     }
+    },
+    {
+     "target_node": "api_close",
+     "description": "fallback",
+     "condition": {
+      "operator": "always"
+     }
+    }
+   ]
+  },
+  "end": {
+   "name": "end",
+   "node_type": "end_call",
+   "on_enter": {
+    "type": "silent"
+   },
+   "disable_inactivity_monitor": true,
+   "transitions": [],
+   "terminal": {
+    "type": "function",
+    "function": {
+     "name": "call_closed",
+     "handler": "__function__:end_call",
+     "parameters": {
+      "type": "object",
+      "properties": {
+       "message_mode": {
+        "type": "string",
+        "default": "none"
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "global_nodes": {},
+ "test_variables": {
+  "customer_id": "c_test",
+  "first_name": "Daniel",
+  "last_name": "Reyes",
+  "title": "Mr",
+  "now": "2026-10-14T11:00"
+ }
+}

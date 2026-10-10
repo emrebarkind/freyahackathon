@@ -17,7 +17,7 @@ use the default shown and record it in `assumptions`.
  "confirm": {"max_asks": 2},                       // how many times the agent asks "Am I speaking with ...?" before closing as unclear
  "callback": {                                     // when someone else answers and a callback is booked
    "days": ["today", "next_business_day"],         // allowed callback days. Items: "today", "next_business_day", "tomorrow",
-                                                   // "within_business_days:N"
+                                                   // "within_business_days:N" (next N business days), "within_days:N" (next N days)
    "start": "10:00", "end": "19:00",               // allowed time window, inclusive, 24h
    "after_now": true,                              // the callback must be later than now
    "business_days_only": false,
@@ -26,8 +26,10 @@ use the default shown and record it in `assumptions`.
  "identity": {
    "questions": [                                  // in the order the brief asks them, one per verify call
      {"field": "<value the verify tool expects for this question>",
-      "kind": "date" | "digits" | "year" | "upper" | "text",   // date -> sent as YYYY-MM-DD; digits -> digits only
-      "length": 4,                                 // for digits: exact number of digits expected (omit otherwise)
+      "kind": "date" | "digits" | "year" | "upper" | "text" | "email",  // date -> a date; digits -> digits only;
+                                                   // upper -> letters+digits code (postcode, reference); text -> words (a name)
+      "length": 4,                                 // for digits/upper: exact number of characters expected (omit otherwise)
+      "format": "%Y-%m-%d",                        // date only: how the verify tool wants the date (strftime), default %Y-%m-%d
       "ask": "<the spoken question>"}
    ],
    "max_wrong": 3,                                 // wrong answers in total that end the check
@@ -36,7 +38,8 @@ use the default shown and record it in `assumptions`.
    "purpose_is_decline": true,                     // asking what the call is about instead of answering counts as declining
    "question_is_decline": false,
    "response": {"ok": "ok", "verified": "verified", "all_verified": "all_verified",
-                "left": "wrong_answers_left", "hint": "hint"}   // field names in the verify tool's response
+                "left": "wrong_answers_left", "hint": "hint",   // field names in the verify tool's response
+                "pass_values": []}                 // only if `verified` is not a boolean: the values that mean the answer matched
  },
  "products": {
    "names": {"<product type>": "<spoken name, may use {field} from the account record, e.g. credit card ending {card_last4}>"},
@@ -44,7 +47,11 @@ use the default shown and record it in `assumptions`.
    "days_field": "days_late",                      // account field with how many days late the product is
    "floor_field": {"<product type>": "<account field holding the minimum acceptable amount>"},
    "floor_pct": null,                              // only if the floor is a percentage of the amount owed instead (0 = any amount)
-   "floor_names": {"<product type>": "<what the brief calls the floor, e.g. minimum payment>"}
+   "floor_names": {"<product type>": "<what the brief calls the floor, e.g. minimum payment>"},
+   "amount_scale": 1                               // 100 only if the tool API gives amounts in cents/pence (minor units)
+   // If the account records have no product type, use the key "*" in names / floor_field / floor_names.
+   // Optional, normally read from the tool API file: "list_field" (the array of products in the get_account
+   // response), "id_field" (product id), "type_field" (product type).
  },
  "bands": [                                        // lateness bands, by the account's days_late, inclusive bounds
    {"name": "early", "min": 1, "max": 7,
@@ -52,16 +59,20 @@ use the default shown and record it in `assumptions`.
                                                    // calendar_days_after, end_of_month, end_of_next_month, last_business_day_of_month,
                                                    // end_of_week, end_of_next_week (last business day), day_of_next_month (n-th day),
                                                    // business_days_after_or_end_of_month (whichever is first)
-    "attempts": 1}                                 // persuasion attempts allowed in this band
+    "attempts": 1,                                 // persuasion attempts allowed in this band
+    "ladder": null}                                // only if this band has its own persuasion steps (same format as "ladder")
  ],
  "ladder": [                                       // persuasion attempts in order; attempt k uses ladder[k-1]
    {"amount": "full" | "floor" | "full_or_floor" | "pct:N",  // full_or_floor: the floor if the customer already said the full
                                                    // amount is too much; pct:N = N percent of the amount owed
-    "date": "last_business_day_this_week" | "last_business_day_next_week" | "deadline" | "today" | "business_days_after:N"}
+    "date": "last_business_day_this_week" | "last_business_day_next_week" | "deadline" | "today" | "tomorrow" |
+            "next_business_day" | "business_days_after:N" | "calendar_days_after:N"}
  ],
  "rules": {"refuse_deadline_is_refusal": true,
-           "deadline_adjust": "previous_business_day"},   // if a computed deadline is not a business day: previous_business_day,
+           "deadline_adjust": "previous_business_day",    // if a computed deadline is not a business day: previous_business_day,
                                                    // next_business_day, or none (only if the brief says promise dates need not be business days)
+           "first_ask": "today"},                  // the first payment question after disclosure: "today" (full amount today) or
+                                                   // "deadline" (full amount by the deadline); a plain yes agrees to that
  "after_promise": {"ask_anything_else": true},     // give the customer one more turn after a recorded promise
  "notes": {"enabled": false},                      // true if the brief requires add_note for products that end without a promise
  "multi": {"clamp_single_date": true,              // one date for all products: a product whose deadline is earlier gets its own deadline
@@ -85,16 +96,28 @@ use the default shown and record it in `assumptions`.
    "wrong_number":           {"outcome": "...", "reason": "..."},
    "deceased":               {"outcome": "...", "reason": "..."},
    "unclear":                {"outcome": "...", "reason": "..."}
+   // optional: "callback_requested": {"outcome": "...", "reason": "..."} only if the brief says what to do when the
+   // VERIFIED customer asks to be called back later (the agent then books a callback in the callback window)
  },                                                // reason "" when the outcome table lists none
+                                                   // queue "": the brief does not transfer in this situation (the call
+                                                   // closes with that event instead); note "": no add_note for this outcome
  "tool_bodies": {                                  // request body field -> engine slot, for each tool. Slots:
    "verify_identity": {"<question field param>": "q_field", "<answer param>": "q_answer"},
    "get_account": {},
    "create_promise": {"<product id param>": "p_product", "<amount param>": "p_amount", "<date param>": "p_date"},
    "add_note": {"<product id param>": "n_product", "<reason param>": "n_reason"},
-   "schedule_callback": {"<date param>": "cb_date", "<time param>": "cb_time"},
+   "schedule_callback": {"<date param>": "cb_date", "<time param>": "cb_time"},   // or {"<datetime param>": "cb_datetime"}
+                                                   // (sent as YYYY-MM-DDTHH:MM) if the tool takes one field
    "transfer_to_agent": {"<queue param>": "t_queue"},
    "close_call": {"<outcome param>": "c_outcome", "<reason param>": "c_reason"}
- },                                                // customer_id is added automatically; do not list it
+ },                                                // customer_id is added automatically; do not list it.
+                                                   // Every other REQUIRED request field must be mapped: to a slot, or to
+                                                   // "const:<value>" for a fixed value the brief or API gives
+ "responses": {},                                  // optional, normally read from the tool API: per tool, the success flag of its
+                                                   // response, e.g. {"create_promise": {"field": "status", "values": ["created"]}}
+ "intents": {},                                    // optional: how the brief defines a situation, one line each, quoting its
+                                                   // examples, for keys among hardship, dispute, already_paid, restructure, vague,
+                                                   // too_much, human. Only where the brief defines it.
  "lines": { ... },                                 // every sentence the agent speaks, see below
  "assumptions": ["..."]                            // anything you had to decide that the brief does not say
 }
@@ -148,3 +171,8 @@ Meaning of the less obvious ones:
 - promise_change: what to say if the customer wants to change a promise that is already recorded (use the brief's rule,
   e.g. "You can change it in the mobile app."; if the brief says nothing, say it cannot be changed on this call).
 - goodbye: thanks and goodbye, said at the end of every call.
+
+Optional lines (a sensible default is used when absent): callback_failed (the callback could not be booked),
+transfer_failed (the transfer did not go through), confirm_again (a second, plainer read-back question, e.g. "Sorry, I
+did not catch that. Do you confirm, yes or no?"), cb_ask (asks a verified customer when to call back, if
+callback_requested is used), system_error (the bank's system does not respond).

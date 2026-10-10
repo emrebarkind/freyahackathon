@@ -174,3 +174,119 @@ def test_postcode_and_year_identity_from_variant_c():
              dict(k="answer", t="eighty-five"), dict(k="already_paid")]
     led, tr = selftest.simulate(spec, V0, bank, turns)
     assert led["outcome"] == spec["events"]["paid"]["outcome"], tr
+
+
+# ---------------------------------------------------------------- hidden-brief shapes (audit, hidden lens)
+def _gen(spec, turns, products=None, faults=None, identity=None, now="2026-10-14T11:00"):
+    import sys as _s
+    _s.path.insert(0, str(ROOT))
+    from builder import selftest
+    ident = identity or {q["field"]: v for q, v in zip(spec["identity"]["questions"], ["1985-06-21", "7777"])}
+    prods = products or [selftest.make_product(spec, 0, list(spec["products"]["names"])[0], 3)]
+    bank = selftest.GenericBank(spec, ident, copy.deepcopy(prods), faults)
+    V0 = dict(customer_id="c", first_name="Alex", last_name="Morgan", title="Mr", now=now)
+    return selftest.simulate(spec, V0, bank, turns)
+
+
+IDS = [dict(k="confirmed"), dict(k="answer", t="21 June 1985"), dict(k="answer", t="7777")]
+
+
+def test_string_status_success_fields():
+    spec = copy.deepcopy(A)
+    spec["responses"] = {"create_promise": {"field": "status", "values": ["created"]}}
+    spec["identity"]["response"]["pass_values"] = ["pass"]
+    led, tr = _gen(spec, IDS + [dict(k="yes"), dict(k="yes")])
+    assert len(led["promises"]) == 1 and led["outcome"] == "promise", tr
+
+
+def test_no_queue_means_no_transfer_and_event_note():
+    spec = copy.deepcopy(B)
+    spec["events"]["transfer_restructuring"] = dict(outcome="no_promise", reason="plan", queue="", note="plan_requested")
+    led, tr = _gen(spec, IDS + [dict(k="restructure")])
+    assert led["transfers"] == [] and (led["outcome"], led["reason"]) == ("no_promise", "plan"), tr
+    assert led["notes"] == [("p1", "plan_requested")]
+
+
+def test_hardship_without_support_queue_closes_as_hardship():
+    spec = copy.deepcopy(A)
+    spec["events"]["transfer_support"]["queue"] = ""
+    led, tr = _gen(spec, IDS + [dict(k="hardship")])
+    assert led["transfers"] == [] and led["outcome"] == spec["events"]["hardship"]["outcome"], tr
+
+
+def test_empty_note_code_means_no_note():
+    spec = copy.deepcopy(B)
+    spec["events"]["refused"]["note"] = ""
+    led, tr = _gen(spec, IDS + [dict(k="no")] * 6)
+    assert led["notes"] == [] and led["outcome"] == "no_promise", tr
+
+
+def test_verify_rejections_are_bounded():
+    from builder import selftest
+    spec = copy.deepcopy(A)
+
+    class Rejecting(selftest.GenericBank):
+        def call(self, tool, a):
+            if tool == "verify_identity":
+                self.led["calls"].append(tool)
+                return {"ok": False, "error": "unreadable value"}
+            return super().call(tool, a)
+    bank = Rejecting(spec, {"date_of_birth": "1985-06-21", "phone_last4": "7777"}, [selftest.make_product(spec, 0, "credit_card", 3)])
+    led, tr = selftest.simulate(spec, dict(customer_id="c", first_name="A", last_name="M", title="Mr", now="2026-10-14T11:00"),
+                                bank, [dict(k="confirmed")] + [dict(k="answer", t="21 June 1985")] * 6)
+    assert led["calls"].count("verify_identity") == 3 and led["outcome"] == spec["events"]["id_failed"]["outcome"], tr
+
+
+def test_failed_callback_is_not_announced_as_booked():
+    led, tr = _gen(A, [dict(k="third_party"), dict(k="gives_time", t="tomorrow at eleven", d="tomorrow")], faults=dict(schedule_callback=2))
+    said = " ".join(t for w, t in tr if w == "agent")
+    assert led["callbacks"] == [] and "11:00" not in said.split("tomorrow at eleven")[-1] and led["reason"] == "no_callback", tr
+
+
+def test_identity_date_format_from_spec():
+    spec = copy.deepcopy(A)
+    spec["identity"]["questions"][0]["format"] = "%d/%m/%Y"
+    led, tr = _gen(spec, IDS + [dict(k="yes"), dict(k="yes")], identity={"date_of_birth": "21/06/1985", "phone_last4": "7777"})
+    assert len(led["promises"]) == 1, tr
+
+
+def test_same_type_products_told_apart_by_digits():
+    from builder import selftest
+    spec = copy.deepcopy(B)
+    p1 = selftest.make_product(spec, 0, "credit_card", 3)
+    p2 = dict(selftest.make_product(spec, 1, "credit_card", 3), card_last4="1234")
+    turns = IDS + [dict(k="proposes", d="Friday", f="credit_card", t="I can pay the card ending one two three four on Friday"),
+                   dict(k="no"), dict(k="yes")]
+    led, tr = _gen(spec, turns, products=[p1, p2])
+    assert [p[0] for p in led["promises"]] == ["p2"], tr
+
+
+def test_account_without_type_field_and_star_names():
+    spec = copy.deepcopy(A)
+    spec["products"]["names"] = {"*": "account {label}"}
+    spec["products"]["floor_field"] = {"*": "min_due"}
+    spec["products"]["floor_names"] = {"*": "minimum due"}
+    prod = {"product_id": "A-1", "label": "Platinum", "past_due": 420.0, "days_late": 3, "min_due": 50.0}
+    led, tr = _gen(spec, IDS + [dict(k="too_much"), dict(k="yes"), dict(k="yes")], products=[prod])
+    said = " ".join(t for w, t in tr if w == "agent")
+    assert "None" not in said and "account Platinum" in said and led["promises"][0][1] == 50.0, tr
+
+
+def test_confirm_waits_through_small_talk():
+    led, tr = _gen(A, IDS + [dict(k="yes")] + [dict(k="unclear", t="work has been so busy")] * 3 + [dict(k="yes")])
+    assert len(led["promises"]) == 1, tr
+
+
+def test_verified_customer_callback_when_brief_has_it():
+    spec = copy.deepcopy(A)
+    spec["events"]["callback_requested"] = dict(outcome="not_reached", reason="callback")
+    led, tr = _gen(spec, IDS + [dict(k="call_later", t="can you call me tomorrow?"), dict(k="gives_time", t="tomorrow at eleven", d="tomorrow")])
+    assert led["callbacks"] == [("2026-10-15", "11:00")] and led["reason"] == "callback", tr
+
+
+def test_json_block_takes_the_spec_not_quoted_values():
+    import sys as _s
+    _s.path.insert(0, str(ROOT))
+    from builder.claude import json_block
+    t = 'bands: x -- "quote"\n```json\n{"n": 12}\n```\nFinal:\n```json\n{"identity": {}, "events": {}, "lines": {"a": "{name}"}}\n```'
+    assert json_block(t, keys=["identity", "events", "lines"]) == {"identity": {}, "events": {}, "lines": {"a": "{name}"}}

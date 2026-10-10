@@ -138,8 +138,23 @@ KINDS = {
 }
 
 
+OVERRIDABLE = ("hardship", "dispute", "already_paid", "restructure", "vague", "too_much", "human")
+
+
+def kinds_for(stage, spec):
+    """The stage's intents; the brief's own definitions (spec.intents) replace the defaults where given."""
+    kinds = dict(KINDS[stage])
+    if stage in ("nego", "confirm") and (spec or {}).get("events", {}).get("callback_requested", {}).get("outcome"):
+        kinds = dict(list(kinds.items())[:-2] + [("call_later", "asks to be called back another time instead of deciding now")]
+                     + list(kinds.items())[-2:])
+    for k, v in ((spec or {}).get("intents") or {}).items():
+        if k in OVERRIDABLE and k in kinds and isinstance(v, str) and v.strip() and stage in ("nego", "confirm", "after"):
+            kinds[k] = v.strip().replace("{", "(").replace("}", ")")
+    return kinds
+
+
 def extraction(stage, spec):
-    kinds = KINDS[stage]
+    kinds = kinds_for(stage, spec)
     desc = ("Classify ONLY the customer's latest message. Values: " +
             "; ".join(f"{k} = {v}" for k, v in kinds.items()) + "; none = nothing new was said.")
     schema = [{"name": stage + "_kind", "type": "string", "enum_values": list(kinds) + ["none"], "description": desc, "min_confidence": 0.0},
@@ -172,8 +187,8 @@ def extraction(stage, spec):
         schema.append({"name": stage + "_amount", "type": "float", "min_confidence": 0.0,
                        "description": "An amount of money the customer offers or agrees to pay in the latest message, as a number "
                                       "(e.g. 'six hundred thirty-seven fifty' = 637.5). If they correct themselves, the corrected value. Empty if none."})
-        names = spec.get("products", {}).get("names", {}) if spec else {}
-        if names:
+        names = {t: n for t, n in (spec.get("products", {}).get("names", {}) if spec else {}).items() if t != "*"}
+        if len(names) > 1:
             spoken = "; ".join(f"{t} = the {re.sub(r'[{][^}]*[}]', '', n).replace('ending', '').strip()}" for t, n in names.items())
             schema.append({"name": stage + "_for", "type": "string", "enum_values": list(names) + ["all", "none"], "min_confidence": 0.0,
                            "description": "Which product the customer's date, amount or yes/no in the latest message is about. "
@@ -195,7 +210,7 @@ def talk_node(stage, spec):
 def api_node(node, tool, url, body, types, nxt="step", tts=None, extra_transitions=None):
     """An engine-run bank call. No pre/post hooks: every hook is an extra sandbox run (seconds under load).
     Body fields take their JSON type from the tool API file, so numbers are sent as numbers."""
-    props = {k: {"type": types.get(k, "string"), "default": v} for k, v in body.items()}
+    props = {k: {"type": types.get(k, "string"), "default": const_value(v, types.get(k, "string"))} for k, v in body.items()}
     trans = list(extra_transitions or []) + [{"target_node": nxt, "description": "always", "condition": {"operator": "always"}}]
     return {"name": node, "node_type": "api_request", "passthrough": True, "passthrough_default_transition": nxt,
             "on_enter": {"type": "tts", "text": tts} if tts else {"type": "silent"}, "disable_inactivity_monitor": True,
@@ -207,6 +222,21 @@ def api_node(node, tool, url, body, types, nxt="step", tts=None, extra_transitio
                                               "headers": {"type": "object", "properties": {"Content-Type": {"type": "string", "default": "application/json"}}},
                                               "body": {"type": "object", "properties": props}}}}}],
             "transitions": trans}
+
+
+def const_value(v, typ):
+    """'{{slot}}' stays a placeholder; a 'const:<value>' mapping becomes the literal, typed as the tool API says."""
+    if not (isinstance(v, str) and v.startswith("const:")):
+        return v
+    lit = v[6:]
+    if typ == "number":
+        try:
+            return float(lit) if "." in lit else int(lit)
+        except ValueError:
+            return lit
+    if typ == "boolean":
+        return lit.strip().lower() == "true"
+    return lit
 
 
 API_NODES = {"api_verify": "verify_identity", "api_account": "get_account", "api_promise": "create_promise",
@@ -240,10 +270,54 @@ def account_shape(openapi, spec):
     return out
 
 
-def compile_workflow(spec, openapi):
-    spec = json.loads(json.dumps(spec))
+PASS_RE = (r"^(ok|success|successful|succeeded|created|recorded|scheduled|booked|done|accepted|transferred|queued|added|"
+           r"saved|confirmed|pass|passed|verified|match|matched|correct|valid)$")
+
+
+def response_props(openapi, tool):
+    try:
+        return openapi["paths"]["/" + tool]["post"]["responses"]["200"]["content"]["application/json"]["schema"].get("properties", {}) or {}
+    except (KeyError, TypeError, AttributeError):
+        return {}
+
+
+def response_shape(openapi):
+    """Per tool, the response field that says the call succeeded, read from the tool API file:
+    a boolean ok/success flag, or a status enum and its success values; none -> HTTP status decides."""
+    out = {}
+    for tool in sorted(set(API_NODES.values())):
+        props = response_props(openapi, tool)
+        flags = [k for k, v in props.items() if v.get("type") == "boolean" and k.lower() in ("ok", "success", "succeeded", "successful")]
+        if flags:
+            out[tool] = {"field": flags[0], "values": ["true"]}
+            continue
+        out[tool] = {"field": "", "values": []}
+        for k in ("status", "result", "state", "outcome"):
+            en = (props.get(k) or {}).get("enum")
+            vals = [e for e in en or [] if re.match(PASS_RE, str(e).lower())]
+            if vals:
+                out[tool] = {"field": k, "values": vals}
+                break
+    return out
+
+
+def apply_defaults(spec, openapi):
+    """Fill what the tool API file decides and the spec left out (in place): response field names and
+    success flags, the shape of the account record, the verify pass values of a non-boolean field."""
     spec.setdefault("products", {}).update({k: v for k, v in account_shape(openapi, spec).items()
                                             if k not in spec["products"]})
+    rs = spec.setdefault("responses", {})
+    for tool, v in response_shape(openapi).items():
+        rs.setdefault(tool, v)
+    R_ = spec.setdefault("identity", {}).setdefault("response", {})
+    vf = response_props(openapi, "verify_identity").get(R_.get("verified", "verified")) or {}
+    if vf.get("enum") and not R_.get("pass_values"):
+        R_["pass_values"] = [e for e in vf["enum"] if re.match(PASS_RE, str(e).lower())]
+    return spec
+
+
+def compile_workflow(spec, openapi):
+    spec = apply_defaults(json.loads(json.dumps(spec)), openapi)
     base = openapi["servers"][0]["url"].rstrip("/")
     bodies = spec["tool_bodies"]
     nodes = {}
@@ -264,7 +338,7 @@ def compile_workflow(spec, openapi):
         mapping = dict(bodies.get(tool, {}))
         if node == "api_close_nr":      # close without a reason field (outcomes whose table lists no reason)
             mapping = {k: v for k, v in mapping.items() if v != "c_reason"}
-        body = {k: "{{" + v + "}}" for k, v in mapping.items()}
+        body = {k: (v if str(v).startswith("const:") else "{{" + v + "}}") for k, v in mapping.items()}
         if "customer_id" in schema.get("properties", {}):
             body["customer_id"] = "{{customer_id}}"
         if node in ("api_close", "api_close_nr"):

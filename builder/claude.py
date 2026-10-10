@@ -43,8 +43,31 @@ def ask_many(jobs, trace, model=MODEL, effort="high"):
     return asyncio.run(run())
 
 
-def json_block(text):
-    """Extract the JSON object from a model answer (```json fences or the outermost braces)."""
-    m = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, re.S)
-    raw = m.group(1) if m else text[text.find("{"): text.rfind("}") + 1]
-    return json.loads(raw)
+def json_block(text, keys=None):
+    """The spec object in a model answer. Each ```json fence is parsed on its own (an answer may quote small JSON
+    values before the final spec); without fences, objects are scanned with raw_decode. Prefers objects holding
+    all `keys`, then the largest."""
+    cands = []
+    for m in re.finditer(r"```(?:json)?\s*(.*?)```", text, re.S):
+        try:
+            v = json.loads(m.group(1))
+        except Exception:
+            continue
+        if isinstance(v, dict):
+            cands.append(v)
+    if not cands:
+        dec, i = json.JSONDecoder(), text.find("{")
+        while i != -1:
+            try:
+                v, end = dec.raw_decode(text, i)
+            except Exception:
+                i = text.find("{", i + 1)
+                continue
+            if isinstance(v, dict):
+                cands.append(v)
+            i = text.find("{", end)
+    if not cands:
+        raise ValueError("no JSON object in the answer")
+    if keys:
+        cands = [c for c in cands if all(k in c for k in keys)] or cands
+    return max(cands, key=lambda c: len(json.dumps(c)))

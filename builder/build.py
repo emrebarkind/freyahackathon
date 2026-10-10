@@ -50,9 +50,12 @@ def main():
         trace.note(f"spec loaded from {a.spec} (no model call)")
     else:
         from builder import extract
-        spec = extract.extract(docs, openapi, trace)
-    for k, v in comp.account_shape(openapi, spec).items():      # response field names come from the tool API file
-        spec.setdefault("products", {}).setdefault(k, v)
+        try:
+            spec = extract.extract(docs, openapi, trace)
+        except Exception as e:                  # one more full attempt before giving up
+            trace.note(f"extraction failed ({type(e).__name__}: {e}); trying once more")
+            spec = extract.extract(docs, openapi, trace)
+    comp.apply_defaults(spec, openapi)       # response field names / success flags come from the tool API file
     out_dir = ROOT / "submission"
     out_dir.mkdir(exist_ok=True)
     (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
@@ -64,6 +67,25 @@ def main():
     for name, ok, detail in results:
         trace.test("local " + name, ok, detail)
     trace.note(f"local self-test: {sum(r[1] for r in results)}/{len(results)} passed")
+    failed = [r for r in results if not r[1]]
+    if failed and not a.spec:
+        trace.step("2b. one repair round driven by the failed self-test scenarios")
+        try:
+            from builder import extract
+            fixed = comp.apply_defaults(extract.repair_behaviour(
+                spec, "\n".join(f"- {n}: {d[:1500]}" for n, _, d in failed), docs, openapi, trace), openapi)
+            r2 = selftest.run_all(fixed, openapi)
+            n_err, n_err2 = len(extract.validate(spec, openapi)), len(extract.validate(fixed, openapi))
+            trace.note(f"repaired spec: self-test {sum(r[1] for r in r2)}/{len(r2)}, validation problems {n_err2} (before {n_err})")
+            if n_err2 <= n_err and sum(not r[1] for r in r2) < len(failed):
+                spec, results = fixed, r2
+                (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
+                for name, ok, detail in results:
+                    trace.test("local (after repair) " + name, ok, detail)
+            else:
+                trace.note("repair not better; keeping the first spec")
+        except Exception as e:
+            trace.note(f"repair round failed ({type(e).__name__}: {e}); keeping the first spec")
 
     trace.step("3. compile workflow")
     wf = comp.compile_workflow(spec, openapi)

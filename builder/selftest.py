@@ -15,7 +15,7 @@ API_SLOTS = {
     "api_account": ("get_account", []),
     "api_promise": ("create_promise", ["p_product", "p_amount", "p_date"]),
     "api_note": ("add_note", ["n_product", "n_reason"]),
-    "api_callback": ("schedule_callback", ["cb_date", "cb_time"]),
+    "api_callback": ("schedule_callback", ["cb_date", "cb_time", "cb_datetime"]),
     "api_transfer": ("transfer_to_agent", ["t_queue"]),
     "api_close": ("close_call", ["c_outcome", "c_reason"]),
     "api_close_nr": ("close_call", ["c_outcome"]),
@@ -30,6 +30,20 @@ class GenericBank:
         self.led = dict(promises=[], notes=[], callbacks=[], transfers=[], outcome=None, reason=None, calls=[])
         self.ok_fields, self.wrong = set(), 0
 
+    def ok(self, tool):
+        """The success flag in the shape the spec expects for this tool (e.g. ok: true, status: 'created')."""
+        r = self.spec.get("responses", {}).get(tool) or {"field": "ok", "values": ["true"]}
+        if not r.get("field"):
+            return {}
+        v = (r.get("values") or ["true"])[0]
+        return {r["field"]: True if str(v).lower() == "true" else v}
+
+    def verdict(self, good):
+        pv = self.R.get("pass_values")
+        if pv:
+            return pv[0] if good else "fail"
+        return bool(good)
+
     def call(self, tool, a):
         self.led["calls"].append(tool)
         if self.faults.get(tool, 0) > 0:
@@ -39,29 +53,26 @@ class GenericBank:
         if tool == "verify_identity":
             if str(a["q_answer"]) == str(self.identity.get(a["q_field"])):
                 self.ok_fields.add(a["q_field"])
-                return {R.get("ok", "ok"): True, R.get("verified", "verified"): True,
-                        R.get("all_verified", "all_verified"): len(self.ok_fields) == len(self.identity),
+                return {R.get("ok", "ok"): True, R.get("verified", "verified"): self.verdict(True),
+                        R.get("all_verified", "all_verified"): self.verdict(len(self.ok_fields) == len(self.identity)),
                         R.get("left", "wrong_answers_left"): self.spec["identity"].get("max_wrong", 3) - self.wrong}
             self.wrong += 1
-            return {R.get("ok", "ok"): True, R.get("verified", "verified"): False, R.get("all_verified", "all_verified"): False,
+            return {R.get("ok", "ok"): True, R.get("verified", "verified"): self.verdict(False), R.get("all_verified", "all_verified"): self.verdict(False),
                     R.get("left", "wrong_answers_left"): self.spec["identity"].get("max_wrong", 3) - self.wrong}
         if tool == "get_account":
-            return {"ok": True, self.spec["products"].get("list_field", "products"): copy.deepcopy(self.products)}
+            return dict(self.ok(tool), **{self.spec["products"].get("list_field", "products"): copy.deepcopy(self.products)})
         if tool == "create_promise":
             self.led["promises"].append((a["p_product"], round(float(a["p_amount"]), 2), a["p_date"]))
-            return {"ok": True}
-        if tool == "add_note":
+        elif tool == "add_note":
             self.led["notes"].append((a["n_product"], a["n_reason"]))
-            return {"ok": True}
-        if tool == "schedule_callback":
-            self.led["callbacks"].append((a["cb_date"], a["cb_time"]))
-            return {"ok": True}
-        if tool == "transfer_to_agent":
+        elif tool == "schedule_callback":
+            self.led["callbacks"].append((a.get("cb_date") or str(a.get("cb_datetime", ""))[:10],
+                                          a.get("cb_time") or str(a.get("cb_datetime", ""))[11:16]))
+        elif tool == "transfer_to_agent":
             self.led["transfers"].append(a["t_queue"])
-            return {"ok": True}
-        if tool == "close_call":
+        elif tool == "close_call":
             self.led["outcome"], self.led["reason"] = a["c_outcome"], a.get("c_reason") or ""
-            return {"ok": True}
+        return dict(self.ok(tool), done=True)
 
 
 def flatten(prefix, obj, out):
@@ -138,12 +149,19 @@ def pick_now(spec):
     return d
 
 
+SPOKEN = {"date": "the twenty-first of June nineteen eighty-five", "year": "nineteen eighty-five", "upper": "it's A B one two, C D",
+          "text": "it's Smith", "email": "alex dot morgan at example dot com"}
+
+
 def identity_values(spec):
     vals, wrong = {}, {}
     for q in spec["identity"]["questions"]:
         k = q.get("kind")
         if k == "date":
-            vals[q["field"]], wrong[q["field"]] = "1985-06-21", "1979-02-03"
+            fmt = q.get("format") or "%Y-%m-%d"
+            vals[q["field"]], wrong[q["field"]] = datetime.date(1985, 6, 21).strftime(fmt), datetime.date(1979, 2, 3).strftime(fmt)
+        elif k == "email":
+            vals[q["field"]], wrong[q["field"]] = "alex.morgan@example.com", "x@y.com"
         elif k == "digits":
             n = int(q.get("length") or 4)
             vals[q["field"]], wrong[q["field"]] = "7" * n, "3" * n
@@ -189,6 +207,13 @@ def run_all(spec, openapi):
         notes_on = spec.get("notes", {}).get("enabled")
         T = spec["events"]["transfer_support"].get("queue")
         R = spec["events"]["transfer_restructuring"].get("queue")
+        ev_ = spec["events"]
+
+        def notes_for(event, pids=("p1",)):
+            n = ev_.get(event, {}).get("note")
+            return [(p, n) for p in pids] if notes_on and n else []
+        spoken = [dict(k="answer", t=SPOKEN.get(q.get("kind"), " ".join("seven" for _ in range(int(q.get("length") or 4)))))
+                  for q in spec["identity"]["questions"]]
         full = single[0][spec["products"].get("amount_field", "past_due")]
         cb = spec["callback"]
         nb = cal.next_business_day(today, include_self=False)
@@ -202,16 +227,19 @@ def run_all(spec, openapi):
             ("wrong number", [dict(k="wrong_number")], single, expected(spec, "wrong_number")),
             ("identity fails", [C] + [dict(k="answer", t=wrong[spec["identity"]["questions"][0]["field"]])] * int(spec["identity"].get("max_wrong", 3)), single,
              expected(spec, "id_failed")),
-            ("already paid", [C] + answers + [dict(k="already_paid")], single,
-             expected(spec, "paid", notes=[("p1", spec["events"]["paid"].get("note"))] if notes_on else [])),
-            ("dispute", [C] + answers + [dict(k="dispute")], single,
-             expected(spec, "dispute", notes=[("p1", spec["events"]["dispute"].get("note"))] if notes_on else [])),
-            ("hardship, accepts support", [C] + answers + [dict(k="hardship"), dict(k="yes")], single,
-             expected(spec, "transfer_support", transfers=[T])),
+            ("identity answered the way people speak", [C] + spoken + [dict(k="yes"), dict(k="yes")], single,
+             expected(spec, "promise", promises=[("p1", full, today.isoformat())])),
+            ("already paid", [C] + answers + [dict(k="already_paid")], single, expected(spec, "paid", notes=notes_for("paid"))),
+            ("dispute", [C] + answers + [dict(k="dispute")], single, expected(spec, "dispute", notes=notes_for("dispute"))),
+            ("hardship, accepts support" if T else "hardship (no transfer in this brief)", [C] + answers + [dict(k="hardship"), dict(k="yes")], single,
+             expected(spec, "transfer_support", transfers=[T]) if T else expected(spec, "hardship", notes=notes_for("hardship"))),
             ("restructuring request", [C] + answers + [dict(k="restructure")], single,
-             expected(spec, "transfer_restructuring", transfers=[R])),
-            ("flat refusals", [C] + answers + [dict(k="no")] * 6, single,
-             expected(spec, "refused", notes=[("p1", spec["events"]["refused"].get("note"))] if notes_on else [])),
+             expected(spec, "transfer_restructuring", transfers=[R] if R else [], notes=[] if R else notes_for("transfer_restructuring"))),
+            ("flat refusals", [C] + answers + [dict(k="no")] * 6, single, expected(spec, "refused", notes=notes_for("refused"))),
+            ("the bank fails to record the promise twice", [C] + answers + [dict(k="yes"), dict(k="yes")], single,
+             expected(spec, "service_error", notes=notes_for("service_error")), dict(create_promise=2)),
+            ("the callback booking fails once, then works", [dict(k="third_party"), dict(k="gives_time", t="next business day at %s" % cb_time, d=nb.isoformat())], single,
+             expected(spec, "callback", callbacks=[(nb.isoformat(), cb_time)]), dict(schedule_callback=1)),
         ]
         if len(types) > 1:
             multi = [make_product(spec, i, t, dl0) for i, t in enumerate(types[:3])]
@@ -220,9 +248,10 @@ def run_all(spec, openapi):
             prom = [(p[idf], p[spec["products"].get("amount_field", "past_due")], today.isoformat()) for p in multi]
             scenarios.append(("several products, all paid today", [C] + answers + [dict(k="yes"), dict(k="yes")], multi,
                               expected(spec, "promise", promises=prom)))
-        for name, turns, prods, exp in scenarios:
+        for sc in scenarios:
+            name, turns, prods, exp = sc[:4]
             try:
-                bank = GenericBank(spec, ident, copy.deepcopy(prods))
+                bank = GenericBank(spec, ident, copy.deepcopy(prods), sc[4] if len(sc) > 4 else None)
                 led, tr = simulate(spec, V0, bank, turns)
                 got = dict(outcome=led["outcome"], reason=led["reason"] or "", promises=sorted(led["promises"]), notes=sorted(led["notes"]),
                            callbacks=sorted(led["callbacks"]), transfers=sorted(led["transfers"]))
