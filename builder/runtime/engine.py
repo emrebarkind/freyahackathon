@@ -668,9 +668,11 @@ def callback_ok(V, d, hm):
         return False
     if c.get("business_days_only") and not is_business_day(d):
         return False
-    if not (c.get("start", "00:00") <= hm <= c.get("end", "23:59")):
+    mins = lambda x: int(x[:2]) * 60 + int(x[3:5])      # validated HH:MM values only (see spec_model)
+    t, a_, b_ = mins(hm), mins(c.get("start", "00:00")), mins(c.get("end", "23:59"))
+    if not (a_ <= t <= b_ if a_ <= b_ else (t >= a_ or t <= b_)):     # start > end: the window crosses midnight
         return False
-    if c.get("after_now", True) and d == today and hm <= now.strftime("%H:%M"):
+    if c.get("after_now", True) and d == today and t <= now.hour * 60 + now.minute:
         return False
     return True
 
@@ -976,6 +978,10 @@ def make_offer(V, s, p, step_idx, pre=""):
     focus(p)
     today = today_of(V)
     ladder = ladder_of(p)
+    if not ladder:                    # the brief allows no persuasion: no offer, the product ends as refused
+        p["status"] = "refused"
+        p["offer"] = None
+        return advance(V, s, pre)
     st_ = ladder[min(step_idx, len(ladder)) - 1]
     amt = p["full"]
     if st_.get("amount") == "floor" or (st_.get("amount") == "full_or_floor" and p["too_much"]):

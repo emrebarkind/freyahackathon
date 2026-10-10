@@ -144,10 +144,11 @@ def validate(spec, openapi):
     P_ = dict(comp.account_shape(openapi, spec), **{k: v for k, v in spec["products"].items() if k in ("list_field", "id_field", "type_field")})
     item = account_item(openapi, P_["list_field"])
     if item:
-        for key in ("amount_field", "days_field"):
-            f = spec["products"].get(key)
-            if f and f not in item:
-                errs.append(f"products.{key} '{f}' is not a field of the get_account product record (fields: {sorted(item)})")
+        for key, engine_default in (("amount_field", "past_due"), ("days_field", "days_late")):
+            f = spec["products"].get(key) or engine_default      # the field the engine will actually read
+            if f not in item:
+                errs.append(f"products.{key} '{f}'" + ("" if spec["products"].get(key) else " (the engine default)") +
+                            f" is not a field of the get_account product record (fields: {sorted(item)})")
         for t, f in (spec["products"].get("floor_field") or {}).items():
             if f and f not in item:
                 errs.append(f"products.floor_field.{t} '{f}' is not a field of the get_account product record (fields: {sorted(item)})")
@@ -299,6 +300,7 @@ def extract(briefs, openapi, trace):
             except Exception as e:
                 trace.note(f"adjudication answer did not parse ({e}); keeping reading 1")
     for attempt in range(3):
+        spec_model.normalise(spec)
         errs = validate(spec, openapi)
         trace.note(f"validation round {attempt + 1}: {len(errs)} problem(s)" + ("".join("\n  - " + e for e in errs)))
         if not errs:

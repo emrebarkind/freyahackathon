@@ -56,6 +56,23 @@ def main():
             trace.note(f"extraction failed ({type(e).__name__}: {e}); trying once more")
             spec = extract.extract(docs, openapi, trace)
     comp.apply_defaults(spec, openapi)       # response field names / success flags come from the tool API file
+    from builder import spec_model
+    for u in spec_model.unsupported(spec):    # valid policy the engine cannot carry out as written: say so, do not change it
+        trace.note("UNSUPPORTED by the engine (policy kept as the brief states it): " + u)
+    errs = spec_model.check(spec)             # the engine only gets a structurally valid spec
+    if errs and not a.spec:
+        trace.note("structural problems before deploy:" + "".join("\n  - " + e for e in errs))
+        try:
+            from builder import extract
+            fixed = comp.apply_defaults(extract.repair_behaviour(spec, "Structural problems: " + "; ".join(errs), docs, openapi, trace), openapi)
+            if not spec_model.check(fixed) and len(extract.validate(fixed, openapi)) <= len(extract.validate(spec, openapi)):
+                spec, errs = fixed, []
+        except Exception as e:
+            trace.note(f"structural repair failed ({type(e).__name__}: {e})")
+    if errs:
+        trace.note("STOP: the spec is still malformed; not deploying:" + "".join("\n  - " + e for e in errs))
+        trace.end()
+        sys.exit("spec still malformed after repair (see the trace); nothing deployed")
     out_dir = ROOT / "submission"
     out_dir.mkdir(exist_ok=True)
     (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
