@@ -106,7 +106,8 @@ def resp(V, node, field):
 
 
 TOOL_OF = dict(api_verify="verify_identity", api_account="get_account", api_promise="create_promise", api_note="add_note",
-               api_callback="schedule_callback", api_transfer="transfer_to_agent", api_close="close_call", api_close_nr="close_call")
+               api_callback="schedule_callback", api_transfer="transfer_to_agent", api_close="close_call", api_close_nr="close_call",
+               api_promise_2="create_promise", api_promise_3="create_promise", api_note_2="add_note", api_note_3="add_note")
 PASS_WORDS = ("true", "1", "yes", "ok", "success", "successful", "succeeded", "pass", "passed", "verified", "match", "matched",
               "correct", "valid", "created", "recorded", "scheduled", "booked", "done", "accepted", "transferred", "queued",
               "added", "saved", "confirmed")
@@ -1541,7 +1542,9 @@ def for_products(prods, key, name_them):
     if "{name}" in t:
         return L(key, name=names)
     line = L(key)
-    return ("For your " + names + ": " + line[:1].lower() + line[1:]) if line else ""
+    if line and not re.match(r"I\b|I'", line):
+        line = line[:1].lower() + line[1:]
+    return ("For your " + names + ": " + line) if line else ""
 
 
 def after_promise(V, s):
@@ -1563,12 +1566,166 @@ def after_promise(V, s):
     return record_next(V, s)
 
 
+# ----------------------------------------------------------------------------------------------- chains
+# A bank write whose follow-up needs no new decision does not come back to this code node: the engine plans the
+# whole sequence as if every call succeeds (e.g. promise, promise, then the 'recorded' turn; note, note, close)
+# and the workflow walks it through deterministic transitions (<node> succeeded AND plan_<node> == next node).
+# Each code run costs seconds of silence on the platform. If a call fails, the workflow falls back to this node,
+# which rebuilds the state from what really happened and continues one call at a time.
+CHAIN = dict(api_promise=["api_promise", "api_promise_2", "api_promise_3"], api_note=["api_note", "api_note_2", "api_note_3"],
+             api_callback=["api_callback"], api_transfer=["api_transfer"])
+SLOTS_OF = dict(api_promise=["p_product", "p_amount", "p_date"], api_note=["n_product", "n_reason"],
+                api_callback=["cb_date", "cb_time", "cb_datetime"], api_transfer=["t_queue"])
+PHYS = [x for v in CHAIN.values() for x in v]
+
+
+def logical(node):
+    return re.sub(r"_[23]$", "", node)
+
+
+def suffix(node):
+    m = re.search(r"_([23])$", node)
+    return "_" + m.group(1) if m else ""
+
+
+def counts(V, node):
+    return (num(V.get(node + "_success_count")) or 0) + (num(V.get(node + "_failure_count")) or 0)
+
+
+def fake_success(V, node):
+    R_ = S.get("responses", dict()).get(TOOL_OF.get(node, ""), dict()) or dict()
+    for k in list(V.keys()):
+        if k.startswith(node + "_response"):
+            V[k] = ""
+    f = R_.get("field", "ok") if R_ else "ok"
+    vals = R_.get("values") or ["true"]
+    V[node + "_response.data." + (f or "done")] = vals[0] if f else "true"
+    V[node + "_response.status_code"] = 200
+
+
+def clear_result(V, node):
+    for k in list(V.keys()):
+        if k.startswith(node + "_response") or k == node + "_status_code":
+            V[k] = ""
+
+
+def plan_chain(V):
+    nxt = V.get("next")
+    if nxt not in CHAIN or S.get("no_chains"):
+        return
+    s = st(V)
+    if s.get("no_chain"):
+        return
+    snap = dict(V)
+    s0 = V.get("_state", "")
+    calls, used = [], dict((k, 0) for k in CHAIN)
+    try:
+        for _ in range(12):
+            node = V.get("next")
+            if node not in CHAIN:
+                break
+            if used[node] >= len(CHAIN[node]):
+                raise ValueError("chain too long")
+            phys = CHAIN[node][used[node]]
+            used[node] += 1
+            calls.append(dict(node=node, phys=phys, slots=dict((k, V.get(k)) for k in SLOTS_OF[node])))
+            fake_success(V, node)
+            handle_result(V, st(V), node)
+        final = V.get("next") or ""
+        if not (final.startswith("talk_") or final in ("api_close", "api_close_nr")):
+            raise ValueError("chain does not end in a turn or the close")
+    except Exception:
+        for k in list(V.keys()):                       # undo the dry run
+            if k not in snap:
+                V[k] = ""
+        V.update(snap)
+        return
+    fs = st(V)
+    for p in PHYS:
+        clear_result(V, p)
+        V["plan_" + p] = ""
+    for i, c in enumerate(calls):
+        for k, v in c["slots"].items():
+            V[k + suffix(c["phys"])] = v
+        V["plan_" + c["phys"]] = calls[i + 1]["phys"] if i + 1 < len(calls) else final
+    fs["chain"] = calls
+    fs["chain_s0"] = s0
+    fs["chain_await"] = fs.get("await", "")
+    fs["chain_final"] = final
+    fs["chain_say"] = V.get("say", "")
+    fs["chain_close"] = [V.get("c_outcome", ""), V.get("c_reason", "")]
+    fs["chain_counts"] = dict((c["phys"], counts(V, c["phys"])) for c in calls)
+    fs["await"] = "chain"
+    put(V, fs)
+    V["next"] = calls[0]["phys"]
+
+
+def chain_step(V, s):
+    """The step node runs after a planned chain. Returns True if this run is fully handled."""
+    calls = s.get("chain", [])
+    c0 = s.get("chain_counts", dict())
+    ran = [counts(V, c["phys"]) > c0.get(c["phys"], 0) or succeeded(V, c["phys"]) for c in calls]
+    if all(ran) and all(succeeded(V, c["phys"]) for c in calls):
+        final = s.pop("chain_final", "")
+        say_ = s.pop("chain_say", "")
+        cl = s.pop("chain_close", ["", ""])
+        s["await"] = s.pop("chain_await", "talk")
+        for k in ("chain", "chain_s0", "chain_counts"):
+            s.pop(k, None)
+        put(V, s)
+        stage = s.get("stage", "open")
+        heard = str(V.get(stage + "_kind") or "none").strip().lower() not in ("", "none") or str(V.get(stage + "_text") or "").strip()
+        if final.startswith("talk_") and heard:
+            return False                               # the planned turn was spoken and answered: carry on
+        V["say"] = say_                                # the workflow came back before the planned node: go there now
+        V["c_outcome"], V["c_reason"] = cl[0], cl[1]
+        go(V, final)
+        return True
+    # a call failed: rebuild the state from what really happened, then continue one call at a time
+    st0 = json.loads(s["chain_s0"]) if s.get("chain_s0") else dict()
+    st0["no_chain"] = True
+    put(V, st0)
+    for c, r in zip(calls, ran):
+        if not r:
+            return True                                # the previous result already routed to this call: make it now
+        ok = succeeded(V, c["phys"])
+        if c["phys"] != c["node"]:
+            clear_result(V, c["node"])
+            for k in list(V.keys()):
+                if k.startswith(c["phys"] + "_response"):
+                    V[c["node"] + k[len(c["phys"]):]] = V[k]
+        for k, v in c["slots"].items():
+            V[k] = v
+        handle_result(V, st(V), c["node"])
+        if not ok:
+            return True
+    return True
+
+
 # ----------------------------------------------------------------------------------------------- entry
 def run(V):
     s = st(V)
     aw = s.get("await", "")
     if not s:   # the initial talk_open node already spoke the opening and the first identity ask
         s = dict(stage="open", asks=1, questions=0, not_talk=0)
+    if aw == "chain":
+        if chain_step(V, s):
+            return
+        s = st(V)
+        aw = s.get("await", "")
+    if aw in RESULT_NODES:
+        return handle_result(V, s, aw)
+    stage = s.get("stage", "open")
+    if s.get("products") and cur(s) is not None:
+        focus(cur(s))                                  # product fields for every line said this step
+    return run_turn(V, s, stage)
+
+
+RESULT_NODES = ("api_verify", "api_account", "api_promise", "api_note", "api_callback", "api_transfer", "api_close", "api_close_nr")
+
+
+def handle_result(V, s, aw):
+    """What to do after a bank call returned (or failed)."""
     if aw == "api_verify":
         return after_verify(V, s)
     if aw == "api_account":
@@ -1600,9 +1757,10 @@ def run(V):
     if aw in ("api_close", "api_close_nr"):
         go(V, "end")
         return
-    stage = s.get("stage", "open")
-    if s.get("products") and cur(s) is not None:
-        focus(cur(s))                                  # product fields for every line said this step
+
+
+def run_turn(V, s, stage):
+    """A customer turn arrived from talk_<stage>."""
     k, t, dtxt, a, scope = take_input(V, stage)
     if s.pop("human_pending", False) and k in ("no", "refuses", "not_talk", "human", "unclear", "none", "asks_why"):
         k = "human"                                    # still wants a person after being asked once: transfer
@@ -1688,8 +1846,11 @@ def main(V):
     CTX.clear()
     CTX.update(names(V))
     V["next"] = ""
+    for p in PHYS:
+        V["plan_" + p] = ""
     try:
         run(V)
+        plan_chain(V)
     except Exception as e:  # never let the call die: apologise and close safely
         V["engine_error"] = (type(e).__name__ + ": " + str(e))[:300]
         s = st(V)

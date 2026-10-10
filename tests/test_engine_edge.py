@@ -290,3 +290,75 @@ def test_json_block_takes_the_spec_not_quoted_values():
     from builder.claude import json_block
     t = 'bands: x -- "quote"\n```json\n{"n": 12}\n```\nFinal:\n```json\n{"identity": {}, "events": {}, "lines": {"a": "{name}"}}\n```'
     assert json_block(t, keys=["identity", "events", "lines"]) == {"identity": {}, "events": {}, "lines": {"a": "{name}"}}
+
+
+# ---------------------------------------------------------------- planned chains (no code run between bank writes)
+def _count_steps(fn):
+    from builder.runtime import engine
+    n = [0]
+    orig = engine.main
+
+    def main(V):
+        n[0] += 1
+        orig(V)
+    engine.main = main
+    try:
+        out = fn()
+    finally:
+        engine.main = orig
+    return out, n[0]
+
+
+def test_chain_three_promises_then_recorded_turn_in_one_code_run():
+    (led, tr), steps = _count_steps(lambda: run_case(B, CASES["PUB-11"], ids_b("PUB-11") + [dict(k="yes"), dict(k="yes")]))
+    assert len(led["promises"]) == 3 and led["outcome"] == "promise", agent_lines(tr)
+    # open, answer 1, verify result, answer 2 (verify -> account), account, nego, confirm (-> 3 promises + the
+    # recorded turn), after (-> close) = 8 code runs; one run per bank write would make it 11
+    assert steps <= 8, steps
+
+
+def test_chain_recovers_when_a_promise_fails_twice():
+    import sim
+    orig = sim.FakeBank.__call__
+
+    def call(self, tool, body):
+        if tool == "create_promise" and body.get("product_id") == "p2":
+            self.led["calls"].append(dict(tool=tool, args=body, result="500"))
+            return 500, None
+        return orig(self, tool, body)
+    sim.FakeBank.__call__ = call
+    try:
+        led, tr = run_case(B, CASES["PUB-11"], ids_b("PUB-11") + [dict(k="yes"), dict(k="yes")])
+    finally:
+        sim.FakeBank.__call__ = orig
+    assert sorted(p["product_id"] for p in led["promises"]) == ["p1", "p3"]
+    assert [c["args"]["product_id"] for c in led["calls"] if c["tool"] == "create_promise"].count("p2") == 2
+    assert led["notes"] == [dict(product_id="p2", reason="service_error")] and led["outcome"] == "promise"
+    said = " ".join(agent_lines(tr))
+    assert "personal loan: I'm sorry" in said, said
+
+
+def test_chain_note_failure_is_retried():
+    case = copy.deepcopy(CASES["PUB-01"])
+    case["faults"] = [dict(tool="add_note", fail_first_n=1)]
+    led, tr = run_case(B, case, ids("PUB-01") + [dict(k="no"), dict(k="no")])
+    assert led["notes"] == [dict(product_id="p1", reason="refused")] and led["outcome"] == "no_promise", agent_lines(tr)
+
+
+def test_chain_platform_returning_early_still_reaches_the_planned_turn():
+    import sim  # noqa: F401
+    from builder import selftest
+    orig = selftest.route
+
+    def route(n, V):                    # the platform ignores the planned transitions: every call comes back to step
+        t = orig(n, V)
+        if n.get("node_type") == "api_request" and n["name"] not in ("api_close", "api_close_nr", "api_verify") and t != "end":
+            return "step"
+        return t
+    selftest.route = route
+    try:
+        led, tr = run_case(B, CASES["PUB-11"], ids_b("PUB-11") + [dict(k="yes"), dict(k="yes")])
+    finally:
+        selftest.route = orig
+    assert len(led["promises"]) == 3 and led["outcome"] == "promise"
+    assert any("recorded" in x for x in agent_lines(tr)), agent_lines(tr)

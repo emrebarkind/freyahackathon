@@ -328,7 +328,32 @@ def const_value(v, typ):
 
 API_NODES = {"api_verify": "verify_identity", "api_account": "get_account", "api_promise": "create_promise",
              "api_note": "add_note", "api_callback": "schedule_callback", "api_transfer": "transfer_to_agent",
-             "api_close": "close_call", "api_close_nr": "close_call"}
+             "api_close": "close_call", "api_close_nr": "close_call",
+             # extra copies for planned chains (several promises / notes in a row without a code run in between)
+             "api_promise_2": "create_promise", "api_promise_3": "create_promise", "api_note_2": "add_note", "api_note_3": "add_note"}
+CHAIN_NODES = ["api_promise", "api_promise_2", "api_promise_3", "api_note", "api_note_2", "api_note_3", "api_callback", "api_transfer"]
+
+
+def chain_transitions(node, targets, success):
+    """node -> T when the call succeeded and the engine planned T next (plan_<node> == T)."""
+    field, values = success
+    out = []
+    for t in targets:
+        if t == node:
+            continue
+        groups = []
+        if field:
+            for v in values:
+                for form in sorted({str(v), str(v).lower(), str(v).capitalize()}):
+                    groups.append({"logic": "and", "conditions": [
+                        {"variable": f"{node}_response.data.{field}", "operator": "equals", "operand": form},
+                        {"variable": f"plan_{node}", "operator": "equals", "operand": t}]})
+        else:
+            groups.append({"logic": "and", "conditions": [
+                {"variable": f"{node}_response.status_code", "operator": "equals", "operand": "200"},
+                {"variable": f"plan_{node}", "operator": "equals", "operand": t}]})
+        out.append({"target_node": t, "description": f"planned next: {t}", "condition": {"logic": "or", "conditions": groups}})
+    return out
 
 
 def account_shape(openapi, spec):
@@ -427,7 +452,8 @@ def compile_workflow(spec, openapi):
         mapping = dict(bodies.get(tool, {}))
         if node == "api_close_nr":      # close without a reason field (outcomes whose table lists no reason)
             mapping = {k: v for k, v in mapping.items() if v != "c_reason"}
-        body = {k: (v if str(v).startswith("const:") else "{{" + v + "}}") for k, v in mapping.items()}
+        sfx = re.search(r"_[23]$", node).group(0) if re.search(r"_[23]$", node) else ""
+        body = {k: (v if str(v).startswith("const:") else "{{" + v + sfx + "}}") for k, v in mapping.items()}
         if "customer_id" in schema.get("properties", {}):
             body["customer_id"] = "{{customer_id}}"
         if node in ("api_close", "api_close_nr"):
@@ -439,9 +465,14 @@ def compile_workflow(spec, openapi):
                            {"variable": f"api_verify_response.data.{allv}", "operator": "equals", "operand": "true"},
                            {"variable": f"api_verify_response.data.{allv}", "operator": "equals", "operand": "True"}]}}]
             nodes[node] = api_node(node, tool, f"{base}/{tool}", body, types, extra_transitions=direct)
+        elif node in CHAIN_NODES:
+            targets = CHAIN_NODES + ["talk_" + s for s in stages if s != "open"] + ["talk_open_again", "api_close", "api_close_nr"]
+            r = spec.get("responses", {}).get(tool) or {"field": "ok", "values": ["true"]}
+            nodes[node] = api_node(node, tool, f"{base}/{tool}", body, types,
+                                   extra_transitions=chain_transitions(node, targets, (r.get("field"), r.get("values") or ["true"])))
         else:
             nodes[node] = api_node(node, tool, f"{base}/{tool}", body, types)
-    routes = ["talk_" + s for s in stages if s != "open"] + ["talk_open_again"] + [n for n in API_NODES]
+    routes = ["talk_" + s for s in stages if s != "open"] + ["talk_open_again"] + [n for n in API_NODES if not re.search(r"_[23]$", n)]
     nodes["step"] = code_step(spec, routes)
     nodes["end"] = {"name": "end", "node_type": "end_call", "on_enter": {"type": "silent"}, "disable_inactivity_monitor": True,
                     "transitions": [], "terminal": {"type": "function", "function": {

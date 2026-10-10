@@ -107,55 +107,24 @@ def feed(V, stage, u):
               stage + "_for": u.get("f", "none"), stage + "_cut": u.get("cut", "no")})
 
 
-def run_case(spec, case, script, verbose=False):
-    engine.S = spec
-    cal.P = dict(workdays=spec["calendar"]["workdays"], holidays=spec["calendar"]["holidays"])
-    engine.P = cal.P
+def run_case(spec, case, script, verbose=False, openapi=None):
+    """Runs the call through the compiled workflow (selftest.walk): engine runs, request bodies and transitions
+    (including planned chains) as on the platform."""
+    from builder import selftest, compile as comp
+    openapi = openapi or json.load(open(ROOT / "kit" / "build-the-builder" / "tools" / "openapi.json"))
+    spec = comp.apply_defaults(json.loads(json.dumps(spec)), openapi)
+    wf = comp.compile_workflow(spec, openapi)
     bank = FakeBank(case)
     V = dict(case["variables"], customer_id="c_x")
-    transcript, turns = [], list(script)
+
+    def call(tool, body, slots):
+        code, r = bank(tool, body)
+        return r
+
+    tr = selftest.walk(wf, spec, V, call, script, lambda stage, u: feed(V, stage, u))
     opening = (spec["lines"]["opening"] + " " + spec["lines"]["confirm_ask"]).replace("{title}", V.get("title", "")).replace("{last_name}", V.get("last_name", ""))
-    transcript.append(("agent", opening))
-    u = turns.pop(0)
-    transcript.append(("customer", json.dumps(u)))
-    feed(V, "open", u)
-    for _ in range(200):
-        engine.main(V)
-        nxt = V.get("next")
-        if V.get("engine_error"):
-            raise RuntimeError(V["engine_error"])
-        if nxt in API:
-            tool, mk = API[nxt]
-            if nxt in ("api_close", "api_close_nr") and V.get("say"):
-                transcript.append(("agent", V["say"]))
-            for k in [k for k in V if k.startswith(nxt + "_response.")]:
-                del V[k]
-            code, r = bank(tool, mk(V))
-            if r is not None:
-                flatten(nxt + "_response.data", r, V)
-            allv = spec["identity"].get("response", {}).get("all_verified")
-            if nxt == "api_verify" and allv and str(V.get("api_verify_response.data." + allv)).lower() == "true":
-                for k in [k for k in V if k.startswith("api_account_response.")]:
-                    del V[k]
-                code, r = bank("get_account", {})          # the workflow's direct transition verify -> account
-                if r is not None:
-                    flatten("api_account_response.data", r, V)
-            if nxt in ("api_close", "api_close_nr"):
-                break
-            continue
-        if nxt and nxt.startswith("talk_"):
-            transcript.append(("agent", V.get("say", "")))
-            if not turns and nxt == "talk_after":
-                turns = [dict(k="done", t="no, that's all, thank you")]
-            if not turns:
-                transcript.append(("customer", "<hangs up>"))
-                break
-            u = turns.pop(0)
-            transcript.append(("customer", json.dumps(u)))
-            feed(V, nxt[len("talk_"):].replace("open_again", "open"), u)
-            continue
-        break
+    tr[0] = ("agent", opening)
     if verbose:
-        for who, text in transcript:
+        for who, text in tr:
             print(("  AGENT: " if who == "agent" else "  CUST:  ") + str(text))
-    return bank.led, transcript
+    return bank.led, tr
