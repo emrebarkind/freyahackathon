@@ -668,8 +668,11 @@ def make_offer(V, s, p, step_idx, pre=""):
         return make_offer(V, s, p, step_idx + 1, pre)
     p["used"] = step_idx
     p["offer"] = offer
-    line = L("offer_floor_date" if amt == p["floor"] and amt < p["full"] else "offer",
-             name=p["name"], amount=money(amt), date=spoken(d))
+    floor_first = amt == p["floor"] and amt < p["full"] and not p.get("floor_note_said")
+    if floor_first:
+        p["floor_note_said"] = True
+        p["floor_offered"] = True
+    line = L("offer_floor_date" if floor_first else "offer", name=p["name"], amount=money(amt), date=spoken(d))
     say(V, pre, line)
     return talk(V, "nego", s)
 
@@ -864,16 +867,23 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         if p["floor_offered"]:
             return refusal(V, s, p)
         p["too_much"] = True
-        p["floor_offered"] = True
-        d0 = p["offer"][1] if p.get("offer") else None
-        p["offer"] = [p["floor"], d0]
-        line = L("offer_floor", amount=money(p["floor"]), name=p["name"])
-        if dtxt or a is not None:
+        if dtxt:                                  # "too much, but I could pay something on Friday"
+            p["floor_offered"] = True
+            p["floor_note_said"] = True
+            p["offer"] = [p["floor"], None]
             res, pre = apply_proposal(V, s, p, dtxt, None)
             if res == "agreed":
                 p["agreed"][0] = p["floor"]
-                return advance(V, s)
-        say(V, line)
+                return advance(V, s, L("offer_floor", amount=money(p["floor"])))
+            say(V, L("offer_floor", amount=money(p["floor"])), pre)
+            return talk(V, "nego", s)
+        if p["used"] == 0:
+            return make_offer(V, s, p, 1)          # attempt 1 = the floor on the attempt-1 date, said once with its note
+        d = p["offer"][1] if p.get("offer") and p["offer"][1] else iso(ladder_date(today_of(V), S["ladder"][0].get("date", "deadline"), p))
+        p["offer"] = [p["floor"], d]
+        p["floor_offered"] = True
+        p["floor_note_said"] = True
+        say(V, L("offer_floor_date", amount=money(p["floor"]), date=spoken(d)))
         return talk(V, "nego", s)
     if dtxt or a is not None or k in ("proposes", "gives_date", "gives_amount", "vague"):
         res, pre = apply_proposal(V, s, p, dtxt if dtxt else (t if k == "vague" else ""), a)

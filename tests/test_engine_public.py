@@ -28,6 +28,8 @@ SCRIPTS = {
                dict(k="no", t="no, I don't want to be transferred")],
     "PUB-06": [C, dict(k="answer", t="17 May 1986"), dict(k="answer", t="1502"), dict(k="too_much", t="the full amount is too much right now"),
                dict(k="proposes", d="this Friday", t="ok the minimum, this Friday"), dict(k="yes")],
+    "PUB-06-twice": [C, dict(k="answer", t="17 May 1986"), dict(k="answer", t="1502"), dict(k="too_much"), dict(k="too_much", t="you tell me, I can't afford that either"),
+                     dict(k="proposes", d="Friday", t="I can do that on Friday"), dict(k="yes")],
     "PUB-07": [C, dict(k="answer", t="5 December 1975"), dict(k="answer", t="7093"), dict(k="vague", d="the week after next", t="the week after next"),
                dict(k="proposes", d="Monday the 26th"), dict(k="yes"), dict(k="yes")],
     "PUB-08": [C, dict(k="answer", t="28 April 1993"), dict(k="answer", t="3317"), dict(k="already_paid", t="I paid it in the app this morning")],
@@ -45,14 +47,14 @@ SCRIPTS = {
 
 
 def check(cid, spec, verbose=False):
-    case = CASES[cid.split("-pieces")[0]]
+    case = CASES[cid.split("-")[0] + "-" + cid.split("-")[1]]
     led, tr = run_case(spec, case, SCRIPTS[cid], verbose=verbose)
     return score_ledger(case, led), tr
 
 
 def test_brief_a_cases():
     bad = {}
-    for cid in [c for c in SCRIPTS if CASES[c.split("-pieces")[0]]["brief"] == "A"]:
+    for cid in [c for c in SCRIPTS if CASES["-".join(c.split("-")[:2])]["brief"] == "A"]:
         r, tr = check(cid, SPEC_A)
         if not r["pass"]:
             bad[cid] = (r["failed"], tr)
@@ -68,7 +70,7 @@ def test_brief_b_cases():
     if SPEC_B is None:
         return
     bad = {}
-    for cid in [c for c in SCRIPTS if CASES[c.split("-pieces")[0]]["brief"] == "B"]:
+    for cid in [c for c in SCRIPTS if CASES["-".join(c.split("-")[:2])]["brief"] == "B"]:
         r, tr = check(cid, SPEC_B)
         if not r["pass"]:
             bad[cid] = (r["failed"], tr)
@@ -77,7 +79,7 @@ def test_brief_b_cases():
 
 if __name__ == "__main__":
     for cid in sys.argv[1:] or SCRIPTS:
-        case = CASES[cid.split("-pieces")[0]]
+        case = CASES[cid.split("-")[0] + "-" + cid.split("-")[1]]
         spec = SPEC_A if case["brief"] == "A" else (SPEC_B or SPEC_A)
         print("==", cid, case["title"])
         r, _ = check(cid, spec, verbose=True)

@@ -5,9 +5,9 @@ sys.path.insert(0, os.path.join(ROOT, "kit", "build-the-builder"))
 import freya
 arg = sys.argv[1]
 if len(arg) < 30:
-    r = freya.api("GET", "/api/v2/simulations", workspaceId=freya.workspace_id(), limit=1)
+    r = freya.api("GET", "/api/v2/simulations", workspaceId=freya.workspace_id(), limit=5)
     sims = r.get("simulations") or r.get("items") or r
-    sid = sims[0]["id"]; its = freya.api("GET", f"/api/v2/simulations/{sid}/iterations"); its = its.get("iterations") or its
+    sid = sys.argv[2] if len(sys.argv) > 2 else [x for x in sims if x.get("status") == "completed"][0]["id"]; its = freya.api("GET", f"/api/v2/simulations/{sid}/iterations"); its = its.get("iterations") or its
     runs = freya.get_iteration(sid, its[0]["id"])["runs"]
     arg = [x for x in runs if arg in (x.get("personaName") or "")][0]["callId"]
 call = freya.get_call(arg)

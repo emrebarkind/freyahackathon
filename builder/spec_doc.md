@@ -124,7 +124,9 @@ Meaning of the less obvious ones:
 - id_intro precedes the first security question; id_why/id_explain explain why the questions are needed; id_failed is said after too many wrong answers (include where to go instead, if the brief says).
 - disclose_intro: the sentence after verification that says why you call; product_line: one late product ({name} {amount} {days}).
 - ask_today / ask_today_multi: the first payment question (one product / several).
-- offer: a persuasion offer ({amount} on {date}); offer_floor: offering the floor once when the full amount is too much (say what happens to the rest if the brief says);
+- offer: a persuasion offer ({amount} on {date}); offer_floor_date: THE one offer of the floor ({amount} on {date}) after the customer
+  said the full amount is too much: include what happens to the rest if the brief says so (this line is said only once per product);
+  offer_floor: the same without a date;
   below_floor: the amount is under the floor; after_deadline: the date is past the latest allowed ({date} = latest date); not_business_day: ({date} = next business day);
   vague_ask: ask once for the exact day; propose_deadline: propose ({amount} on {date}).
 - readback_item: one promise ({name} {amount} {date}); confirm_q: the confirmation question the brief prescribes.
