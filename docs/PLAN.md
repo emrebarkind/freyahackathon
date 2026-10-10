@@ -62,6 +62,22 @@ The kit is in `kit/build-the-builder/` (briefs, openapi, 13 practice cases, docs
    - **Self-test:** dry-run validate, graph lint (every path reaches end_call, passthrough nodes have `always`), local asserts on the code nodes (the `nego_step` engine run in a local Python simulator with Claude-generated synthetic cases), then 1 smoke simulation or chat-route test.
    - **Trace** (`traces/<brief>.log`): start/end times, every model call (model plus a one-line purpose), workflow/agent id, node and tool counts, test results. API keys are scrubbed.
 
+
+## Kit v3 update (10 Oct): what changed and how it affects our plan
+- What's new:
+  - `examples/agent_builder.py`: Claude Agent SDK + the skill `.claude/skills/build-phone-agent/SKILL.md`. Claude reads the brief, writes the workflow, runs `run_cases.py`, and fixes it up to 3 times.
+  - According to the v3 notes it **passed 10/10 on Brief A in one run**.
+  - `examples/base-agent.json`: a 2-node example agent, 2/13.
+  - `minimal_builder.py` was removed. Briefs, docs, `freya.py`, openapi, test set and run_cases/score are unchanged.
+- Useful patterns in `base-agent.json`:
+  - `close_call` as an `end_of_call` lifecycle tool, with `{{outcome}}`/`{{reason}}` filled by one model call from the conversation; a pre-hook drops the reason for promise/paid.
+  - Ending the call with the trigger phrase "Have a good day" (`end_call` with `interruptible` + `trigger_pattern`).
+- **What it means for our strategy:** the bar went up. Most teams will start from this agentic builder and improve the skill, and one run of 10/10 is not 3/3.
+  - **Our edge:** hidden-brief variety, multi-product, customer styles and 3/3 reliability.
+  - **Hybrid approach:** the Claude Agent SDK agentic loop plus our deterministic, tested building blocks (spec extraction, the calendar/deadline/floor runtime library, code-node and hook templates, a graph compiler). Claude makes the remaining design decisions and fixes things after self-tests.
+  - **Day-1 comparison:** run the example builder as the baseline (A ×3 reps, B, with styles). Measure our compiler against it.
+- **Critical:** there are no practice cases for a hidden brief. `run_cases --brief A` is meaningless for a hidden brief. Self-tests need synthetic cases (custom practice sessions or chat + Claude customer). This is still the top unknown to test on day 1.
+
 ## Files (new public repo; see "Repo" below)
 - `builder/build.py`: CLI, timing, trace, orchestration
 - `builder/normalize.py`, `builder/extract.py`: Claude calls (reuses `builder/llm.py`)
