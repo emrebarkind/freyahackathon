@@ -125,10 +125,20 @@ def ev(name):
 
 # ----------------------------------------------------------------------------------------------- products
 def read_products(V):
+    P_ = S.get("products", dict())
+    lf, idf, tf = P_.get("list_field", "products"), P_.get("id_field", "product_id"), P_.get("type_field", "type")
+    out = read_products_raw(V, lf, idf)
+    for p in out:                       # normalise to the engine's own keys
+        p["product_id"] = p.get(idf, p.get("product_id"))
+        p["type"] = p.get(tf, p.get("type"))
+    return out
+
+
+def read_products_raw(V, lf, idf):
     out, i = [], 0
     while True:
-        base = "api_account_response.data.products." + str(i) + "."
-        pid = V.get(base + "product_id")
+        base = "api_account_response.data." + lf + "." + str(i) + "."
+        pid = V.get(base + idf)
         if pid is None or pid == "":
             break
         p = dict()
@@ -138,7 +148,7 @@ def read_products(V):
         out.append(p)
         i += 1
     if not out:
-        raw = V.get("api_account_response.data.products")
+        raw = V.get("api_account_response.data." + lf)
         if isinstance(raw, str):
             try:
                 raw = json.loads(raw)
@@ -291,6 +301,8 @@ def go(V, node):
 
 
 def talk(V, stage, s):
+    if not str(V.get("say", "")).strip():
+        V["say"] = L("go_on") or "Sorry, could you say that again?"
     s["await"] = "talk"
     s["stage"] = stage
     put(V, s)
@@ -905,10 +917,16 @@ def default_amount(p):
     return p["floor"] if p["too_much"] and p["floor_offered"] else p["full"]
 
 
-def special(V, s, k, p):
+def special(V, s, k, p, scope="none"):
     """Paid / dispute / hardship / restructure on product p (or the call). Returns True if handled."""
     focus(p)
     multi = len(s["products"]) > 1
+    if multi and scope == "all" and k in ("already_paid", "dispute"):
+        for q in s["products"]:
+            if q["status"] in ("open", "agreed"):
+                q["status"] = "paid" if k == "already_paid" else "dispute"
+        advance(V, s, L("paid_line") if k == "already_paid" else L("dispute_line"))
+        return True
     if k == "already_paid":
         if multi and S.get("multi", dict()).get("continue_after_paid", True):
             p["status"] = "paid"
@@ -972,12 +990,32 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
     else:
         s["unclear_n"] = 0
     target = product_target(s, scope) if multi else None
+    if target is not None and prods[target]["status"] == "agreed" and k not in ("no", "refuses"):
+        tp = prods[target]
+        dd = parse_spoken_date(dtxt, today_of(V), S.get("date_rules")) if dtxt else None
+        same = (dd is None or iso(dd) == tp["agreed"][1]) and (a is None or abs(snap_amount(tp, a) - tp["agreed"][0]) < 0.005)
+        if same:                  # restating what was already agreed for that product: not about the current one
+            target, dtxt, a, scope = None, "", None, "none"
     if target is not None:
         s["ci"] = target
         scope = "one"
         if prods[target]["status"] == "agreed" and (dtxt or a is not None or k in ("no", "refuses")):
             prods[target]["status"] = "open"
             prods[target]["offer"] = list(prods[target]["agreed"])
+    if s.get("phase") == "today" and k in ("robot", "scam", "question", "purpose", "human", "not_talk", "asks_amount", "details") \
+            and not dtxt and a is None and target is None:
+        ask = L("ask_today_multi") if multi else L("ask_today")
+        if k == "details":
+            say(V, " ".join(L("product_line", name=q["name"], amount=money(q["full"]), days=q["days_late"]) for q in prods), ask)
+            return talk(V, "nego", s)
+        if k in ("question", "purpose"):
+            say(V, L("no_info"), ask)
+            return talk(V, "nego", s)
+        if k == "asks_amount":
+            say(V, ask)
+            return talk(V, "nego", s)
+        if common_intents(V, s, k, ask, True):
+            return
     if s.get("phase") == "today":
         s["phase"] = "items"
         if k in ("yes", "agrees", "pay_today") and target is None and not dtxt:
@@ -1017,17 +1055,22 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         p["offer"] = [default_amount(p), iso(dl)]
         say(V, L("propose_deadline", date=spoken(dl), amount=pay(p, p["offer"][0])))
         return talk(V, "nego", s)
-    if special(V, s, k, p):
+    if special(V, s, k, p, scope):
         return
     if common_intents(V, s, k, short, True):
         return
+    if k == "details":                # "which account?", "how much was it?": answer from what we know, then re-prompt
+        focus(p)
+        line = L("product_line", name=p["name"], amount=money(p["full"]), days=p["days_late"])
+        say(V, line, short if p.get("offer") and p["offer"][1] else L("ask_today"))
+        return talk(V, "nego", s)
     if k == "asks_amount":            # "you tell me" / "how much?": the agent always proposes the amount
         if p.get("offer") and p["offer"][1] and abs(p["offer"][0] - p["floor"]) < 0.005 and p.get("floor_note_said"):
             if p.get("floor_restated"):
-                k = "too_much"            # asked again after the floor was restated once: treat as not accepting it
+                k = "too_much"            # asked again: treat as not accepting the floor
             else:
                 p["floor_restated"] = True
-                say(V, again)
+                say(V, short)             # the floor was just named: do not name it again
                 return talk(V, "nego", s)
         else:
             say(V, again)
@@ -1068,12 +1111,17 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         p["floor_note_said"] = True
         say(V, L("offer_floor_date", amount=pay(p, p["floor"]), date=spoken(d)))
         return talk(V, "nego", s)
+    if k in ("yes", "agrees", "pay_today") and s.pop("all_pending", False) and not dtxt and a is None:
+        for q in prods:
+            if q["status"] == "open" and q.get("offer") and q["offer"][1]:
+                agree(q, q["offer"][0], q["offer"][1])
+        return advance(V, s)
     if k in ("yes", "agrees", "pay_today") and p.get("offer") and p["offer"][1] and not dtxt and \
             (a is None or snap_amount(p, a) <= p["offer"][0] + 0.005):
         agree(p, p["offer"][0], p["offer"][1])          # "yes, I can pay six hundred and thirty..." = yes to the offer
         return advance(V, s)
     if dtxt or a is not None or k in ("proposes", "gives_date", "gives_amount", "vague"):
-        res, pre = apply_proposal(V, s, p, dtxt if dtxt else (t if k == "vague" else ""), a)
+        res, pre = apply_proposal(V, s, p, dtxt if dtxt else ("__vague__" if k == "vague" else ""), a)
         if res == "agreed":
             return advance(V, s)
         if res == "ask":
@@ -1110,6 +1158,12 @@ def propose_all(V, s, dtxt, a, k):
         res, pre = apply_proposal(V, s, p, dtxt, a if len(s["products"]) == 1 else None, scope_all=True)
         if res != "agreed":
             s["ci"] = s["products"].index(p)
+            if p.get("offer") and p["offer"][1]:          # e.g. a weekend date: offer the adjusted day for every open product
+                for q in s["products"]:
+                    if q is not p and q["status"] == "open" and not q.get("offer"):
+                        dq = min(datetime.date.fromisoformat(p["offer"][1]), datetime.date.fromisoformat(q["deadline"]))
+                        q["offer"] = [default_amount(q), iso(dq)]
+                s["all_pending"] = True
             say(V, pre)
             return talk(V, "nego", s)
     return advance(V, s)
@@ -1140,12 +1194,30 @@ def stage_hardship(V, s, k, t, dtxt, a):
     for q in s["products"]:
         if q["status"] in ("open",):
             q["status"] = "hardship"
+    if any(q["status"] == "agreed" for q in s["products"]):
+        return readback(V, s, L("hardship_declined"))        # promises agreed before the hardship stay
     return finish(V, s, L("hardship_declined"))
 
 
 def stage_confirm(V, s, k, t, dtxt, a, scope):
     agreed = [p for p in s["products"] if p["status"] == "agreed"]
     ti = product_target(s, scope)
+    named_change = False
+    if ti is not None and s["products"][ti] in agreed and (dtxt or a is not None):
+        kp0 = s["products"][ti]
+        dd = parse_spoken_date(dtxt, today_of(V), S.get("date_rules")) if dtxt else None
+        named_change = (dd is not None and iso(dd) != kp0["agreed"][1]) or (a is not None and abs(snap_amount(kp0, a) - kp0["agreed"][0]) > 0.005)
+    if ti is not None and len(agreed) > 1 and named_change and k not in special_kinds():
+        kp = s["products"][ti]                    # "make the card Monday": re-check that product only, keep the others
+        kp["status"] = "open"
+        kp["offer"] = list(kp["agreed"])
+        res, pre = apply_proposal(V, s, kp, dtxt, a)
+        if res == "agreed":
+            return readback(V, s)
+        s["stage"] = "nego"
+        s["ci"] = ti
+        say(V, pre or L("offer_short") or "Would that work for you?")
+        return talk(V, "nego", s)
     if ti is not None and len(agreed) > 1 and s["products"][ti] in agreed and k not in special_kinds():
         # "I only confirm the credit card": keep that one, the others go back to negotiation as refused offers
         kp = s["products"][ti]
@@ -1272,6 +1344,10 @@ def run(V):
         return after_account(V, s)
     if aw == "api_promise":
         return after_promise(V, s)
+    if aw in ("api_note", "api_callback", "api_transfer") and not truthy(resp(V, aw, "ok")) and not s.get("retried_" + aw):
+        s["retried_" + aw] = True                     # HTTP 500 / ok:false: try once more with the same values
+        return call(V, s, aw)
+    s.pop("retried_" + aw, None)
     if aw == "api_note":
         return finish(V, s)
     if aw == "api_callback":
@@ -1295,6 +1371,14 @@ def run(V):
         s["reask"] = True
         say(V, L("go_on") or "Sorry, please go on.")
         return talk(V, stage, s)
+    if V.get("_cut") == "yes" and (dtxt or a is not None) and stage in ("nego", "confirm", "hardship") \
+            and k not in ("yes", "agrees", "confirm") and not s.get("cut_value_waited"):
+        s["cut_value_waited"] = True                   # "I can pay six hundred and..." : let them finish the number
+        s["reask"] = True
+        say(V, L("go_on") or "Sorry, please go on.")
+        return talk(V, stage, s)
+    if V.get("_cut") != "yes":
+        s["cut_value_waited"] = False
     s["cut_waits"] = 0
     if s.get("same", 0) >= 2 and stage in ("nego", "confirm") and k in ("unclear", "none", "question", "asks_amount", "proposes") \
             and not dtxt and a is None:

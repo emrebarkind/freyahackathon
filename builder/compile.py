@@ -100,6 +100,7 @@ KINDS = {
         "scam": "asks whether this is a scam",
         "not_talk": "says they do not want to talk about this",
         "asks_amount": "asks how much they should or can pay, what the options are, or says 'you tell me', without refusing in the same message",
+        "details": "asks which account or product this is, how much they owe, how late it is, or asks you to repeat the amount",
         "question": "asks another question",
         "unclear": "anything else",
     },
@@ -213,7 +214,36 @@ API_NODES = {"api_verify": "verify_identity", "api_account": "get_account", "api
              "api_close": "close_call", "api_close_nr": "close_call"}
 
 
+def account_shape(openapi, spec):
+    """Field names of the get_account response, read from the tool API file (not assumed):
+    the array of product objects, the product id field and the product type field."""
+    out = dict(list_field="products", id_field="product_id", type_field="type")
+    try:
+        props = openapi["paths"]["/get_account"]["post"]["responses"]["200"]["content"]["application/json"]["schema"]["properties"]
+    except (KeyError, TypeError):
+        return out
+    arrays = [(k, v) for k, v in props.items() if v.get("type") == "array" and v.get("items", {}).get("type", "object") == "object"]
+    if not arrays:
+        return out
+    lf, arr = arrays[0]
+    item = arr.get("items", {}).get("properties", {})
+    out["list_field"] = lf
+    promise_id = [k for k, v in spec.get("tool_bodies", {}).get("create_promise", {}).items() if v == "p_product"]
+    ids = [k for k in item if k in promise_id] or [k for k in item if k.endswith("_id") or k == "id"] or \
+          [k for k in item if "id" in k.lower()]
+    if ids:
+        out["id_field"] = ids[0]
+    types = [k for k, v in item.items() if v.get("enum") and k in ("type", "product_type", "kind", "product")] or \
+            [k for k, v in item.items() if v.get("enum")]
+    if types:
+        out["type_field"] = types[0]
+    return out
+
+
 def compile_workflow(spec, openapi):
+    spec = json.loads(json.dumps(spec))
+    spec.setdefault("products", {}).update({k: v for k, v in account_shape(openapi, spec).items()
+                                            if k not in spec["products"]})
     base = openapi["servers"][0]["url"].rstrip("/")
     bodies = spec["tool_bodies"]
     nodes = {}

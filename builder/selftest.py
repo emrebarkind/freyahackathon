@@ -46,7 +46,7 @@ class GenericBank:
             return {R.get("ok", "ok"): True, R.get("verified", "verified"): False, R.get("all_verified", "all_verified"): False,
                     R.get("left", "wrong_answers_left"): self.spec["identity"].get("max_wrong", 3) - self.wrong}
         if tool == "get_account":
-            return {"ok": True, "products": copy.deepcopy(self.products)}
+            return {"ok": True, self.spec["products"].get("list_field", "products"): copy.deepcopy(self.products)}
         if tool == "create_promise":
             self.led["promises"].append((a["p_product"], round(float(a["p_amount"]), 2), a["p_date"]))
             return {"ok": True}
@@ -157,7 +157,8 @@ def identity_values(spec):
 
 
 def make_product(spec, i, typ, days_late):
-    p = {"product_id": "p%d" % (i + 1), "type": typ, spec["products"].get("days_field", "days_late"): days_late,
+    P_ = spec["products"]
+    p = {P_.get("id_field", "product_id"): "p%d" % (i + 1), P_.get("type_field", "type"): typ, P_.get("days_field", "days_late"): days_late,
          "card_last4": "4821", "account_last4": "1234", "last4": "1234"}
     full = 300.0 + 100 * i
     p[spec["products"].get("amount_field", "past_due")] = full
@@ -215,7 +216,8 @@ def run_all(spec, openapi):
         if len(types) > 1:
             multi = [make_product(spec, i, t, dl0) for i, t in enumerate(types[:3])]
             fri = cal.ladder_date(today, "last_business_day_this_week", None) if False else None
-            prom = [(p["product_id"], p[spec["products"].get("amount_field", "past_due")], today.isoformat()) for p in multi]
+            idf = spec["products"].get("id_field", "product_id")
+            prom = [(p[idf], p[spec["products"].get("amount_field", "past_due")], today.isoformat()) for p in multi]
             scenarios.append(("several products, all paid today", [C] + answers + [dict(k="yes"), dict(k="yes")], multi,
                               expected(spec, "promise", promises=prom)))
         for name, turns, prods, exp in scenarios:

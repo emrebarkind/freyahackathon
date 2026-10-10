@@ -115,3 +115,47 @@ def test_clear_yes_in_a_cut_off_message_is_acted_on():
     script = ids("PUB-01") + [dict(k="yes"), dict(k="yes", cut="yes", t="Yes, I confirm. I've been")]
     led, tr = run_case(A, CASES["PUB-01"], script)
     assert len(led["promises"]) == 1, agent_lines(tr)
+
+
+B = json.load(open(ROOT / "specs" / "brief-b.gold.json"))
+
+
+def ids_b(cid):
+    c = CASES[cid]
+    return [C, dict(k="answer", t=c["identity"]["date_of_birth"]), dict(k="answer", t=c["identity"]["phone_last4"])]
+
+
+def test_multi_restating_agreed_product_does_not_loop():
+    # PUB-12 data: the customer repeats "card tomorrow" while the loan offer is on the table
+    case = copy.deepcopy(CASES["PUB-12"])
+    case["identity"]["phone_last4"] = "4410"
+    script = ids_b("PUB-12") + [dict(k="proposes", d="tomorrow", f="credit_card", t="card tomorrow, not the others"),
+                                dict(k="proposes", d="tomorrow", f="credit_card", t="I said card tomorrow, I am not paying the loan"),
+                                dict(k="no"), dict(k="no"), dict(k="no"), dict(k="yes")]
+    led, tr = run_case(B, case, script)
+    assert [(p["product_id"], p["date"]) for p in led["promises"]] == [("p1", "2026-10-15")], agent_lines(tr)
+    assert sorted((n["product_id"], n["reason"]) for n in led["notes"]) == [("p2", "refused"), ("p3", "refused")]
+
+
+def test_multi_side_question_at_all_today_keeps_phase():
+    script = ids_b("PUB-11") + [dict(k="robot", t="are you a robot?"), dict(k="yes", t="yes, I can pay all of them today"), dict(k="yes")]
+    led, tr = run_case(B, CASES["PUB-11"], script)
+    assert len(led["promises"]) == 3 and all(p["date"] == "2026-10-14" for p in led["promises"]), agent_lines(tr)
+
+
+def test_multi_already_paid_all():
+    script = ids_b("PUB-11") + [dict(k="already_paid", f="all", t="I paid all of them yesterday")]
+    led, tr = run_case(B, CASES["PUB-11"], script)
+    assert led["outcome"] == "paid" and sorted(n["reason"] for n in led["notes"]) == ["paid", "paid", "paid"], agent_lines(tr)
+
+
+def test_multi_weekend_date_for_all_is_adjusted_for_all():
+    script = ids_b("PUB-11") + [dict(k="no"), dict(k="proposes", d="Saturday", f="all", t="all of them on Saturday"), dict(k="yes"), dict(k="yes")]
+    led, tr = run_case(B, CASES["PUB-11"], script)
+    assert sorted(p["date"] for p in led["promises"]) == ["2026-10-19"] * 3, agent_lines(tr)
+
+
+def test_details_question_is_answered_not_no_info():
+    script = ids("PUB-01") + [dict(k="details", t="which card is this about?"), dict(k="yes"), dict(k="yes")]
+    led, tr = run_case(A, CASES["PUB-01"], script)
+    assert "4821" in agent_lines(tr)[4] and "don't have" not in agent_lines(tr)[4] and len(led["promises"]) == 1

@@ -51,6 +51,8 @@ def main():
     else:
         from builder import extract
         spec = extract.extract(docs, openapi, trace)
+    for k, v in comp.account_shape(openapi, spec).items():      # response field names come from the tool API file
+        spec.setdefault("products", {}).setdefault(k, v)
     out_dir = ROOT / "submission"
     out_dir.mkdir(exist_ok=True)
     (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
