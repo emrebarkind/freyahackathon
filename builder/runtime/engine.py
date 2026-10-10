@@ -840,6 +840,10 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             s["ci"] = next_open(s)
             if multi and (scope == "all" or (dtxt and a is None and scope != "one")):
                 return propose_all(V, s, dtxt, a, k)
+        elif k == "asks_amount":
+            s["phase"] = "today"
+            say(V, L("ask_today_multi") if multi else L("ask_today"))
+            return talk(V, "nego", s)
         elif k in ("no", "refuses", "cannot", "none", "unclear"):
             s["ci"] = next_open(s)
             p = cur(s)
@@ -858,6 +862,9 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
         return
     if common_intents(V, s, k, again, True):
         return
+    if k == "asks_amount":            # "you tell me" / "how much?": the agent always proposes the amount
+        say(V, again)
+        return talk(V, "nego", s)
     if k in ("question", "purpose"):
         say(V, L("no_info"), again)
         return talk(V, "nego", s)

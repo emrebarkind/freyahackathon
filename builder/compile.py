@@ -99,6 +99,7 @@ KINDS = {
         "robot": "asks whether you are a robot or an AI",
         "scam": "asks whether this is a scam",
         "not_talk": "says they do not want to talk about this",
+        "asks_amount": "asks how much they should or can pay, what the options are, or says 'you tell me'",
         "question": "asks another question",
         "unclear": "anything else",
     },
