@@ -1638,9 +1638,14 @@ def clear_result(V, node):
             V[k] = ""
 
 
+def chainable(node):
+    r = S.get("responses", dict()).get(TOOL_OF.get(node, ""), dict()) or dict()
+    return bool(r.get("field")) if r else True     # without a success flag the platform cannot test success
+
+
 def plan_chain(V):
     nxt = V.get("next")
-    if nxt not in CHAIN or S.get("no_chains"):
+    if nxt not in CHAIN or S.get("no_chains") or not chainable(nxt):
         return
     s = st(V)
     if s.get("no_chain"):
@@ -1651,7 +1656,7 @@ def plan_chain(V):
     try:
         for _ in range(12):
             node = V.get("next")
-            if node not in CHAIN:
+            if node not in CHAIN or not chainable(node):
                 break
             if used[node] >= len(CHAIN[node]):
                 raise ValueError("chain too long")
@@ -1670,6 +1675,11 @@ def plan_chain(V):
         V.update(snap)
         return
     fs = st(V)
+    fs["chain_prefix"] = snap.get("_prefix", "")
+    if final.startswith("talk_"):
+        fstage = final[5:].replace("open_again", "open")
+        for f in ("_kind", "_cut", "_text"):
+            V[fstage + f] = ""                         # the talk node writes these when the customer answers
     for p in PHYS:
         clear_result(V, p)
         V["plan_" + p] = ""
@@ -1693,7 +1703,15 @@ def chain_step(V, s):
     """The step node runs after a planned chain. Returns True if this run is fully handled."""
     calls = s.get("chain", [])
     c0 = s.get("chain_counts", dict())
-    ran = [counts(V, c["phys"]) > c0.get(c["phys"], 0) or succeeded(V, c["phys"]) for c in calls]
+    def has_result(n):
+        return any(k.startswith(n + "_response") and V[k] not in (None, "") for k in V)
+    # A failed call leaves no trace on the platform. But a call that succeeded moves on to the next one, so the
+    # chain stopped at the first call that did not succeed: that one ran (and failed), the ones after it did not.
+    ran, stopped = [], False
+    for c in calls:
+        ran.append(not stopped or counts(V, c["phys"]) > c0.get(c["phys"], 0) or has_result(c["phys"]))
+        if not succeeded(V, c["phys"]):
+            stopped = True
     if all(ran) and all(succeeded(V, c["phys"]) for c in calls):
         final = s.pop("chain_final", "")
         say_ = s.pop("chain_say", "")
@@ -1703,7 +1721,7 @@ def chain_step(V, s):
             s.pop(k, None)
         put(V, s)
         stage = s.get("stage", "open")
-        heard = str(V.get(stage + "_kind") or "none").strip().lower() not in ("", "none") or str(V.get(stage + "_text") or "").strip()
+        heard = any(str(V.get(stage + f) or "").strip() for f in ("_kind", "_cut", "_text"))
         if final.startswith("talk_") and heard:
             return False                               # the planned turn was spoken and answered: carry on
         V["say"] = say_                                # the workflow came back before the planned node: go there now
@@ -1714,6 +1732,8 @@ def chain_step(V, s):
     st0 = json.loads(s["chain_s0"]) if s.get("chain_s0") else dict()
     st0["no_chain"] = True
     put(V, st0)
+    if s.get("chain_prefix"):
+        V["_prefix"] = s["chain_prefix"]
     for c, r in zip(calls, ran):
         if not r:
             return True                                # the previous result already routed to this call: make it now
@@ -1734,6 +1754,13 @@ def chain_step(V, s):
 def fallback_close(V):
     """Outcome to close with if later engine runs keep failing on the platform (api_close_fb)."""
     s = st(V)
+    if s.get("await") == "chain" and s.get("chain_s0"):
+        s = json.loads(s["chain_s0"])                  # what really happened so far, not the planned result
+        prods = s.get("products") or []
+        e = ev("promise" if any(p.get("status") == "recorded" for p in prods) else ("service_error" if prods else "unclear"))
+        V["fb_outcome"], V["fb_reason"] = e.get("outcome", ""), e.get("reason", "") or ""
+        V["fb_say"] = (L("system_error") or "I'm sorry, we have a technical problem and need to end the call. Please call us back.") + " " + L("goodbye")
+        return
     prods = s.get("products") or []
     if s.get("stage") == "closing" and V.get("c_outcome"):
         o, r = V.get("c_outcome", ""), V.get("c_reason", "")

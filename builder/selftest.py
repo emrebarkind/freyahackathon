@@ -162,7 +162,7 @@ def walk(wf, spec, V, bank_call, turns, feed, max_steps=400):
                 del V[k]
             r = bank_call(tool, body, slots)
             if r is None:
-                V[node + "_failure_count"] = (V.get(node + "_failure_count") or 0) + 1
+                pass                               # as on the platform: a failed call leaves no variables, no counter
             else:
                 V[node + "_success_count"] = (V.get(node + "_success_count") or 0) + 1
                 flatten(node + "_response.data", r, V)
