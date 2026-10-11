@@ -153,6 +153,8 @@ use the default shown and record it in `assumptions`.
    "create_promise": {"<product id param>": "p_product", "<amount param>": "p_amount", "<date param>": "p_date"},
    "add_note": {"<product id param>": "n_product", "<reason param>": "n_reason"},
    "schedule_callback": {"<date param>": "cb_date", "<time param>": "cb_time"},   // or {"<datetime param>": "cb_datetime"}
+   // a request field that identifies the customer under another name than customer_id (e.g. "client_ref") maps to
+   // the call variable: {"client_ref": "customer_id"}; a field literally named customer_id is filled automatically
                                                    // (sent as YYYY-MM-DDTHH:MM) if the tool takes one field
    "transfer_to_agent": {"<queue param>": "t_queue"},
    "close_call": {"<outcome param>": "c_outcome", "<reason param>": "c_reason"}

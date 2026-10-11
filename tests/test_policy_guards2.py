@@ -169,3 +169,15 @@ def test_promise_retries_come_from_the_brief():
         got = score.conversation(s, {"now": "2026-10-14T11:00", "products": prods, "script": script,
                                      "faults": {"create_promise": 1}}, O)
         assert bool(got["promises"]) == recorded, (retries, got)
+
+
+def test_a_customer_reference_under_another_name_reaches_every_node():
+    o = json.load(open(ROOT / "eval" / "robust" / "r3" / "openapi.json"))
+    s = json.load(open(ROOT / "eval" / "robust" / "results" / "r3-B-3a2c263509.spec.json"))
+    from builder import extract
+    assert not [e for e in extract.validate(copy.deepcopy(s), o) if "'customer_id' is not a slot" in e]
+    wf = comp.compile_workflow(comp.apply_defaults(s, o), o)
+    for n in ("api_promise", "api_promise_2", "api_promise_3", "api_note_2", "api_close"):
+        if n in wf["nodes"]:
+            b = wf["nodes"][n]["pre_actions"][0]["function"]["parameters"]["properties"]["body"]["properties"]
+            assert b["client_ref"]["default"] == "{{customer_id}}", (n, b["client_ref"])

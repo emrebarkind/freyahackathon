@@ -124,7 +124,7 @@ def resolve(tmpl, V):
     return tmpl, None
 
 
-def walk(wf, spec, V, bank_call, turns, feed, max_steps=400):
+def walk(wf, spec, V, bank_call, turns, feed, max_steps=400, required=None):
     """Run a call through the compiled workflow: the step node runs the engine, api nodes call the bank with the
     compiled request body, transitions are evaluated as the platform does. Returns the transcript."""
     engine.S = spec
@@ -158,6 +158,9 @@ def walk(wf, spec, V, bank_call, turns, feed, max_steps=400):
                 body[f] = float(val) if d.get("type") == "number" and val not in (None, "") else val
                 if var:
                     slots[re.sub(r"_[23]$", "", var)] = body[f]
+            missing = [f for f in (required or {}).get(tool, []) if body.get(f) in (None, "")]
+            if missing:                            # the platform would send this call without a required field
+                raise RuntimeError(f"{node} ({tool}) would be sent without required field(s) {missing}")
             for k in [k for k in V if k.startswith(node + "_response")]:
                 del V[k]
             r = bank_call(tool, body, slots)
@@ -202,7 +205,13 @@ def simulate(spec, variables, bank, turns, max_steps=400, openapi=None):
         if stage == "id":
             V["id_norm"] = u.get("norm", "")
 
-    tr = walk(wf, spec, V, lambda tool, body, slots: bank.call(tool, slots), turns, feed, max_steps)
+    req = {}
+    for path, item in (openapi.get("paths") or {}).items():
+        try:
+            req[path.strip("/")] = item["post"]["requestBody"]["content"]["application/json"]["schema"].get("required", [])
+        except (KeyError, TypeError):
+            pass
+    tr = walk(wf, spec, V, lambda tool, body, slots: bank.call(tool, slots), turns, feed, max_steps, required=req)
     return bank.led, tr
 
 

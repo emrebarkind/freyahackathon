@@ -49,7 +49,7 @@ SLOTS = {"verify_identity": {"q_field", "q_answer"}, "get_account": set(),
          "close_call": {"c_outcome", "c_reason"}}
 
 
-ALL_SLOTS = set().union(*SLOTS.values()) | {"cb_datetime"}
+ALL_SLOTS = set().union(*SLOTS.values()) | {"cb_datetime", "customer_id"}   # customer_id: the call variable
 PLACEHOLDERS = {"title", "first_name", "last_name", "name", "amount", "date", "days", "time", "deadline", "floor", "full"}
 STATEMENT_LINES = {"robot", "scam", "tp_no_info", "not_talk_once", "id_wrong", "id_why", "id_explain", "no_info",
                    "below_floor_again", "paid_line", "dispute_line", "recorded", "sms_line", "record_failed"}

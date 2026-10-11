@@ -547,7 +547,9 @@ def compile_workflow(spec, openapi):
         if node == "api_close_nr":      # close without a reason field (outcomes whose table lists no reason)
             mapping = {k: v for k, v in mapping.items() if v != "c_reason"}
         sfx = re.search(r"_[23]$", node).group(0) if re.search(r"_[23]$", node) else ""
-        body = {k: (v if str(v).startswith("const:") else "{{" + v + sfx + "}}") for k, v in mapping.items()}
+        # customer_id is the call's own variable (the customer reference, whatever the API calls it): never suffixed
+        body = {k: (v if str(v).startswith("const:") else "{{customer_id}}" if v == "customer_id" else "{{" + v + sfx + "}}")
+                for k, v in mapping.items()}
         if "customer_id" in schema.get("properties", {}):
             body["customer_id"] = "{{customer_id}}"
         if node in ("api_close", "api_close_nr"):
