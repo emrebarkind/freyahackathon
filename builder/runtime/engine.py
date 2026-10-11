@@ -1586,6 +1586,8 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             return talk(V, "nego", s)
         if p["used"] == 0:
             return make_offer(V, s, p, 1)          # attempt 1 = the floor on the attempt-1 date, said once with its note
+        if S.get("rules", dict()).get("too_much_skips_full"):
+            return refusal(V, s, p)                # the brief's own meaning of "too much": a refusal; later full steps skipped
         d = p["offer"][1] if p.get("offer") and p["offer"][1] else iso(ladder_date(today_of(V), ladder_of(p)[0].get("date", "deadline"), p))
         p["offer"] = [p["floor"], d]
         p["floor_offered"] = True

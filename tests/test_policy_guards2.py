@@ -265,3 +265,31 @@ def test_too_much_skips_later_full_steps_only_when_the_brief_says_so():
         assert p["offer"] == [300.0, "2026-10-20"]                  # brief silent: the step is offered
     finally:
         eng.say, eng.talk, eng.advance, eng.focus = saved
+
+
+def test_too_much_mid_ladder_follows_the_brief():
+    from builder import selftest
+    spec = copy.deepcopy(E.A)
+    spec["rules"].pop("week_end_today", None)
+    spec["ladder"] = [dict(amount="full", date="calendar_days_after:7"), dict(amount="pct:50", date="deadline"),
+                      dict(amount="floor", date="deadline")]
+    for b in spec["bands"]:
+        b["attempts"], b["ladder"] = 3, None
+    s = comp.apply_defaults(copy.deepcopy(spec), O)
+    ident, _ = selftest.identity_values(s)
+    typ = list(s["products"]["names"])[0]
+    rec = {"product_id": "p1", "type": typ, "past_due": 300.0, "days_late": max(b["min"] for b in s["bands"]),
+           s["products"]["floor_field"][typ]: 30.0}
+
+    def amounts(opt):
+        s["rules"]["too_much_skips_full"] = opt
+        bank = selftest.GenericBank(s, ident, [dict(rec)], {})
+        turns = [dict(k="confirmed", t="yes")] + [dict(k="answer", t=ident[q["field"]]) for q in s["identity"]["questions"]] + \
+            [dict(k=k, t=k, d="", a=None, f="none", cut="no") for k in ("no", "too_much", "no", "no")]
+        _, tr = selftest.simulate(s, dict(customer_id="c", first_name="A", last_name="M", title="Mr", now="2026-10-14T11:00"),
+                                  bank, turns, openapi=O)
+        return [ln for who, ln in tr if who == "agent" and ("150" in ln or " 30 " in ln)]
+    on = amounts(True)
+    assert "150" in on[0] and " 30 " in on[1]        # r2: too much = refusal of step 1, then step 2, then the floor
+    off = amounts(False)
+    assert " 30 " in off[0]                          # brief silent: the built-in floor offer comes first
