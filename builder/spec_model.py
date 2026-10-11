@@ -223,7 +223,10 @@ class Spec(Loose):
 def normalise(spec):
     """Lossless format fixes, in place: H:MM / H.MM -> HH:MM; no callback window on any of the 7 weekdays is the same
     policy as no callback day (days: []). Anything ambiguous is left for the checks."""
-    cb = spec.get("callback") if isinstance(spec, dict) else None
+    m = spec.get("multi") if isinstance(spec, dict) else None
+    if isinstance(m, dict) and isinstance(m.get("outcome_priority"), list):    # the engine never ranks these two:
+        m["outcome_priority"] = [x for x in m["outcome_priority"] if x not in ("paid", "promise")]  # promise always
+    cb = spec.get("callback") if isinstance(spec, dict) else None              # wins; paid only when all are paid
     if isinstance(cb, dict):
         w = cb.get("windows")
         if isinstance(w, dict) and sorted(w) == [str(i) for i in range(7)] and not any(w.values()):

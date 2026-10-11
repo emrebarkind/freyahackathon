@@ -223,7 +223,7 @@ def validate(spec, openapi, docs_text=""):
         except Exception as e:
             errs.append(f"changes from {c['from']}: cannot be applied ({type(e).__name__}: {e})")
     for x in (spec.get("multi") or {}).get("outcome_priority") or []:
-        if x not in spec["events"] or x in ("paid", "promise"):
+        if x not in spec["events"]:
             errs.append(f"multi.outcome_priority: '{x}' is not a ranking entry (use event keys of the endings that share a "
                         f"no-promise close, e.g. refused, dispute; a recorded promise always wins and paid closes only "
                         f"when every product is paid)")

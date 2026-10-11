@@ -293,7 +293,8 @@ Built-in behaviour (always carried out; never list these under unsupported_rules
   event, after it every open product ends refused (the refused event); the first time gets one `not_talk_once` line;
 - several products: the call closes with the promise event if any promise was recorded (a product whose write failed
   gets its own service_error note); otherwise with paid if every product was paid; otherwise with the ending of the
-  first product in account order, unless `multi.outcome_priority` ranks the endings;
+  first product in handling order (`multi.order`, else account order) that did not end paid, unless
+  `multi.outcome_priority` ranks the endings;
 - hardship: once the customer has declined the support offer there is no further persuasion; open products end with
   the hardship event;
 - a transfer (restructuring, human, support) ends the call: a promise agreed but not yet read back is not recorded;
