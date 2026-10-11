@@ -1,0 +1,79 @@
+[    0.0s] START 2026-10-11T06:11:05+0000
+[    0.0s] NOTE briefs=['eval/hard/h1/brief.md'] tool_api=eval/hard/h1/openapi.json slot=rehearsal-h1
+[    0.0s] STEP 1. spec extraction
+[    0.8s] NOTE extraction mode B
+[  112.2s] MODEL CALL #1 model=claude-opus-5-5 seconds=111.4 cost_usd=0.304 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  160.0s] MODEL CALL #2 model=claude-opus-5-5 seconds=47.8 cost_usd=0.323 purpose: audit the high-risk fields of the reading against the source documents
+[  160.0s] NOTE audit: **Audit of the Brackenridge Finance spec against the brief and tool API**
+[  160.0s] 
+[  160.0s] The spec is correct in every high-risk field. One rule is missing from `unsupported_rules`: the date on which PAID changes to CLAIMED_PAID.
+[  160.0s] 
+[  160.0s] calendar: OK -- "Brackenridge holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2027-01-01 and 2027-01-04" + CO-26-14 "2026-11-27 (Friday) and 2026-12-07 (Monday) are added" + CO-26-15 "withdrawn for 2026-12-07 only … 2026-11-27 remains" -- six holidays, 12-07 rightly left out; Mon–Fri workdays.
+[  160.0s] date_rules: OK -- the brief says nothing about "next Friday", so the default is used and recorded in assumptions.
+[  160.0s] confirm: OK -- "still unclear who answered after two asks, NOCONTACT / UNCLEAR" -- max_asks 2.
+[  160.0s] callback: OK -- "today or the next business day, and never for a time earlier than the current time"; Priya: "Monday to Thursday is right. Friday closes at 16:00 … (16:00 itself is fine)"; Hamish: "Monday to Thursday 09:00 to 20:00 … Both ends included" -- 09:00–20:00, Friday 09:00–16:00, no weekends, after_now true.
+[  160.0s] identity.questions: OK -- "date of birth first, then the postcode"; API "birth_date: eight digits DDMMYYYY"; "home_postcode: capital letters and digits, no spaces" -- date with %d%m%Y, then upper with no spaces and no fixed length.
+[  160.0s] identity.max_wrong: OK -- Priya: "the third wrong answer ends it, whichever question it was on" (this overrides Hamish's two) -- 3, counted in total; max_wrong_per_question is null.
+[  160.0s] identity.hints: OK -- the verify_identity response has no hint field -- {}.
+[  160.0s] identity (rest): OK -- "If a customer gives a date only as numbers, read it as day, month, year" -- date_order dmy; the response fields correct / identity_passed / attempts_remaining match the API.
+[  160.0s] products.amount_field: OK -- "arrears_gbp: Past-due amount in pounds with pence" -- arrears_gbp; days_field is days_overdue.
+[  160.0s] products.floor_field: OK -- "(b) PLOAN: the contractual monthly payment … (c) MOTOR: the contractual monthly payment in bands 1 and 2" -- contractual_payment_gbp for both.
+[  160.0s] products.floor_pct: OK -- Priya: "12% of the arrears, not 10%, and the minimum is £25 … always round up to the next whole multiple of £5 … The minimum applies after rounding … never more than the arrears" -- CARD 12, floor_round up:5, floor_min CARD 25; the cap at the arrears is built in. Hand checks: £437.80 → £55; £150 → £25; £20 → £20 (capped at the arrears); £250 → £30 (already a multiple of £5, so unchanged).
+[  160.0s] products (rest): OK -- "Money read from get_account is in pounds with pence; money sent to create_promise is in integer pence" -- promise_scale 100. promise_round stays null because no rounding rule is given. list/id/type fields are products / product_ref / kind.
+[  160.0s] bands: OK -- table 7.4 (1–14 → 8th business day, 1 attempt; 15–44 → 5th, 2; 45–90 → 2nd, 3) + CO-26-14 "Motor finance, band 2: the deadline becomes the 3rd business day after today" (CO-26-15 says this stands) + 7.5(c) "In band 3 the floor is the full arrears" -- MOTOR has its own band 2 deadlin
+[  160.0s] NOTE audit changed: ['unsupported_rules']
+[  160.0s] NOTE validation round 1: 0 problem(s)
+[  160.0s] NOTE assumption: Read the documents in date order: Hamish's email (20 Oct) is corrected by Priya's (22 Oct); CO-26-14 (21 Oct) is corrected by CO-26-15 (28 Oct).
+[  160.0s] NOTE assumption: Wrong answers: Priya overrides Hamish's limit of two. The third wrong answer, on either question, ends the check, so max_wrong = 3 counted in total.
+[  160.0s] NOTE assumption: Card floor: Priya overrides Hamish. It is 12% of arrears_gbp, rounded up to the next multiple of £5 (an exact multiple of £5 stays as it is), then raised to at least £25 after rounding, then capped at the arrears. Examples: £437.80 -> 52.536 -> £55; £150 -> 18 -> 20 -> £25; £20 -> 2.40 -> 5 -> 25 -> capped at £20; £250 -> 30 -> £30.
+[  160.0s] NOTE assumption: Callback window: Monday to Thursday 09:00-20:00 (Hamish's hours, which Priya confirmed); Friday 09:00-16:00 (Priya's correction of 17:00). Both ends included. Callbacks are only today or the next business day and never earlier than now. Weekends have no callbacks, and holidays are excluded because only business days are allowed.
+[  160.0s] NOTE assumption: Holidays: the policy's list plus 2026-11-27 from CO-26-14. 2026-12-07 was added by CO-26-14 but withdrawn by CO-26-15, so it is a business day.
+[  160.0s] NOTE assumption: MOTOR band 2 deadline is the 3rd business day after today (CO-26-14 item 1, confirmed by CO-26-15 item 2). Attempts are unchanged.
+[  160.0s] NOTE assumption: MOTOR band 3 floor is the full arrears (7.5c). The MOTOR floor is named 'minimum payment' so that the band 3 floor is not called a contractual monthly payment.
+[  160.0s] NOTE assumption: PAID is replaced by CLAIMED_PAID for calls closed from 2 November 2026 (CO-26-15 item 3). The build is used after the memo dates, so CLAIMED_PAID is used for the paid event.
+[  160.0s] NOTE assumption: The dispute note is N-DISP. N-DSP is deprecated.
+[  160.0s] NOTE assumption: Hardship: the brief transfers straight to Q-VULN with no offer, and N-HARD is for human agents only. The hardship event therefore uses XFER/CARE with no note, and on any transfer no notes are written (7.11f).
+[  160.0s] NOTE assumption: create_promise failures are never retried (promise_retries = 0). The product is noted N-SYS and the call carries on as normal.
+[  160.0s] NOTE assumption: get_account amounts are in pounds with pence; create_promise takes integer pence, so promise_scale = 100. The brief gives no rounding rule because the amounts are already in pence.
+[  160.0s] NOTE assumption: Date of birth is sent as DDMMYYYY (%d%m%Y), and numeric dates are read day-month-year. The postcode is sent in capitals with no spaces, and no fixed length is set because UK postcodes vary in length.
+[  160.0s] NOTE assumption: The verify_identity response has no hint field, so hints are empty.
+[  160.0s] NOTE assumption: Step 1 uses full_or_floor because, after 'too much', every step uses the floor in place of the full arrears (7.8). Step 2 then repeats step 1 and is skipped without using an attempt (7.7).
+[  160.0s] NOTE assumption: 'Too much' said to the opening ask: each product starts at step 1 with the floor (too_much_floor = attempt_1).
+[  160.0s] NOTE assumption: If today is the last business day of this week, steps 1 and 2 use the last business day of next week (week_end_today = next_week). A step date after the product's deadline uses the deadline.
+[  160.0s] NOTE assumption: customer_ref is mapped to the customer_id call variable in every tool body.
+[  160.0s] NOTE assumption: The brief is silent on these, so defaults are used: date_rules.next_weekday = following_week, callback.max_asks = 2, max_not_talk = 2, after_promise.ask_anything_else = true, purpose_is_decline = true, deadline_adjust = previous_business_day (computed deadlines are already business days).
+[  160.0s] NOTE assumption: The brief gives no rule for changing a promise that is already recorded, so the agent says it cannot be changed on this call. The brief requires no SMS sentence.
+[  160.0s] STEP 2. local checks: structure, tool API, engine self-test on synthetic customers
+[  160.8s] TEST PASS local happy path, pays in full today
+[  160.8s] TEST PASS local someone else answers, books a callback
+[  160.8s] TEST PASS local wrong number
+[  160.8s] TEST PASS local identity fails
+[  160.8s] TEST PASS local identity answered the way people speak
+[  160.8s] TEST PASS local already paid
+[  160.8s] TEST PASS local dispute
+[  160.8s] TEST PASS local hardship, accepts support
+[  160.8s] TEST PASS local restructuring request
+[  160.8s] TEST PASS local flat refusals
+[  160.8s] TEST PASS local the bank fails to record the promise twice
+[  160.8s] TEST PASS local the callback booking fails once, then works
+[  160.8s] TEST PASS local several products, all paid today
+[  160.8s] NOTE local checks: structural 0, tool API 0, self-test 13/13
+[  160.8s] NOTE UNSUPPORTED by the engine (policy kept as the brief states it): rule the spec cannot carry, not applied: 7.11(c) Financial hardship (illness, bereavement, job loss): one sentence of sympathy, then transfer to the Customer Care queue. Do not ask further questions.
+[  160.8s] NOTE UNSUPPORTED by the engine (policy kept as the brief states it): rule the spec cannot carry, not applied: CO-26-15 item 3: For calls closed from 2 November 2026, the outcome code PAID is replaced by CLAIMED_PAID. The ledger rejects PAID from that date.
+[  160.8s] NOTE repair budget used: 0/3
+[  160.8s] STEP 3. compile workflow
+[  160.8s] NOTE workflow: 25 nodes, 16 engine-run calls, 194359 bytes
+[  160.8s] STEP 4. validate, save, publish
+[  161.7s] TEST PASS platform dry-run validation
+[  162.8s] NOTE FREYA workflow_id=ea7991d5-c9c3-423c-95bb-fbcc7df9be6d agent_id=fb681a32-98b0-4306-adb1-00fdec171054 version=1
+[  162.8s] STEP 5. chat smoke test on Freya
+[  178.0s] TEST PASS chat the engine runs on the platform (asks the first security question) -- Hello? / Before we go on, I need to ask you two security questions. What is your date of birth?
+[  178.0s] TEST PASS chat no unfilled placeholder spoken
+[  178.0s] TEST PASS chat nothing about the debt before verification
+[  178.0s] STEP 6. export
+[  179.1s] NOTE exported submission/rehearsal-h1.workflow.json
+{"workflow_id": "ea7991d5-c9c3-423c-95bb-fbcc7df9be6d", "agent_id": "fb681a32-98b0-4306-adb1-00fdec171054", "export": "submission/rehearsal-h1.workflow.json"}
+[  179.1s] NOTE RESULT: INCOMPLETE -- the agent does not meet these:
+[  179.1s]   - not carried: 7.11(c) Financial hardship (illness, bereavement, job loss): one sentence of sympathy, then transfer to the Customer Care queue. Do not ask further questions.
+[  179.1s]   - not carried: CO-26-15 item 3: For calls closed from 2 November 2026, the outcome code PAID is replaced by CLAIMED_PAID. The ledger rejects PAID from that date.
+[  179.1s] END 2026-10-11T06:14:04+0000 total_seconds=179.1 model_calls=2 model_cost_usd=0.63

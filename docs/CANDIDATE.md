@@ -1,6 +1,39 @@
 # Submission candidates
 
-## Candidate 2 (recommended): builder at `4a919df` (merged as `4a17cd8`)
+## Candidate 3 (recommended): builder at `41de6d0` (merged as `87a6839`)
+
+Candidate 2 plus the robustness fixes (eval/robust r1-r3, eval/hard h1): floor percentage per product type, step
+rounding (up/nearest/down:<step>), minimum floor, a band whose floor is the whole debt, rounded percentage steps;
+skipped repeats, promise retries and the week-end rule come from the brief (silent: engine default, written as an
+assumption); the refused opening ask is never proposed again; returning to a product repeats its open offer; a
+customer reference under another field name reaches every node; the self-test fails a call missing a required field;
+tools the API lacks are never called and need no mapping; no callback day means no time question. Repairs only while
+they make progress (fewer problems, none new, no passing scenario broken, no stated value dropped, no rule moved to
+`unsupported_rules`). A rule not carried or a failing local scenario makes the run INCOMPLETE (exit 3, agent still
+exported). `git diff 41de6d0 87a6839 -- builder requirements.txt scripts kit` is empty. 151 tests pass.
+
+Rehearsal on `87a6839` (clean tree): `scripts/final_run.sh rehearsal-h1 eval/hard/h1/brief.md eval/hard/h1/openapi.json`
+
+| | |
+|---|---|
+| start / end | 2026-10-11 06:11:05 / 06:14:04 UTC, 179 s |
+| model calls | 2, $0.63; validation 0 problems, repair rounds 0/3 |
+| local checks | structural 0, tool API 0, self-test 13/13 |
+| platform | dry-run passed; workflow `ea7991d5-c9c3-423c-95bb-fbcc7df9be6d`, agent `fb681a32-98b0-4306-adb1-00fdec171054`; chat smoke test passed |
+| verdict | INCOMPLETE (exit 3): two rules named as not carried (hardship transfer without a question; outcome code switched by call date) |
+| spec vs frozen key (hard h1) | 34/34 (candidate 2 on the same brief: 20/34, engine error on per-type floors) |
+
+```
+0bd5ae7451cc021b1986e8265b5d78ba741accfb2b4b5dfe0d6ce6b675b86a5e  submission/rehearsal-h1.workflow.json
+1d0da208871e3a53f8356e6f8241ea1f2e99dd55cdc1ac282caa06460bb35ba5  submission/rehearsal-h1.spec.json
+511eb2dd56f4cd08a69c4534146c0e3a5cc2914bf191e2a2e8731549f0d6159e  traces/rehearsal-h1.log
+614b687becbe37d365b6eef2700a42eb08cc37a77cdf938a795856d3bcf20735  traces/rehearsal-h1.trace.log
+```
+
+Local builds on this builder: p1 29/30 (INCOMPLETE, 1 rule named), q1 16/16 (COMPLETE), r2 22/22 (INCOMPLETE, 1 rule
+named), r3 20/20 (COMPLETE), h1 34/34 (eval/branch-results).
+
+## Candidate 2: builder at `4a919df` (merged as `4a17cd8`)
 
 Candidate 1 plus the policy guards: an amount `create_promise` cannot take is never sent and never changed (the
 product ends as not recorded); "last business day of this week" moves to next week only when the brief says so
