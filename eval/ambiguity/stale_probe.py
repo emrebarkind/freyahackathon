@@ -30,7 +30,7 @@ selftest.walk(wf, spec, V, lambda tool, body, slots: bank.call(tool, slots),
               [T("confirmed", "yes"), dict(k="answer", t="14 March 1988", norm="1988-03-14"), dict(k="answer", t="4471", norm="4471"),
                T("proposes", "I can pay the full amount on Friday.", "Friday")], feed, 400)
 st = json.loads(V["_state"]); st["turns_seen"] = 1; st["await"] = "talk"
-inject = dict(sess, _state=json.dumps(st), say=V["say"], confirm_kind="yes", confirm_text="Yes, I confirm.", confirm_cut="no")
+inject = dict(sess, _state=json.dumps(st, separators=(",", ":")), say=V["say"], confirm_kind="yes", confirm_text="Yes, I confirm.", confirm_cut="no")
 res, cid = [], None
 for i, m in enumerate(["Hello?", "Yes, I confirm.", "Yes, I confirm."]):
     body = {"workflowId": wf_id, "message": m, "customerVariables": inject if i == 0 else sess}

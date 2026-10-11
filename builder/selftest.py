@@ -128,15 +128,26 @@ def resolve(tmpl, V):
     return tmpl, None
 
 
+COUNTERS = [True]  # the platform's <node>.total_turns counters are visible to the code node (False: test the fallback)
+REJECTED = []      # code writes the platform would reject (schema validation), recorded by walk()
+
+
 def walk(wf, spec, V, bank_call, turns, feed, max_steps=400, required=None):
     """Run a call through the compiled workflow: the step node runs the engine, api nodes call the bank with the
     compiled request body, transitions are evaluated as the platform does. Returns the transcript."""
     engine.S = spec
     cal.P = dict(workdays=spec["calendar"]["workdays"], holidays=spec["calendar"]["holidays"])
     turns = list(turns)
+    enums = {}
+    for nd in wf["nodes"].values():
+        for x in nd.get("extraction_schema") or []:
+            if x.get("enum_values"):
+                enums[x["name"]] = set(x["enum_values"])
     tr = [("agent", "<opening>")]
     u = turns.pop(0)
     tr.append(("customer", json.dumps(u)))
+    if COUNTERS[0]:
+        V["talk_open.total_turns"] = 1
     feed("open", u)
     node = "step"
     for _ in range(max_steps):
@@ -144,7 +155,15 @@ def walk(wf, spec, V, bank_call, turns, feed, max_steps=400, required=None):
             break
         n = wf["nodes"][node]
         if node == "step":
+            before = dict(V)
             engine.main(V)
+            for var, allowed in enums.items():          # as on the platform: a code write outside a variable's enum
+                if var in V and V[var] not in allowed and str(V[var]) not in allowed:   # is rejected; the old value stays
+                    if var in before:
+                        V[var] = before[var]
+                    else:
+                        del V[var]
+                    REJECTED.append(var)
             if V.get("engine_error"):
                 raise RuntimeError("engine error: " + V["engine_error"])
             node = route(n, V)
@@ -185,6 +204,8 @@ def walk(wf, spec, V, bank_call, turns, feed, max_steps=400, required=None):
                 break
             u = turns.pop(0)
             tr.append(("customer", json.dumps(u)))
+            if COUNTERS[0]:
+                V[node + ".total_turns"] = int(V.get(node + ".total_turns") or 0) + 1   # as the platform counts
             feed(node[5:].replace("open_again", "open"), u)
             node = route(n, V)
             continue

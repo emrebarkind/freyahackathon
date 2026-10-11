@@ -401,6 +401,26 @@ def spoken(d):
 
 
 # ----------------------------------------------------------------------------------------------- input
+def customer_turns(V):
+    """Customer turns over the whole call, from the platform's own counters (<node>.total_turns of the talk nodes),
+    or None when they are not visible to the code node."""
+    n, seen = 0, False
+    for key, v in list(V.items()):
+        if str(key).startswith("talk_") and str(key).endswith(".total_turns"):
+            try:
+                n += int(float(v or 0)); seen = True
+            except (TypeError, ValueError):
+                pass
+    return n if seen else None
+
+
+def fresh_answer(V, stage):
+    """Without the counters: a talk node's values count as an answer only if something real is in them (the engine
+    resets <stage>_kind to "none", _cut to "no" and _text to "" once it has used them)."""
+    return (str(V.get(stage + "_kind") or "none").strip().lower() not in ("", "none") or
+            bool(str(V.get(stage + "_text") or "").strip()) or str(V.get(stage + "_cut") or "no").strip().lower() == "yes")
+
+
 def take_input(V, stage):
     """Extracted values of the talk node that just ran (variables are named per stage: <stage>_kind ...)."""
     g = lambda f: V.get(stage + "_" + f)
@@ -2043,8 +2063,9 @@ def plan_chain(V):
     fs["chain_prefix"] = snap.get("_prefix", "")
     if final.startswith("talk_"):
         fstage = final[5:].replace("open_again", "open")
-        for f in ("_kind", "_cut", "_text"):
-            V[fstage + f] = ""                         # the talk node writes these when the customer answers
+        for f, v in (("_kind", "none"), ("_cut", "no"), ("_text", "")):
+            V[fstage + f] = v                          # platform-valid resets ("" is rejected for enum variables)
+        fs["turns_at_plan"] = customer_turns(V)
     for p in PHYS:
         clear_result(V, p)
         V["plan_" + p] = ""
@@ -2086,7 +2107,8 @@ def chain_step(V, s):
             s.pop(k, None)
         put(V, s)
         stage = s.get("stage", "open")
-        heard = any(str(V.get(stage + f) or "").strip() for f in ("_kind", "_cut", "_text"))
+        n0, n1 = s.get("turns_at_plan"), customer_turns(V)
+        heard = (n1 > n0) if (n0 is not None and n1 is not None) else fresh_answer(V, stage)
         if final.startswith("talk_") and heard:
             return False                               # the planned turn was spoken and answered: carry on
         V["say"] = say_                                # the workflow came back before the planned node: go there now
@@ -2154,6 +2176,14 @@ def run(V):
     stage = s.get("stage", "open")
     if s.get("products") and cur(s) is not None:
         focus(cur(s))                                  # product fields for every line said this step
+    n = customer_turns(V)
+    if n is not None and s.get("turns_seen") is not None and n <= s["turns_seen"]:
+        # no new customer message since the last answer was used: nothing extracted earlier is taken as an answer
+        # (never as a yes, a no or a confirmation); the last line is said again
+        s["reask"] = True
+        return talk(V, stage, s)
+    if n is not None:
+        s["turns_seen"] = n
     return run_turn(V, s, stage)
 
 
