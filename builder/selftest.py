@@ -48,9 +48,13 @@ class GenericBank:
 
     def call(self, tool, a):
         self.led["calls"].append(tool)
-        if self.faults.get(tool, 0) > 0:
-            self.faults[tool] -= 1
-            return None
+        pk = f"{tool}:{a.get('p_product') or a.get('n_product') or ''}"          # a fault for one product's write
+        if self.faults.get(tool, 0) > 0 or self.faults.get(pk, 0) > 0:
+            self.faults[tool if self.faults.get(tool, 0) > 0 else pk] -= 1
+            return None                          # HTTP 500: nothing recorded (what the kit API documents)
+        lost = self.faults.get(tool + ":lost", 0) > 0     # undocumented case, simulated only: written, answer lost
+        if lost:
+            self.faults[tool + ":lost"] -= 1
         R = self.R
         if tool == "verify_identity":
             if str(a["q_answer"]) == str(self.identity.get(a["q_field"])):
@@ -74,7 +78,7 @@ class GenericBank:
             self.led["transfers"].append(a["t_queue"])
         elif tool == "close_call":
             self.led["outcome"], self.led["reason"] = a["c_outcome"], a.get("c_reason") or ""
-        return dict(self.ok(tool), done=True)
+        return None if lost else dict(self.ok(tool), done=True)
 
 
 def flatten(prefix, obj, out):
