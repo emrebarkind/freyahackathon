@@ -1,0 +1,154 @@
+{
+ "agent_id": "568d5428-94ee-4c7b-aa32-d376fdbce28b",
+ "simulation_id": "73088fa1-1812-4535-b4d9-5361d29e5bbe",
+ "iteration_id": "e0a932d8-58c2-466f-8d4f-d56ba39eebdb",
+ "seconds": 77,
+ "passed": 1,
+ "total": 3,
+ "runs": 1,
+ "final": [
+  {
+   "id": "PUB-01",
+   "family": "Happy path",
+   "passes": 1,
+   "runs": 1,
+   "pass": true
+  },
+  {
+   "id": "PUB-05",
+   "family": "Hardship",
+   "passes": 0,
+   "runs": 1,
+   "pass": false
+  },
+  {
+   "id": "PUB-08",
+   "family": "Already paid",
+   "passes": 0,
+   "runs": 1,
+   "pass": false
+  }
+ ],
+ "rows": [
+  {
+   "id": "PUB-01",
+   "level": "easy",
+   "family": "Happy path",
+   "pass": true,
+   "failed": [],
+   "call_id": "9a15cdeb-eebb-4d11-9a10-a11e97487d8f",
+   "tools": [
+    "verify_identity",
+    "verify_identity",
+    "get_account",
+    "create_promise",
+    "close_call"
+   ],
+   "customer_id": "c_c9bb81df-e80",
+   "slowest_turn_s": 12.9,
+   "ended": "assistant-ended-call"
+  },
+  {
+   "id": "PUB-05",
+   "level": "medium",
+   "family": "Hardship",
+   "pass": false,
+   "failed": [
+    "outcome ('transferred', 'support'), expected ('no_promise', 'hardship')",
+    "transfers [{'queue': 'support'}], expected []"
+   ],
+   "call_id": "dd000b03-55fd-4fc3-a06d-2ef578980e4e",
+   "tools": [
+    "verify_identity",
+    "verify_identity",
+    "get_account",
+    "transfer_to_agent",
+    "close_call"
+   ],
+   "customer_id": "c_bc4abc8a-0eb",
+   "slowest_turn_s": 12.3,
+   "ended": "assistant-ended-call"
+  },
+  {
+   "id": "PUB-08",
+   "level": "medium",
+   "family": "Already paid",
+   "pass": false,
+   "failed": [
+    "outcome ('no_promise', 'dispute'), expected ('paid', None)"
+   ],
+   "call_id": "6852ba6d-a511-4aec-8c50-6ab221ad67a2",
+   "tools": [
+    "verify_identity",
+    "verify_identity",
+    "get_account",
+    "close_call"
+   ],
+   "customer_id": "c_b3ea1216-cd3",
+   "slowest_turn_s": 1.3,
+   "ended": "assistant-ended-call"
+  }
+ ],
+ "all_rows": [
+  [
+   {
+    "id": "PUB-01",
+    "level": "easy",
+    "family": "Happy path",
+    "pass": true,
+    "failed": [],
+    "call_id": "9a15cdeb-eebb-4d11-9a10-a11e97487d8f",
+    "tools": [
+     "verify_identity",
+     "verify_identity",
+     "get_account",
+     "create_promise",
+     "close_call"
+    ],
+    "customer_id": "c_c9bb81df-e80",
+    "slowest_turn_s": 12.9,
+    "ended": "assistant-ended-call"
+   },
+   {
+    "id": "PUB-05",
+    "level": "medium",
+    "family": "Hardship",
+    "pass": false,
+    "failed": [
+     "outcome ('transferred', 'support'), expected ('no_promise', 'hardship')",
+     "transfers [{'queue': 'support'}], expected []"
+    ],
+    "call_id": "dd000b03-55fd-4fc3-a06d-2ef578980e4e",
+    "tools": [
+     "verify_identity",
+     "verify_identity",
+     "get_account",
+     "transfer_to_agent",
+     "close_call"
+    ],
+    "customer_id": "c_bc4abc8a-0eb",
+    "slowest_turn_s": 12.3,
+    "ended": "assistant-ended-call"
+   },
+   {
+    "id": "PUB-08",
+    "level": "medium",
+    "family": "Already paid",
+    "pass": false,
+    "failed": [
+     "outcome ('no_promise', 'dispute'), expected ('paid', None)"
+    ],
+    "call_id": "6852ba6d-a511-4aec-8c50-6ab221ad67a2",
+    "tools": [
+     "verify_identity",
+     "verify_identity",
+     "get_account",
+     "close_call"
+    ],
+    "customer_id": "c_b3ea1216-cd3",
+    "slowest_turn_s": 1.3,
+    "ended": "assistant-ended-call"
+   }
+  ]
+ ]
+}

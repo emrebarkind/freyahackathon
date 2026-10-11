@@ -1,0 +1,21 @@
+{
+ "builder_commit": "ef271b33777571c1901fa25c6e30cadbf737fefb",
+ "exit_status": 0,
+ "inputs": {
+  "inputs/brief.md": "7150a3c3beaf81d127748f5ce0595f617520321fc2413cd8065e7ec364f0abc5",
+  "inputs/openapi.json": "9a8410b12e5c82b6c6a30e9ed7030574d6f919cafdb1e035cef7bd876b0badb8"
+ },
+ "outputs": {
+  "phase1-aprime.log": "951ded0a28d91b42292464f38209c4020874b636648ca7c9ed253f568895cb6c",
+  "phase1-aprime.spec.json": "86ebd27d1efc8ea9152d90ca18ad7b5b6b634c3f25073a0905a61d65adbd5265",
+  "phase1-aprime.trace.log": "7922a1b8d09d8d47990601d7488a0b64c25f48f407e54d44643558a7a126d152",
+  "phase1-aprime.workflow.json": "5fc3ff3c2d3eccfd90dbd24e902c011999021f80c677ff3ddbe1d919c0747856"
+ },
+ "seconds": 207.0,
+ "model_calls": 2,
+ "cost_usd": 0.87,
+ "result": "COMPLETE",
+ "reasons": [],
+ "workflow_id": "cad7e93a-5fb3-409b-b57d-5306523efb55",
+ "agent_id": "568d5428-94ee-4c7b-aa32-d376fdbce28b"
+}

@@ -1,0 +1,118 @@
+{
+ "ok": 9,
+ "total": 20,
+ "accuracy": 0.45,
+ "rules": 8,
+ "missed_rules": [
+  "FLOOR",
+  "LADDER",
+  "SKIP",
+  "T2DL"
+ ],
+ "failed": [
+  {
+   "id": "C1",
+   "rule": "T2DL",
+   "type": "deadline",
+   "expect": "2026-10-15",
+   "got": "ERROR ValueError: unknown deadline kind day_of_month"
+  },
+  {
+   "id": "C2",
+   "rule": "T2DL",
+   "type": "deadline",
+   "expect": "2026-10-15",
+   "got": "ERROR ValueError: unknown deadline kind day_of_month"
+  },
+  {
+   "id": "C3",
+   "rule": "T2DL",
+   "type": "deadline",
+   "expect": "2026-11-16",
+   "got": "ERROR ValueError: unknown deadline kind day_of_month"
+  },
+  {
+   "id": "C4",
+   "rule": "T2DL",
+   "type": "deadline",
+   "expect": "2026-12-15",
+   "got": "ERROR ValueError: unknown deadline kind day_of_month"
+  },
+  {
+   "id": "C6",
+   "rule": "FLOOR",
+   "type": "floor",
+   "expect": 84.0,
+   "got": "ERROR ValueError: unknown deadline kind day_of_month"
+  },
+  {
+   "id": "C7",
+   "rule": "FLOOR",
+   "type": "floor",
+   "expect": 72.4,
+   "got": "ERROR ValueError: unknown deadline kind day_of_month"
+  },
+  {
+   "id": "C8",
+   "rule": "LADDER",
+   "type": "offers",
+   "expect": [
+    [
+     612.5,
+     "2026-10-15"
+    ],
+    [
+     307.0,
+     "2026-10-15"
+    ]
+   ],
+   "got": "ERROR ValueError: unknown deadline kind day_of_month"
+  },
+  {
+   "id": "C9",
+   "rule": "SKIP",
+   "type": "offers",
+   "expect": [
+    [
+     307.0,
+     "2026-10-15"
+    ],
+    [
+     45.0,
+     "2026-10-15"
+    ]
+   ],
+   "got": "ERROR ValueError: unknown deadline kind day_of_month"
+  },
+  {
+   "id": "C10",
+   "rule": "SKIP",
+   "type": "attempts",
+   "expect": 2,
+   "got": "ERROR ValueError: unknown deadline kind day_of_month"
+  },
+  {
+   "id": "C12",
+   "rule": "SKIP",
+   "type": "offers",
+   "expect": [],
+   "got": "ERROR ValueError: unknown deadline kind day_of_month"
+  },
+  {
+   "id": "C13",
+   "rule": "LADDER",
+   "type": "offers",
+   "expect": [
+    [
+     333.33,
+     "2026-12-15"
+    ],
+    [
+     167.0,
+     "2026-12-15"
+    ]
+   ],
+   "got": "ERROR ValueError: unknown deadline kind day_of_month"
+  }
+ ]
+}

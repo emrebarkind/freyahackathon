@@ -1,0 +1,69 @@
+{
+ "ok": 16,
+ "total": 20,
+ "accuracy": 0.8,
+ "rules": 8,
+ "missed_rules": [
+  "FLOOR",
+  "LADDER",
+  "SKIP",
+  "T2DL"
+ ],
+ "failed": [
+  {
+   "id": "C4",
+   "rule": "T2DL",
+   "type": "deadline",
+   "expect": "2026-12-15",
+   "got": "2026-11-16"
+  },
+  {
+   "id": "C7",
+   "rule": "FLOOR",
+   "type": "floor",
+   "expect": 72.4,
+   "got": 19.0
+  },
+  {
+   "id": "C12",
+   "rule": "SKIP",
+   "type": "offers",
+   "expect": [],
+   "got": [
+    [
+     37.0,
+     "2026-10-15"
+    ],
+    [
+     19.0,
+     "2026-10-15"
+    ]
+   ]
+  },
+  {
+   "id": "C13",
+   "rule": "LADDER",
+   "type": "offers",
+   "expect": [
+    [
+     333.33,
+     "2026-12-15"
+    ],
+    [
+     167.0,
+     "2026-12-15"
+    ]
+   ],
+   "got": [
+    [
+     167.0,
+     "2026-11-16"
+    ],
+    [
+     84.0,
+     "2026-11-16"
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,156 @@
+{
+ "PUB-01": {
+  "ledger_outcome": [
+   "promise",
+   null
+  ],
+  "transfers": [],
+  "promises": [
+   {
+    "promise_id": "pr1",
+    "product_id": "p1",
+    "type": "credit_card",
+    "amount": 420,
+    "date": "2026-10-14"
+   }
+  ],
+  "writes": [
+   [
+    "create_promise",
+    {
+     "date": "2026-10-14",
+     "amount": 420,
+     "product_id": "p1"
+    },
+    200,
+    {
+     "ok": true,
+     "promise_id": "pr1"
+    }
+   ],
+   [
+    "close_call",
+    {
+     "outcome": "promise"
+    },
+    200,
+    {
+     "ok": true
+    }
+   ]
+  ],
+  "last_turns": [
+   [
+    "user",
+    "Yes, I confirm."
+   ],
+   [
+    "assistant",
+    "Thank you, your promise is recorded. You will receive a text message confirming this promise. Is there anything else I can help you with?"
+   ],
+   [
+    "user",
+    "No, that's all."
+   ],
+   [
+    "assistant",
+    "Thank you for your time. Goodbye."
+   ]
+  ],
+  "ended": "assistant-ended-call"
+ },
+ "PUB-05": {
+  "ledger_outcome": [
+   "transferred",
+   "support"
+  ],
+  "transfers": [
+   {
+    "queue": "support"
+   }
+  ],
+  "promises": [],
+  "writes": [
+   [
+    "transfer_to_agent",
+    {
+     "queue": "support"
+    },
+    200,
+    {
+     "ok": true
+    }
+   ],
+   [
+    "close_call",
+    {
+     "reason": "support",
+     "outcome": "transferred"
+    },
+    200,
+    {
+     "ok": true
+    }
+   ]
+  ],
+  "last_turns": [
+   [
+    "user",
+    "Eight eight four six."
+   ],
+   [
+    "assistant",
+    "Thank you. I am calling from the collections team about a late payment. Your personal loan has 780 dollars past due, and it is 21 days late. Can you make this payment today?"
+   ],
+   [
+    "user",
+    "I lost my job last month and I cannot pay anything. Can I get a discount?"
+   ],
+   [
+    "assistant",
+    "I'm very sorry to hear that. I will connect you with our customer support team now. Thank you for your time. Goodbye."
+   ]
+  ],
+  "ended": "assistant-ended-call"
+ },
+ "PUB-08": {
+  "ledger_outcome": [
+   "no_promise",
+   "dispute"
+  ],
+  "transfers": [],
+  "promises": [],
+  "writes": [
+   [
+    "close_call",
+    {
+     "reason": "dispute",
+     "outcome": "no_promise"
+    },
+    200,
+    {
+     "ok": true
+    }
+   ]
+  ],
+  "last_turns": [
+   [
+    "user",
+    "Three three one seven."
+   ],
+   [
+    "assistant",
+    "Thank you. I am calling from the collections team about a late payment. Your credit card ending 5512 has 180 dollars past due, and it is 5 days late. Can you make this payment today?"
+   ],
+   [
+    "user",
+    "I paid it in the app this morning."
+   ],
+   [
+    "assistant",
+    "Thank you. Payments can take one business day to appear. Thank you for your time. Goodbye."
+   ]
+  ],
+  "ended": "assistant-ended-call"
+ }
+}

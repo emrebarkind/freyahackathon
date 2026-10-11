@@ -1,6 +1,49 @@
 # Submission candidates
 
-## Candidate 4 (recommended): builder at `22f774a`
+## Candidate 5 (Phase 1): builder at `ef271b3` (tag `phase1-candidate`; rollback: candidate 4, tag `candidate-4-builder` = `22f774a`)
+
+Changes since candidate 4:
+* Evidence for critical policies (`policy` records: explicit, derived, unspecified, unsupported). Defaults count as
+  values and are shown to the audit as such. The existing audit call rules on every critical policy. An uncorrected
+  contradiction, or a non-default value no passage supports, makes the build INCOMPLETE.
+* `code_tables`: event codes are checked against the brief's tables when the API has no enum. A dated change may
+  introduce a code the materials name.
+* Fixes from eval/fresh/f1:
+  * the verdict now lists spec problems left after the repairs;
+  * the self-test covers every band;
+  * new deadline kind `day_of_month` and flag `roll_before_adjust`;
+  * new option `products.floor_full_below`.
+
+Evidence:
+* Live audit check (eval/audit_cases), first run 4/4, $1.49.
+* eval/fresh/f1, first run at `d1debe1`: INCOMPLETE, 494.3 s, 4 model calls,
+  $1.45, key 9/20. All failures came from an invalid deadline kind left after 2 failed repairs and
+  exported unreported. Retest at `ef271b3`: COMPLETE, 198.2 s, 2 calls, $0.86,
+  key 20/20. f1 is no longer unseen.
+* Clean checkout of `ef271b3`, official command, A-prime: COMPLETE, 207.0 s, 2 model calls,
+  $0.87; workflow `cad7e93a-5fb3-409b-b57d-5306523efb55`, agent `568d5428-94ee-4c7b-aa32-d376fdbce28b`.
+  Platform (`eval/clean-runs/phase1-aprime/`), bank ledger and transcript checked:
+
+  | case | result |
+  |---|---|
+  | PUB-01 | create_promise 420 on 2026-10-14 ok, close promise ok |
+  | PUB-05 | "I'm very sorry to hear that. I will connect you with our customer support team now." → transfer_to_agent support ok → close transferred/support ok; no question asked |
+  | PUB-08 (14 Oct) | close no_promise/dispute ok |
+
+  No infrastructure failure, but the platform was slow (median turn 12 s). The kit scorer applies brief A's
+  expected results, so it marks PUB-05 and PUB-08 as failed.
+
+Inputs and outputs (sha256):
+```
+7150a3c3beaf81d127748f5ce0595f617520321fc2413cd8065e7ec364f0abc5  inputs/brief.md
+9a8410b12e5c82b6c6a30e9ed7030574d6f919cafdb1e035cef7bd876b0badb8  inputs/openapi.json
+951ded0a28d91b42292464f38209c4020874b636648ca7c9ed253f568895cb6c  phase1-aprime.log
+86ebd27d1efc8ea9152d90ca18ad7b5b6b634c3f25073a0905a61d65adbd5265  phase1-aprime.spec.json
+7922a1b8d09d8d47990601d7488a0b64c25f48f407e54d44643558a7a126d152  phase1-aprime.trace.log
+5fc3ff3c2d3eccfd90dbd24e902c011999021f80c677ff3ddbe1d919c0747856  phase1-aprime.workflow.json
+```
+
+## Candidate 4: builder at `22f774a`
 
 Candidate 3 plus the skill-review fixes and the brief-stated rule options. The platform rehearsal below was built at
 `b913754`; `22f774a` changes only the spec doc (the extraction prompt): the built-in "I don't want to talk" handling

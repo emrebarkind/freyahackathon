@@ -1,0 +1,23 @@
+{
+ "builder_commit": "d1debe1f316e742885a88bc7ed06f6b5ad0a45a3",
+ "exit_status": 3,
+ "inputs": {
+  "inputs/brief.md": "9788471c4fd6b7f017d3024c7aead29ff645f46f744b0aa0113926ef95952fcd",
+  "inputs/openapi.json": "d2bc41699b3ee8ae67b002df0a086c3d8038b1da41a23d59679c9cfb96d28866"
+ },
+ "outputs": {
+  "fresh-f1.log": "90f59e1bf8adb476b07989f960b31a73724767aa7f102462a2d9ab201df8f230",
+  "fresh-f1.spec.json": "e15c0d2934768d4765e8b0ace1401a3b54102d71a5d5a50a37f3a7dbc88cc5f2",
+  "fresh-f1.trace.log": "f88d02ee2b680656c296621fd4787b766f17d0cf0770b2ed0bc287e1e10e18b5",
+  "fresh-f1.workflow.json": "e404c95bdb85adbaaf3b0ba0da753051e3089a74f13cb19870b54c266a71a7aa"
+ },
+ "seconds": 494.3,
+ "model_calls": 4,
+ "cost_usd": 1.45,
+ "result": "INCOMPLETE",
+ "reasons": [
+  "not carried: If `overdue_eur` is below 100, the floor is the whole overdue amount."
+ ],
+ "workflow_id": "0c258c36-6ec4-4913-a15c-8a347ab56b93",
+ "agent_id": "abff2132-af02-4161-8c7a-7455114111bd"
+}
