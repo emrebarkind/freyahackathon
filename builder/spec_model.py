@@ -190,9 +190,14 @@ class Spec(Loose):
 
 
 def normalise(spec):
-    """Lossless format fixes, in place: H:MM / H.MM -> HH:MM. Anything ambiguous is left for the checks."""
+    """Lossless format fixes, in place: H:MM / H.MM -> HH:MM; no callback window on any of the 7 weekdays is the same
+    policy as no callback day (days: []). Anything ambiguous is left for the checks."""
     cb = spec.get("callback") if isinstance(spec, dict) else None
     if isinstance(cb, dict):
+        w = cb.get("windows")
+        if isinstance(w, dict) and sorted(w) == [str(i) for i in range(7)] and not any(w.values()):
+            cb["days"] = []
+            cb.pop("windows")
         for k in ("start", "end"):
             m = re.fullmatch(r"\s*(\d{1,2})[:.](\d{2})\s*", str(cb.get(k, "")))
             if m and int(m.group(1)) <= 23 and int(m.group(2)) <= 59:

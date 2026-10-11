@@ -52,3 +52,14 @@ def test_a_skipped_repeat_uses_no_attempt():
     spec["bands"][0]["ladder"] = None
     lines = offers_on_friday(spec, attempts=2)                 # opening + one more proposal
     assert len(lines) == 1 and "Friday 16 October" not in lines[0], lines   # step 2 = today = the opening: skipped
+
+
+def test_no_window_on_any_weekday_is_no_callback():
+    s = copy.deepcopy(E.A)
+    s["callback"]["windows"] = {str(i): None for i in range(7)}
+    spec_model.normalise(s)
+    assert s["callback"]["days"] == [] and "windows" not in s["callback"]
+    s = copy.deepcopy(E.A)
+    s["callback"]["windows"] = {"5": None}                     # one day closed: a real per-day policy, kept
+    spec_model.normalise(s)
+    assert s["callback"]["windows"] == {"5": None} and s["callback"]["days"]
