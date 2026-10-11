@@ -185,3 +185,49 @@ def test_date_boundaries_select_the_code_and_other_events_keep_theirs():
                        "2026-11-03": ("CLAIMED_PAID", "NOPTP", "money_trouble")}
     finally:
         engine.TODAY[0] = None
+
+
+# ---------------------------------------------------------------- found by eval/fresh/f1 (first run 9/20)
+
+def test_day_of_month_rolls_before_the_weekend_move_only_when_the_brief_says_so():
+    from builder.runtime import cal
+    spec = copy.deepcopy(E.A)
+    from builder import compile as comp
+    s = comp.apply_defaults(spec, O)
+    s["calendar"]["holidays"] = []
+    s["rules"]["deadline_adjust"] = "next_business_day"
+    rule = {"kind": "day_of_month", "n": 15, "roll_if_before_today": True}
+    for b in s["bands"]:
+        b["deadline"] = dict(rule)
+    engine.S = s
+    cal.P = dict(workdays=s["calendar"]["workdays"], holidays=[])
+    typ = list(s["products"]["names"])[0]
+    raw = {"product_id": "p1", "type": typ, "past_due": 300.0, "days_late": s["bands"][0]["min"],
+           s["products"]["floor_field"][typ]: 30.0}
+    dl = lambda now: engine.product_facts({"now": now + "T11:00"}, raw)["deadline"]
+    assert [dl("2026-10-14"), dl("2026-10-15"), dl("2026-10-16")] == ["2026-10-15", "2026-10-15", "2026-11-16"]
+    assert dl("2026-11-16") == "2026-11-16"            # default order: the moved date (Mon 16th) is not before today
+    for b in s["bands"]:
+        b["deadline"]["roll_before_adjust"] = True     # "moved forward only after that rollover"
+    assert dl("2026-11-16") == "2026-12-15" and dl("2026-10-15") == "2026-10-15"
+
+
+def test_a_band_the_engine_cannot_compute_fails_the_self_test_and_the_verdict():
+    from builder import selftest, build
+    spec = copy.deepcopy(E.A)
+    spec["bands"][-1]["deadline"] = {"kind": "day_of_the_month", "n": 15}
+    r = dict((n, ok) for n, ok, _ in selftest.run_all(spec, O))
+    assert r["every band and product type gives a deadline and a floor"] is False
+
+    class Tr:
+        def note(self, s):
+            self.last = s
+
+        def end(self):
+            pass
+    tr = Tr()
+    try:
+        build.finish(tr, {}, {"failed": [], "api": ["band late: deadline kind 'x' invalid"]})
+        assert False, "must exit INCOMPLETE"
+    except SystemExit as e:
+        assert e.code == 3 and "spec problem left" in tr.last

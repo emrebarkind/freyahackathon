@@ -114,6 +114,8 @@ def deadline(today, rule):
     if kind == "day_of_next_month":     # the n-th calendar day of next month
         first = end_of_month(today) + datetime.timedelta(days=1)
         return first.replace(day=min(max(n, 1), 28))
+    if kind == "day_of_month":          # the n-th calendar day of this month (the month's last day if shorter)
+        return today.replace(day=min(max(n, 1), end_of_month(today).day))
     if kind == "business_days_after_or_end_of_month":   # whichever comes first
         return min(add_business_days(today, n), end_of_month(today))
     if kind in ("later_of", "earlier_of"):              # of: [rule, rule, ...]

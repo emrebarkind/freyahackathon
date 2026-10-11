@@ -146,7 +146,7 @@ def validate(spec, openapi, docs_text=""):
     if not spec["identity"].get("questions"):
         errs.append("identity.questions is empty")
     kinds = {"business_days_after", "calendar_days_after", "end_of_month", "end_of_next_month", "last_business_day_of_month", "fixed_date",
-             "end_of_week", "end_of_next_week", "day_of_next_month", "business_days_after_or_end_of_month", "later_of", "earlier_of"}
+             "end_of_week", "end_of_next_week", "day_of_next_month", "day_of_month", "business_days_after_or_end_of_month", "later_of", "earlier_of"}
 
     def rules_of(b):                          # every deadline rule of a band, nested ones included
         out, todo = [], [b.get("deadline") or {}] + list((b.get("deadline_by_type") or {}).values())
@@ -211,7 +211,7 @@ def validate(spec, openapi, docs_text=""):
             errs.append(f"ladder date '{d}' invalid; use one of {sorted(LADDER_DATES)} or business_days_after:N / calendar_days_after:N")
     for b in spec["bands"]:
         for dk in rules_of(b):
-            if dk.get("kind") in ("business_days_after", "calendar_days_after", "day_of_next_month", "business_days_after_or_end_of_month") \
+            if dk.get("kind") in ("business_days_after", "calendar_days_after", "day_of_next_month", "day_of_month", "business_days_after_or_end_of_month") \
                     and not isinstance(dk.get("n"), int):
                 errs.append(f"band {b.get('name')}: deadline kind {dk.get('kind')} needs an integer n")
             if dk.get("kind") == "fixed_date" and not re.fullmatch(r"\d{4}-\d\d-\d\d", str(dk.get("value", ""))):

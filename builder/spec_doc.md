@@ -78,12 +78,15 @@ use the default shown and record it in `assumptions`.
     "deadline": {"kind": "business_days_after", "n": 12},  // kinds: business_days_after (n-th business day after today),
                                                    // calendar_days_after, end_of_month, end_of_next_month, last_business_day_of_month,
                                                    // end_of_week, end_of_next_week (last business day), day_of_next_month (n-th day),
+                                                   // day_of_month (the n-th day of this month; with a roll flag, next month's),
                                                    // business_days_after_or_end_of_month (whichever is first),
                                                    // later_of / earlier_of with "of": [rule, rule] (e.g. the later of the
                                                    // last business day of the month and the 3rd business day).
                                                    // "roll_if_before_today": true when the brief rolls only a date EARLIER than
                                                    // today; "roll_if_not_after_today": true when it rolls a date that is today
                                                    // or earlier. They differ on the day the date is today: read the wording.
+                                                   // "roll_before_adjust": true only if the brief rolls the date BEFORE
+                                                   // moving it off a weekend/holiday (default: the moved date is compared).
                                                    // "roll_if_not_after_today": true when the brief says to use the next
                                                    // period's date if the computed one is today (e.g. 'or next month's')
     "floor": null,                                 // only if this band has its own floor: "full" = the whole amount owed

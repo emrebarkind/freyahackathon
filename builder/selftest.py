@@ -389,9 +389,40 @@ def run_all(spec, openapi):
                 out.append((name, bool(ok), detail))
             except Exception as e:
                 out.append((name, False, f"{type(e).__name__}: {e}"))
+        out.append(every_band(spec, openapi, today, types))
     except Exception as e:
         out.append(("setup", False, f"{type(e).__name__}: {e}"))
     return out
+
+
+def every_band(spec, openapi, today, types):
+    """Each band and product type, on 35 consecutive days: the engine computes a deadline (not before today) and a
+    floor, on every business day. The conversation scenarios use the first band only; a rule the engine cannot compute must not hide there."""
+    from builder import compile as comp
+    from builder.runtime import engine
+    name = "every band and product type gives a deadline and a floor"
+    s = comp.apply_defaults(json.loads(json.dumps(spec)), openapi)
+    saved = engine.S
+    engine.S = s
+    cal.P = dict(workdays=s["calendar"]["workdays"], holidays=s["calendar"]["holidays"])
+    try:
+        for b in s["bands"]:
+            for typ in types:
+                for k in range(35):
+                    d = today + datetime.timedelta(days=k)
+                    if not cal.is_business_day(d):
+                        continue                   # calls on business days; a weekend call day is a policy the brief rarely sets
+                    raw = make_product(s, 0, typ, int(b.get("min", 1)))
+                    V = dict(now=d.isoformat() + "T11:00")
+                    try:
+                        p = engine.product_facts(V, raw)
+                    except Exception as e:
+                        return (name, False, f"band {b.get('name')}, {typ}, {d}: {type(e).__name__}: {e}")
+                    if p["status"] == "open" and p["deadline"] < d.isoformat():
+                        return (name, False, f"band {b.get('name')}, {typ}, {d}: deadline {p['deadline']} is before today")
+        return (name, True, "")
+    finally:
+        engine.S = saved
 
 
 def chat_smoke(freya, workflow_id, spec):

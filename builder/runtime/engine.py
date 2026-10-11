@@ -300,7 +300,8 @@ def product_facts(V, raw):
     floor = min(floor, full)                      # a floor above the amount owed is the amount owed
     rule = (b.get("deadline_by_type") or dict()).get(typ) or b["deadline"]   # a product type with its own deadline
     deadline = band_deadline(today, rule)
-    if (rule.get("roll_if_not_after_today") and deadline <= today) or (rule.get("roll_if_before_today") and deadline < today):
+    seen = cal_deadline(today, rule) if rule.get("roll_before_adjust") else deadline   # the brief rolls the raw date
+    if (rule.get("roll_if_not_after_today") and seen <= today) or (rule.get("roll_if_before_today") and seen < today):
         deadline = band_deadline(end_of_month(today) + datetime.timedelta(days=1), rule, today)
     return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
                 band=b.get("name", ""), deadline=iso(deadline), attempts=int(b.get("attempts", 1)), ladder=b.get("ladder") or None,

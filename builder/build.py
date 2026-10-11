@@ -208,7 +208,8 @@ def finish(trace, spec, chk):
     """The run's verdict. INCOMPLETE when a rule of the materials is not carried or a local scenario still fails:
     the agent exists and is exported, but the run is not reported as a success (exit status 3)."""
     from builder import spec_model
-    gaps = spec_model.critical(spec) + [f"local scenario fails: {n}" for n in chk.get("failed", [])]
+    gaps = spec_model.critical(spec) + [f"local scenario fails: {n}" for n in chk.get("failed", [])] + \
+        [f"spec problem left after the repairs: {e}" for e in chk.get("api", [])]
     if gaps:
         trace.note("RESULT: INCOMPLETE -- the agent does not meet these:" + "".join("\n  - " + g for g in gaps))
         trace.end()
