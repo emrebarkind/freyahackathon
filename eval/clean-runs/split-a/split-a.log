@@ -1,0 +1,135 @@
+[    0.0s] START 2026-10-11T15:09:24+0000
+[    0.0s] NOTE briefs=['inputs/brief-a.md'] tool_api=inputs/openapi.json slot=split-a
+[    0.0s] STEP 1. spec extraction
+[    1.1s] NOTE extraction mode B
+[  121.6s] MODEL CALL #1 model=claude-opus-5-5 seconds=120.5 cost_usd=0.302 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  121.6s] MODEL CALL #2 model=claude-opus-5-5 seconds=120.5 cost_usd=0.132 purpose: independent reading: behaviour checks from the materials only (oracle)
+[  121.6s] NOTE oracle: 22 independent checks
+[  206.9s] MODEL CALL #3 model=claude-opus-5-5 seconds=85.3 cost_usd=0.426 purpose: audit the high-risk fields and the critical policies of the reading against the source documents
+[  206.9s] NOTE audit: # Audit of the Brief A spec: field and policy verdicts
+[  206.9s] 
+[  206.9s] **Result:** every audited field matches the materials. I propose no changes. Most policy rows are supported; the rest are `not_decided` because the brief is silent or the case cannot arise.
+[  206.9s] 
+[  206.9s] ## Fields
+[  206.9s] 
+[  206.9s] - **calendar**: supported. "Business days are Monday to Friday, except Freya Bank holidays: 2026-10-26, 2026-11-11, 2026-11-26, 2026-12-25, 2027-01-01." Workdays are 0–4 and all five holidays are listed exactly.
+[  206.9s] - **date_rules**: supported. "'Next <weekday>' means that weekday in the following calendar week." So the value is following_week.
+[  206.9s] - **confirm**: supported. "Ask once more. If it is still unclear after the second ask, close as `not_reached` / `unclear`." So max_asks is 2.
+[  206.9s] - **callback**: supported. "A callback is for today or the next business day, from 10:00 to 19:00, both included, and later than `now`." and "ask once for another time. If that is also outside it, do not schedule." So the days, the window, after_now true and max_asks 2 are correct. The brief is silent on restricting "today" to business days, so business_days_only false is fine.
+[  206.9s] - **identity.questions**: supported. "first the date of birth, then the last four digits of the phone number on file … Send a date of birth as `YYYY-MM-DD`". The API offers date_of_birth and phone_last4 ("four digits"). The order, kinds, length 4 and %Y-%m-%d are all correct.
+[  206.9s] - **identity.max_wrong**: supported. "Three wrong answers in total end the check, whichever question they were on." So the value is 3, counted overall rather than per question.
+[  206.9s] - **identity.hints**: supported. "`verify_identity` returns `hint: "day_month_swapped"`. Ask them to say the month as a word."
+[  206.9s] - **identity (rest)**: supported.
+[  206.9s]   - date_order dmy: "Read a date given only as numbers as day, then month, then year."
+[  206.9s]   - purpose_is_decline true: "Asking what the call is about instead of answering counts as declining."
+[  206.9s]   - Response fields match the API. Unreadable answers come back as ok=false, so reject_values stays empty.
+[  206.9s] - **products.amount_field**: supported. "State the past-due amount", and the API field is `past_due`.
+[  206.9s] - **products.floor_field**: supported. "The floor is `minimum_payment` for a credit card and `instalment_amount` for a personal loan or a car loan."
+[  206.9s] - **products.floor_pct**: supported as null. The floor is an account field, not a percentage.
+[  206.9s] - **products (rest)**: supported. The names follow "credit card ending 4821", "personal loan", "car loan". There is no rounding, minimum or scale rule.
+[  206.9s] - **bands**: supported. "1 to 7 | early | the 12th business day after today | 1" and "8 to 45 | late | the 7th business day after today | 2".
+[  206.9s] - **ladder**: supported. "Attempt 1 is for the full past-due amount, or for the floor if the customer already said the full amount is too much … propose the last business day of this week" and "Attempt 2, late band only: propose the floor amount on the deadline."
+[  206.9s] - **notes**: supported as disabled. "Brief A never uses `add_note`."
+[  206.9s] - **events**: supported. Every code matches the closing table:
+[  206.9s]   - transfer queues: "queue `support`", "queue `restructuring`", "queue `general`"
+[  206.9s]   - transferred: restructuring, human, support
+[  206.9s]   - no_promise: refused, hardship, dispute, service_error
+[  206.9s]   - not_verified: failed, declined
+[  206.9s]   - not_reached: callback, no_callback, wrong_number, deceased, unclear
+[  206.9s] - **tool_bodies**: supported. Every field name matches the API, and all required fields are mapped.
+[  206.9s] - **multi**: supported. This is a one-product brief, and the defaults apply.
+[  206.9s] - **human**: supported. "A request for a human: ask once whether you can help first."
+[  206.9s] - **max_not_talk**: supported. "If the customer says twice that they do not want to talk".
+[  206.9s] - **rules**: supported. Each rule is covered row by row below.
+[  206.9s] - **code_tables**: supported. The outcome and reason table and the queues match. There is no note table because add_note is never used.
+[  206.9s] 
+[  206.9s] **Rules not carried:** none found. The rules on hardship-then-self-named promise
+[  206.9s] NOTE audit changed: nothing
+[  206.9s] NOTE policy verdicts: changes=supported, event_changes=supported, multi.order=not_decided, multi.outcome_priority=not_decided, products.floor_full_below=not_decided, products.floor_min=not_decided, products.floor_pct=supported, products.floor_round=not_decided, products.promise_round=not_decided, products.promise_scale=not_decided, products.step_round=not_decided, rules.deadline_adjust=not_decided, rules.first_ask=supported, rules.hardship_transfer=supported, rules.ladder_repeat_last=supported, rules.non_answer_counts=supported, rules.notes_before_transfer=supported, rules.opening_blocks_repeat=not_decided, rules.opening_is_attempt=supported, rules.promise_retries=supported, rules.refuse_deadline_is_refusal=supported, rules.skipped_repeat_counts=not_decided, rules.too_much_floor=supported, rules.too_much_skips_full=not_decided, rules.week_end_today=supported
+[  206.9s] NOTE critical policies:
+[  206.9s]   - rules.opening_is_attempt: derived: false
+[  206.9s]   - rules.opening_blocks_repeat: derived: false
+[  206.9s]   - rules.too_much_skips_full: unspecified: false
+[  206.9s]   - rules.too_much_floor: derived: "attempt_1"
+[  206.9s]   - rules.ladder_repeat_last: derived: false
+[  206.9s]   - rules.non_answer_counts: explicit: true
+[  206.9s]   - rules.refuse_deadline_is_refusal: explicit: true
+[  206.9s]   - rules.promise_retries: explicit: 1
+[  206.9s]   - rules.hardship_transfer: explicit: "ask_first" (engine default)
+[  206.9s]   - rules.notes_before_transfer: explicit: false
+[  206.9s]   - rules.deadline_adjust: derived: "previous_business_day"
+[  206.9s]   - rules.first_ask: explicit: "today"
+[  206.9s]   - rules.week_end_today: explicit: "next_week"
+[  206.9s]   - rules.skipped_repeat_counts: unspecified: true (engine default)
+[  206.9s]   - products.floor_pct: unspecified: null (engine default)
+[  206.9s]   - products.floor_min: unspecified: null (engine default)
+[  206.9s]   - products.floor_full_below: unspecified: null (engine default)
+[  206.9s]   - products.floor_round: unspecified: "cents" (engine default)
+[  206.9s]   - products.step_round: unspecified: "cents" (engine default)
+[  206.9s]   - products.promise_scale: unspecified: 1.0 (engine default)
+[  206.9s]   - products.promise_round: unspecified: null (engine default)
+[  206.9s]   - multi.outcome_priority: unspecified: [] (engine default)
+[  206.9s]   - multi.order: unspecified: [] (engine default)
+[  206.9s]   - event_changes: unspecified: [] (engine default)
+[  206.9s]   - changes: unspecified: [] (engine default)
+[  206.9s] NOTE validation round 1: 0 problem(s)
+[  206.9s] NOTE oracle: 22 agree, 0 disagree, 0 unusable
+[  206.9s] NOTE assumption: The brief names no currency. The default 'dollars' is used.
+[  206.9s] NOTE assumption: max_unclear is omitted: the brief does not say how often an unclear answer is asked again. Rule 30 makes a non-answer use a persuasion attempt (non_answer_counts true).
+[  206.9s] NOTE assumption: too_much_floor 'attempt_1': rule 30 says attempt 1 is for the floor once the customer has said the full amount is too much, and rule 26 makes refusing the floor a flat refusal that moves on to the next attempt.
+[  206.9s] NOTE assumption: Ladder: attempt 1 is the full amount, or the floor after 'too much', on the last business day of this week (next week's if today is that day). Attempt 2, late band only, is the floor on the deadline. The early band has 1 attempt.
+[  206.9s] NOTE assumption: Deadlines are the 12th (early) and 7th (late) business day after today, which excludes today. They are always business days. deadline_adjust keeps the default previous_business_day because the brief gives no rule.
+[  206.9s] NOTE assumption: Callback: today or the next business day, 10:00 to 19:00 inclusive, later than now. 'Today' is not restricted to business days because the brief does not say so.
+[  206.9s] NOTE assumption: Numeric dates of birth are read as day, month, year (rule 11). The verify tool receives YYYY-MM-DD.
+[  206.9s] NOTE assumption: Brief A never uses add_note: notes are disabled and every event note is empty.
+[  206.9s] NOTE assumption: The brief does not say whether to ask 'anything else' after a recorded promise. The default (true) is kept.
+[  206.9s] NOTE assumption: bands_outside is omitted: the brief only calls customers 1 to 45 days late. A product outside these bands takes the engine default (service_error).
+[  206.9s] NOTE assumption: transfer_human uses queue 'general' (rule 42). Restructuring and support use their own queues.
+[  206.9s] NOTE assumption: If a transfer follows a recorded promise, the call closes as transferred with that transfer's reason (built-in: a transfer ends the call).
+[  206.9s] NOTE assumption: Rule 32: a customer in hardship who still names a date or amount is handled under sections 7 and 8 by the engine's normal proposal handling.
+[  206.9s] NOTE assumption: The wording for the day_month_swapped hint (asking for the month as a word) follows rule 13. That retry is not counted as a wrong answer.
+[  206.9s] STEP 2. local checks: structure, tool API, engine self-test on synthetic customers
+[  207.8s] TEST PASS local happy path, pays in full today
+[  207.8s] TEST PASS local someone else answers, books a callback
+[  207.8s] TEST PASS local wrong number
+[  207.8s] TEST PASS local identity fails
+[  207.8s] TEST PASS local identity answered the way people speak
+[  207.8s] TEST PASS local already paid
+[  207.8s] TEST PASS local dispute
+[  207.8s] TEST PASS local hardship, accepts support
+[  207.8s] TEST PASS local restructuring request
+[  207.8s] TEST PASS local flat refusals
+[  207.8s] TEST PASS local the bank fails to record the promise twice
+[  207.8s] TEST PASS local the callback booking fails once, then works
+[  207.8s] TEST PASS local several products, all paid today
+[  207.8s] TEST PASS local every band and product type gives a deadline and a floor
+[  207.8s] NOTE local checks: structural 0, tool API 0, self-test 14/14
+[  207.8s] NOTE assumption (engine default, the brief is silent): the brief does not say whether a ladder step skipped as a repeat of an earlier proposal uses one of the band's proposals: it does
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): rules.too_much_skips_full: The brief does not say that later full-amount steps are skipped. Attempt 1 uses the floor via full_or_floor once the customer has said the full amount is too much.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): rules.skipped_repeat_counts: The brief does not say whether a skipped repeat step uses an attempt. The engine default applies.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): products.floor_pct: The floor is an account field (minimum_payment / instalment_amount), not a percentage.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): products.floor_min: No minimum floor is stated.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): products.floor_full_below: No threshold below which the full debt is the floor.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): products.floor_round: No rounding is stated. Floors are taken as given by get_account.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): products.step_round: There are no percentage steps and no rounding is stated.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): products.promise_scale: create_promise takes the same units as get_account.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): products.promise_round: No promise rounding is stated.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): multi.outcome_priority: Brief A covers one product. The default ending applies.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): multi.order: Brief A covers one product. Account order is used.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): event_changes: There are no dated code changes.
+[  207.8s] NOTE assumption (recorded as unspecified by the materials): changes: There are no dated value changes.
+[  207.8s] NOTE repair budget used: 0/3
+[  207.8s] STEP 3. compile workflow
+[  207.8s] NOTE workflow: 25 nodes, 16 engine-run calls, 196499 bytes
+[  207.8s] STEP 4. validate, save, publish
+[  208.8s] TEST PASS platform dry-run validation
+[  210.1s] NOTE FREYA workflow_id=76317e01-3951-4744-b939-69a2e6feea76 agent_id=d6be6cbe-7180-4351-9e9b-09fa170063ab version=1
+[  210.1s] STEP 5. chat smoke test on Freya
+[  223.7s] TEST PASS chat the engine runs on the platform (asks the first security question) -- Please provide the text you would like me to repeat. / Before we go on, I need to ask you two security questions. Could you please tell me your date of birth?
+[  223.7s] TEST PASS chat no unfilled placeholder spoken
+[  223.7s] TEST PASS chat nothing about the debt before verification
+[  223.7s] STEP 6. export
+[  226.1s] NOTE exported submission/split-a.workflow.json
+{"workflow_id": "76317e01-3951-4744-b939-69a2e6feea76", "agent_id": "d6be6cbe-7180-4351-9e9b-09fa170063ab", "export": "submission/split-a.workflow.json"}
+[  226.1s] NOTE RESULT: COMPLETE -- every rule carried, every local scenario passes
+[  226.1s] END 2026-10-11T15:13:10+0000 total_seconds=226.1 model_calls=3 model_cost_usd=0.86
