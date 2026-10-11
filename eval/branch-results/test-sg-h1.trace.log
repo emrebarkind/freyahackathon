@@ -1,0 +1,62 @@
+[    0.0s] START 2026-10-11T06:17:53+0000
+[    0.0s] NOTE briefs=['/home/user/oop/eval/hard/h1/brief.md'] tool_api=/home/user/oop/eval/hard/h1/openapi.json slot=test-sg-h1
+[    0.0s] STEP 1. spec extraction
+[    0.8s] NOTE extraction mode B
+[   86.9s] MODEL CALL #1 model=claude-opus-5-5 seconds=86.1 cost_usd=0.386 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  133.0s] MODEL CALL #2 model=claude-opus-5-5 seconds=46.1 cost_usd=0.328 purpose: audit the high-risk fields of the reading against the source documents
+[  133.0s] NOTE audit: calendar: OK. "Business days are Monday to Friday, except Brackenridge holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2027-01-01 and 2027-01-04" plus CO-26-14 "2026-11-27 (Friday) and 2026-12-07 (Monday) are added", then CO-26-15 "withdrawn for 2026-12-07 only … 2026-11-27 remains a Brackenridge holiday". The spec has six holidays with 12-07 left out, which is correct.
+[  133.0s] date_rules: OK. The materials say nothing about this. The default `following_week` is used and listed in assumptions.
+[  133.0s] confirm: OK. "still unclear who answered after two asks, NOCONTACT / UNCLEAR" gives max_asks 2.
+[  133.0s] callback: OK. "today or the next business day, and never for a time earlier than the current time"; Priya: "Monday to Thursday is right. Friday closes at 16:00, not 17:00 (16:00 itself is fine)"; Hamish: "09:00 to 20:00 … Both ends included". The spec has start 09:00, end 20:00, Friday (weekday 4) 09:00–16:00, no weekend callbacks, after_now true. max_asks 2 is the default.
+[  133.0s] identity.questions: OK. "date of birth first, then the postcode"; API: "birth_date: eight digits DDMMYYYY" gives date with %d%m%Y; "home_postcode: capital letters and digits, no spaces" gives upper with no format. Postcode length varies, so leaving out a length is correct.
+[  133.0s] identity.max_wrong: OK. Priya: "the third wrong answer ends it, whichever question it was on." This overrides Hamish's "two wrong answers". The spec has 3 in total and per_question null.
+[  133.0s] identity.hints: OK. The verify_identity response has no hint field, so `{}` is right.
+[  133.0s] identity (rest): OK. "If a customer gives a date only as numbers, read it as day, month, year" gives date_order dmy. Response fields correct/identity_passed/attempts_remaining match the API. "A value in the wrong format is rejected with ok=false and is not counted" is handled through `ok`. purpose_is_decline uses the default.
+[  133.0s] products.amount_field: OK. API: "arrears_gbp: Past-due amount in pounds with pence". days_field is days_overdue.
+[  133.0s] products.floor_field: OK. 7.5(b) "PLOAN: the contractual monthly payment, in every band"; 7.5(c) "MOTOR: the contractual monthly payment in bands 1 and 2" gives contractual_payment_gbp for both.
+[  133.0s] products.floor_pct: OK. Priya: "Card floor: 12% of the arrears … minimum is £25 … always round up to the next whole multiple of £5 … The minimum applies after rounding … never more than the arrears". The spec has floor_pct CARD 12, floor_round "up:5", floor_min CARD 25. The cap at the arrears is built in.
+[  133.0s] products (rest): OK. API: "Money read from get_account is in pounds with pence; money sent to create_promise is in integer pence" gives amount_scale 1 and promise_scale 100. The brief gives no rounding rule for promises, so promise_round null is right. list_field, id_field and type_field (products, product_ref, kind) match the API.
+[  133.0s] bands: OK. Table 7.4 "1 to 14 / 8th / 1; 15 to 44 / 5th / 2; 45 to 90 / 2nd / 3"; CO-26-14 "Motor finance, band 2: the deadline becomes the 3rd business day after today", which CO-26-15 confirms; 7.5(c) "In band 3 
+[  133.0s] NOTE audit changed: nothing
+[  133.0s] NOTE validation round 1: 0 problem(s)
+[  133.0s] NOTE assumption: Documents were read in date order. A later document overrides an earlier one only on the points it explicitly addresses.
+[  133.0s] NOTE assumption: Wrong-answer limit: Priya (22 Oct) overrides Hamish (20 Oct). The third wrong answer in total, on either question, ends the check, so max_wrong = 3, counted in total and not per question.
+[  133.0s] NOTE assumption: Card floor: Priya overrides Hamish (12% instead of 10%, minimum £25 instead of £20). Order: 12% of the arrears, then round up to the next multiple of £5 (an exact multiple stays as it is), then at least £25, then never more than the arrears. Examples: £437.80 -> 52.536 -> £55; £30 -> 3.60 -> £5 -> £25; £20 -> £25 capped to £20.
+[  133.0s] NOTE assumption: Callback window: Monday to Thursday 09:00-20:00 (Hamish, confirmed by Priya). Friday closes at 16:00, not 17:00 (Priya). Both ends are included. No weekend callbacks: calls are made only on business days and callbacks are today or the next business day.
+[  133.0s] NOTE assumption: Holidays: policy 7.2 list plus 2026-11-27 from CO-26-14. 2026-12-07 was added by CO-26-14 but withdrawn by CO-26-15, so it is a normal business day.
+[  133.0s] NOTE assumption: MOTOR band 2 deadline is the 3rd business day after today (CO-26-14 item 1, confirmed by CO-26-15 item 2). Attempts are unchanged.
+[  133.0s] NOTE assumption: MOTOR band 3 floor is the full arrears (policy 7.5c). PLOAN, and MOTOR in bands 1 and 2, use contractual_payment_gbp as the floor.
+[  133.0s] NOTE assumption: Outcome code PAID is replaced by CLAIMED_PAID for calls closed from 2026-11-02 (CO-26-15 item 3). This is recorded in event_changes.
+[  133.0s] NOTE assumption: Dispute note: N-DISP is used. N-DSP has been deprecated since 1 September 2026.
+[  133.0s] NOTE assumption: Ladder step 1 is full_or_floor because, under 7.8, after 'too much' every step for that product uses the floor in place of the full arrears. Step 2 is then skipped as a repeat, and a skipped step does not use an attempt.
+[  133.0s] NOTE assumption: too_much_floor = attempt_1: 7.8 says that after 'too much' to the opening ask, each product starts at step 1 with the floor.
+[  133.0s] NOTE assumption: week_end_today = next_week: 7.7 says that if today is the last business day of this week, steps 1 and 2 use the last business day of next week.
+[  133.0s] NOTE assumption: Failed create_promise is never retried (promise_retries = 0). The product is noted N-SYS and the call carries on (Moira's email).
+[  133.0s] NOTE assumption: Hardship transfers directly to Q-VULN after one sentence of sympathy, with no question (7.11c). The hardship event therefore mirrors transfer_support, and no note is written because 7.11f forbids notes on any transfer.
+[  133.0s] NOTE assumption: verify_identity has no hint field, so hints is empty and response.hint is blank. Format-rejected answers come back with ok=false and are not counted.
+[  133.0s] NOTE assumption: Postcode length varies, so no fixed length is set. The postcode is sent without spaces in capital letters.
+[  133.0s] NOTE assumption: Every tool needs customer_ref, which is mapped to the call variable customer_id.
+[  133.0s] NOTE assumption: Amounts from get_account are in pounds with pence. create_promise takes integer pence, so promise_scale = 100. No rounding rule is given, so promise_round is null.
+[  133.0s] NOTE assumption: Not stated in the brief, so defaults are used: date_rules.next_weekday = following_week, callback max_asks = 2, max_not_talk = 2, purpose_is_decline = true, ask_anything_else = true, deadline_adjust = previous_business_day (all deadlines are counted in business days anyway).
+[  133.0s] NOTE assumption: The brief says nothing about changing a promise after it is recorded, so the agent says it can't be changed on this call.
+[  133.0s] NOTE assumption: No sentence is required after a recorded promise, so sms_line is empty.
+[  133.0s] STEP 2. local checks: structure, tool API, engine self-test on synthetic customers
+[  133.8s] TEST PASS local happy path, pays in full today
+[  133.8s] TEST PASS local someone else answers, books a callback
+[  133.8s] TEST PASS local wrong number
+[  133.8s] TEST PASS local identity fails
+[  133.8s] TEST PASS local identity answered the way people speak
+[  133.8s] TEST PASS local already paid
+[  133.8s] TEST PASS local dispute
+[  133.8s] TEST PASS local hardship, accepts support
+[  133.8s] TEST PASS local restructuring request
+[  133.8s] TEST PASS local flat refusals
+[  133.8s] TEST PASS local the bank fails to record the promise twice
+[  133.8s] TEST PASS local the callback booking fails once, then works
+[  133.8s] TEST PASS local several products, all paid today
+[  133.8s] NOTE local checks: structural 0, tool API 0, self-test 13/13
+[  133.8s] NOTE repair budget used: 0/3
+[  133.8s] STEP 3. compile workflow
+[  133.8s] NOTE workflow: 25 nodes, 16 engine-run calls, 193405 bytes
+[  133.8s] NOTE RESULT: COMPLETE -- every rule carried, every local scenario passes
+[  133.8s] END 2026-10-11T06:20:06+0000 total_seconds=133.8 model_calls=2 model_cost_usd=0.71

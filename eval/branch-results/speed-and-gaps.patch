@@ -1,0 +1,241 @@
+From 26ddb80be074cc10983b3db632cf21bf7135ed13 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 11 Oct 2026 06:17:26 +0000
+Subject: [PATCH 1/2] Dated event changes (event_changes), direct hardship
+ transfer (rules.hardship_transfer), roll only when earlier than today
+ (roll_if_before_today): each a brief-stated option, validated, tested
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KdXdkXwz4hnpWNsx5cadPC
+---
+ builder/extract.py           | 10 ++++++++++
+ builder/runtime/engine.py    | 21 +++++++++++++++++---
+ builder/spec_doc.md          | 10 ++++++++++
+ tests/test_policy_guards2.py | 37 ++++++++++++++++++++++++++++++++++++
+ 4 files changed, 75 insertions(+), 3 deletions(-)
+
+diff --git a/builder/extract.py b/builder/extract.py
+index 0a401f5..cd083cb 100644
+--- a/builder/extract.py
++++ b/builder/extract.py
+@@ -176,6 +176,15 @@ def validate(spec, openapi):
+         if t not in (spec["products"].get("floor_field") or {}) and "*" not in (spec["products"].get("floor_field") or {}) \
+                 and spec["products"].get("floor_pct") is None:
+             errs.append(f"products.floor_field missing for product type {t}")
++    for c in spec.get("event_changes") or []:
++        if not isinstance(c, dict) or c.get("event") not in spec["events"] or not isinstance(c.get("set"), dict) \
++                or not re.fullmatch(r"\d{4}-\d\d-\d\d", str(c.get("from", ""))) or not set(c["set"]) <= {"outcome", "reason", "queue", "note"}:
++            errs.append(f"event_changes entry {c!r} must be {{event: <event key>, from: YYYY-MM-DD, set: {{outcome|reason|queue|note}}}}")
++        else:
++            for f, enum_tool, param in (("outcome", "close_call", "c_outcome"), ("reason", "close_call", "c_reason"),
++                                        ("queue", "transfer_to_agent", "t_queue"), ("note", "add_note", "n_reason")):
++                if f in c["set"] and c["set"][f]:
++                    check_enum(enum_tool, param, c["set"][f], f"event_changes.{c['event']}.{f}")
+     amt_key = next((k for k, v in (spec.get("tool_bodies") or {}).get("create_promise", {}).items() if v == "p_amount"), "amount")
+     if (tool_props(openapi, "create_promise") or {}).get(amt_key, {}).get("type") == "integer" \
+             and not (spec["products"].get("promise_scale") or spec["products"].get("amount_scale")):
+@@ -204,6 +213,7 @@ def validate(spec, openapi):
+                           ("rules.week_end_today", ("next_week", "today")),
+                           ("rules.skipped_repeat_counts", (True, False)),
+                           ("rules.promise_retries", (0, 1, 2, 3)),
++                          ("rules.hardship_transfer", ("direct",)),
+                           ("products.promise_round", ("up", "down", "nearest"))):
+         v = get(spec, path)
+         if v is not None and v not in allowed:
+diff --git a/builder/runtime/engine.py b/builder/runtime/engine.py
+index dfd730e..5feef19 100644
+--- a/builder/runtime/engine.py
++++ b/builder/runtime/engine.py
+@@ -160,9 +160,17 @@ def today_of(V):
+     return parse_now(V.get("now")).date()
+ 
+ 
++TODAY = [None]    # the call's date, set once per run: dated code changes in the brief read it
++
++
+ def ev(name):
+-    """Event -> dict(outcome, reason, queue, note)."""
+-    return S.get("events", dict()).get(name, dict())
++    """Event -> dict(outcome, reason, queue, note), with the brief's dated changes applied (S['event_changes']:
++    [{"event": "paid", "from": "YYYY-MM-DD", "set": {"outcome": "..."}}])."""
++    e = S.get("events", dict()).get(name, dict())
++    for c in S.get("event_changes") or []:
++        if c.get("event") == name and TODAY[0] is not None and iso(TODAY[0]) >= str(c.get("from", "9999-12-31")):
++            e = dict(e, **(c.get("set") or {}))
++    return e
+ 
+ 
+ # ----------------------------------------------------------------------------------------------- products
+@@ -292,7 +300,7 @@ def product_facts(V, raw):
+     floor = min(floor, full)                      # a floor above the amount owed is the amount owed
+     rule = (b.get("deadline_by_type") or dict()).get(typ) or b["deadline"]   # a product type with its own deadline
+     deadline = band_deadline(today, rule)
+-    if rule.get("roll_if_not_after_today") and deadline <= today:     # e.g. 'or next month's if today is that day'
++    if (rule.get("roll_if_not_after_today") and deadline <= today) or (rule.get("roll_if_before_today") and deadline < today):
+         deadline = band_deadline(end_of_month(today) + datetime.timedelta(days=1), rule, today)
+     return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
+                 band=b.get("name", ""), deadline=iso(deadline), attempts=int(b.get("attempts", 1)), ladder=b.get("ladder") or None,
+@@ -1329,6 +1337,12 @@ def special(V, s, k, p, scope="none"):
+         return True
+     if k == "hardship":
+         s["hardship_offered"] = True
++        if S.get("rules", dict()).get("hardship_transfer") == "direct" and ev("transfer_support").get("queue"):
++            for q in s["products"]:                         # the brief: sympathy, then transfer, no question
++                if q["status"] in ("open", "agreed"):
++                    q["status"] = "hardship"
++            transfer(V, s, "support", L("hardship"))
++            return True
+         if not ev("transfer_support").get("queue"):        # the brief offers no support transfer
+             for q in s["products"]:
+                 if q["status"] == "open":
+@@ -2211,6 +2225,7 @@ def dispatch(V, s, stage, k, t, dtxt, a, scope):
+ 
+ 
+ def main(V):
++    TODAY[0] = today_of(V)
+     CTX.clear()
+     CTX.update(names(V))
+     V["next"] = ""
+diff --git a/builder/spec_doc.md b/builder/spec_doc.md
+index 101fe1b..cc7bbc0 100644
+--- a/builder/spec_doc.md
++++ b/builder/spec_doc.md
+@@ -79,6 +79,9 @@ use the default shown and record it in `assumptions`.
+                                                    // business_days_after_or_end_of_month (whichever is first),
+                                                    // later_of / earlier_of with "of": [rule, rule] (e.g. the later of the
+                                                    // last business day of the month and the 3rd business day).
++                                                   // "roll_if_before_today": true when the brief rolls only a date EARLIER than
++                                                   // today; "roll_if_not_after_today": true when it rolls a date that is today
++                                                   // or earlier. They differ on the day the date is today: read the wording.
+                                                    // "roll_if_not_after_today": true when the brief says to use the next
+                                                    // period's date if the computed one is today (e.g. 'or next month's')
+     "floor": null,                                 // only if this band has its own floor: "full" = the whole amount owed
+@@ -106,6 +109,8 @@ use the default shown and record it in `assumptions`.
+                                                    // "deadline" (full amount by the deadline); a plain yes agrees to that
+            "too_much_floor": "attempt_1",
+            "ladder_repeat_last": false,            // true only if the brief says the last step is repeated for further attempts
++           "hardship_transfer": null,             // "direct" only if the brief says: sympathy, then transfer, no question
++                                                   // (omit when the brief has the agent offer the support transfer first)
+            "promise_retries": null,               // only if the brief says how often a failed create_promise is retried
+                                                    // (0 = never); unstated: once
+            "skipped_repeat_counts": null,         // only if the brief says whether a ladder step skipped because it would
+@@ -255,3 +260,8 @@ Built-in behaviour (always carried out; never list these under unsupported_rules
+ `unsupported_rules`: a list of rules from the materials (quoted, one string each) that no field of this spec can
+ carry: a rounding, minimum, date rule, exception or condition the format has no place for. Never approximate such
+ a rule with a nearby field value; list it here instead. The build reports every item.
++
++`event_changes`: only if the brief changes an outcome/reason/queue/note code from a given calendar date (e.g. "from 2
++November the code PAID is replaced by CLAIMED_PAID"): a list of {"event": "<event key>", "from": "YYYY-MM-DD",
++"set": {"outcome": "..."}}. The base `events` entry then holds the code BEFORE that date; the change applies to calls
++on or after it.
+diff --git a/tests/test_policy_guards2.py b/tests/test_policy_guards2.py
+index 7ecc3f6..4238f3e 100644
+--- a/tests/test_policy_guards2.py
++++ b/tests/test_policy_guards2.py
+@@ -181,3 +181,40 @@ def test_a_customer_reference_under_another_name_reaches_every_node():
+         if n in wf["nodes"]:
+             b = wf["nodes"][n]["pre_actions"][0]["function"]["parameters"]["properties"]["body"]["properties"]
+             assert b["client_ref"]["default"] == "{{customer_id}}", (n, b["client_ref"])
++
++
++def test_dated_event_changes_apply_from_their_date(monkeypatch):
++    spec = comp.apply_defaults(copy.deepcopy(E.A), O)
++    paid = spec["events"]["paid"]["outcome"]
++    spec["event_changes"] = [{"event": "paid", "from": "2026-11-02", "set": {"outcome": "claims_paid"}}]
++    monkeypatch.setattr(engine, "S", spec)
++    monkeypatch.setattr(engine, "TODAY", [__import__("datetime").date(2026, 11, 1)])
++    assert engine.ev("paid")["outcome"] == paid
++    engine.TODAY[0] = __import__("datetime").date(2026, 11, 2)
++    assert engine.ev("paid")["outcome"] == "claims_paid"
++    from builder import extract
++    assert any("event_changes" in e for e in extract.validate({**spec, "event_changes": [{"event": "nope", "from": "x", "set": {}}]}, O))
++
++
++def test_hardship_can_transfer_without_a_question():
++    from sim import run_case
++    spec = copy.deepcopy(E.A)
++    spec["rules"]["hardship_transfer"] = "direct"
++    led, tr = run_case(spec, E.CASES["PUB-01"], E.ids("PUB-01") + [dict(k="hardship")])
++    assert [t["queue"] for t in led["transfers"]] == [spec["events"]["transfer_support"]["queue"]], E.agent_lines(tr)
++    spec["rules"].pop("hardship_transfer")
++    led, tr = run_case(spec, E.CASES["PUB-01"], E.ids("PUB-01") + [dict(k="hardship")])
++    assert led["transfers"] == [], E.agent_lines(tr)        # the default: the support transfer is offered first
++
++
++def test_roll_when_earlier_than_today_differs_from_roll_when_today():
++    spec = copy.deepcopy(E.A)
++    spec["calendar"]["holidays"] = []
++    b = spec["bands"][0]
++    b.update(min=1, max=30)
++    spec["bands"] = [b]
++    rec = dict(type="credit_card", days_late=5, past_due=100.0)
++    b["deadline"] = {"kind": "last_business_day_of_month", "roll_if_before_today": True}
++    assert facts(spec, rec, "2026-11-30T10:00")["deadline"] == "2026-11-30"     # today is that day: stays
++    b["deadline"] = {"kind": "last_business_day_of_month", "roll_if_not_after_today": True}
++    assert facts(spec, rec, "2026-11-30T10:00")["deadline"] == "2026-12-31"     # today is that day: rolls
+-- 
+2.43.0
+
+
+From 72ef27b7d7532e7f0d5f6dab2775e01b17184b49 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 11 Oct 2026 06:21:44 +0000
+Subject: [PATCH 2/2] Spec doc: skipped_repeat_counts true only if the brief
+ says a skipped step still counts, false if it says it is not a proposal;
+ scorer applies dated code changes
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01KdXdkXwz4hnpWNsx5cadPC
+---
+ builder/spec_doc.md | 6 ++++--
+ eval/score.py       | 8 +++++---
+ 2 files changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/builder/spec_doc.md b/builder/spec_doc.md
+index cc7bbc0..e0147e1 100644
+--- a/builder/spec_doc.md
++++ b/builder/spec_doc.md
+@@ -113,8 +113,10 @@ use the default shown and record it in `assumptions`.
+                                                    // (omit when the brief has the agent offer the support transfer first)
+            "promise_retries": null,               // only if the brief says how often a failed create_promise is retried
+                                                    // (0 = never); unstated: once
+-           "skipped_repeat_counts": null,         // only if the brief says whether a ladder step skipped because it would
+-                                                   // repeat an earlier proposal still uses one of the band's proposals: true/false
++           "skipped_repeat_counts": null,         // a ladder step skipped because it would repeat an earlier proposal:
++                                                   // true ONLY if the brief says it still uses one of the band's proposals;
++                                                   // false if the brief says it is not a proposal / is not counted;
++                                                   // null (omit) if the brief says neither
+            "week_end_today": null,                 // only if the brief says what a "last business day of this week" step
+                                                    // means when today is that day: "next_week" (use next week's) or "today";
+                                                    // omit when the brief is silent (the step is then read literally)
+diff --git a/eval/score.py b/eval/score.py
+index b8e8ff4..f194980 100644
+--- a/eval/score.py
++++ b/eval/score.py
+@@ -86,11 +86,11 @@ def answer(spec, c):
+     events = spec.get("events") or {}
+ 
+     def ev(sit):
++        if sit != "hardship" or not (events.get("transfer_support") or {}).get("queue"):
++            return engine.ev(sit)
+         # the engine offers the brief's hardship transfer through the transfer_support event; when that event has a
+         # queue, a hardship call ends there (transfer, its close codes, no other note)
+-        if sit == "hardship" and (events.get("transfer_support") or {}).get("queue"):
+-            return events["transfer_support"]
+-        return events.get(sit) or {}
++        return engine.ev("transfer_support")
+     if t == "deadline":
+         _, p = facts(spec, i["now"], i["product"])
+         return p["deadline"] if p["status"] == "open" else None
+@@ -104,6 +104,8 @@ def answer(spec, c):
+         return cal.is_business_day(cal.datetime.date.fromisoformat(i["date"]))
+     if t == "callback_ok":
+         return bool(engine.callback_ok({"now": i["now"]}, cal.datetime.date.fromisoformat(i["date"]), i["time"]))
++    if t in ("close", "note", "transfer"):                # a dated code change applies on the key's date, else after it
++        engine.TODAY[0] = cal.datetime.date.fromisoformat(i["now"][:10]) if i.get("now") else cal.datetime.date(2099, 1, 1)
+     if t == "close":
+         e = ev(i["situation"])
+         return {"outcome": e.get("outcome"), "reason": e.get("reason") or ""}
+-- 
+2.43.0
+
