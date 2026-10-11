@@ -113,8 +113,10 @@ use the default shown and record it in `assumptions`.
                                                    // (omit when the brief has the agent offer the support transfer first)
            "promise_retries": null,               // only if the brief says how often a failed create_promise is retried
                                                    // (0 = never); unstated: once
-           "skipped_repeat_counts": null,         // only if the brief says whether a ladder step skipped because it would
-                                                   // repeat an earlier proposal still uses one of the band's proposals: true/false
+           "skipped_repeat_counts": null,         // a ladder step skipped because it would repeat an earlier proposal:
+                                                   // true ONLY if the brief says it still uses one of the band's proposals;
+                                                   // false if the brief says it is not a proposal / is not counted;
+                                                   // null (omit) if the brief says neither
            "week_end_today": null,                 // only if the brief says what a "last business day of this week" step
                                                    // means when today is that day: "next_week" (use next week's) or "today";
                                                    // omit when the brief is silent (the step is then read literally)

@@ -86,11 +86,11 @@ def answer(spec, c):
     events = spec.get("events") or {}
 
     def ev(sit):
+        if sit != "hardship" or not (events.get("transfer_support") or {}).get("queue"):
+            return engine.ev(sit)
         # the engine offers the brief's hardship transfer through the transfer_support event; when that event has a
         # queue, a hardship call ends there (transfer, its close codes, no other note)
-        if sit == "hardship" and (events.get("transfer_support") or {}).get("queue"):
-            return events["transfer_support"]
-        return events.get(sit) or {}
+        return engine.ev("transfer_support")
     if t == "deadline":
         _, p = facts(spec, i["now"], i["product"])
         return p["deadline"] if p["status"] == "open" else None
@@ -104,6 +104,8 @@ def answer(spec, c):
         return cal.is_business_day(cal.datetime.date.fromisoformat(i["date"]))
     if t == "callback_ok":
         return bool(engine.callback_ok({"now": i["now"]}, cal.datetime.date.fromisoformat(i["date"]), i["time"]))
+    if t in ("close", "note", "transfer"):                # a dated code change applies on the key's date, else after it
+        engine.TODAY[0] = cal.datetime.date.fromisoformat(i["now"][:10]) if i.get("now") else cal.datetime.date(2099, 1, 1)
     if t == "close":
         e = ev(i["situation"])
         return {"outcome": e.get("outcome"), "reason": e.get("reason") or ""}
