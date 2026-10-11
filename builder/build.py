@@ -160,6 +160,21 @@ def repair_loop(spec, chk, openapi, docs, trace, budget):
     return spec, chk
 
 
+def split_inputs(files):
+    """The tool API is the JSON file that is an OpenAPI document (it has 'paths'); every other file, a JSON code list
+    or table included, is bank material and is read whole. With one JSON file only, that file is the tool API."""
+    jsons = [f for f in files if f.lower().endswith(".json")]
+    others = [f for f in files if not f.lower().endswith(".json")]
+    def is_openapi(f):
+        try:
+            d = json.load(open(f))
+        except Exception:
+            return False
+        return isinstance(d, dict) and isinstance(d.get("paths"), dict)
+    api = [f for f in jsons if is_openapi(f)] if len(jsons) > 1 else jsons
+    return api, others + [f for f in jsons if f not in api]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("files", nargs="+")
@@ -170,15 +185,25 @@ def main():
     a = ap.parse_args()
     if not a.no_deploy and not os.environ.get("FREYA_API_KEY"):
         sys.exit("FREYA_API_KEY is not set: nothing would be deployed (source env.sh first, or use --no-deploy)")
-    tool_api = [f for f in a.files if f.endswith(".json")]
-    briefs = [f for f in a.files if not f.endswith(".json")]
+    tool_api, briefs = split_inputs(a.files)
     if len(tool_api) != 1 or not briefs:
-        sys.exit("usage: build.py <brief files...> <tool_api.json>")
+        sys.exit("usage: build.py <brief files...> <tool_api.json> (exactly one OpenAPI file: a JSON with 'paths'; "
+                 f"found {len(tool_api)}: {tool_api})")
     slot = a.slot or "+".join(pathlib.Path(b).stem for b in briefs)
     trace = Trace(str(ROOT / "traces" / f"{slot}.trace.log"))
     trace.note(f"briefs={briefs} tool_api={tool_api[0]} slot={slot}")
     openapi = json.load(open(tool_api[0]))
-    docs = [(pathlib.Path(b).name, pathlib.Path(b).read_text(errors="ignore")) for b in briefs]
+    docs = []
+    for b in briefs:
+        raw = pathlib.Path(b).read_bytes()
+        text = raw.decode("utf-8", errors="replace")
+        bad = text.count("\ufffd")
+        if bad:                                  # never dropped silently: the reader sees the marks, the trace says so
+            trace.note(f"WARNING {b}: {bad} byte(s) are not UTF-8 and are shown as \ufffd")
+        if b"\x00" in raw[:4096] or raw[:5] == b"%PDF-":
+            trace.note(f"WARNING {b}: looks like a binary file (PDF or other); only its text bytes reach the reading")
+        docs.append((pathlib.Path(b).name, text))
+    trace.note("materials read: " + ", ".join(f"{n} ({len(t)} chars)" for n, t in docs) + f"; tool API {tool_api[0]}")
     DOCS_TEXT[0] = "\n".join(text for _, text in docs) + "\n" + json.dumps(openapi, ensure_ascii=False)
 
     # One budget for the whole pipeline: every repair round anywhere (validation repairs during extraction,
