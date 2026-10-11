@@ -79,6 +79,9 @@ use the default shown and record it in `assumptions`.
                                                    // business_days_after_or_end_of_month (whichever is first),
                                                    // later_of / earlier_of with "of": [rule, rule] (e.g. the later of the
                                                    // last business day of the month and the 3rd business day).
+                                                   // "roll_if_before_today": true when the brief rolls only a date EARLIER than
+                                                   // today; "roll_if_not_after_today": true when it rolls a date that is today
+                                                   // or earlier. They differ on the day the date is today: read the wording.
                                                    // "roll_if_not_after_today": true when the brief says to use the next
                                                    // period's date if the computed one is today (e.g. 'or next month's')
     "floor": null,                                 // only if this band has its own floor: "full" = the whole amount owed
@@ -106,6 +109,8 @@ use the default shown and record it in `assumptions`.
                                                    // "deadline" (full amount by the deadline); a plain yes agrees to that
            "too_much_floor": "attempt_1",
            "ladder_repeat_last": false,            // true only if the brief says the last step is repeated for further attempts
+           "hardship_transfer": null,             // "direct" only if the brief says: sympathy, then transfer, no question
+                                                   // (omit when the brief has the agent offer the support transfer first)
            "promise_retries": null,               // only if the brief says how often a failed create_promise is retried
                                                    // (0 = never); unstated: once
            "skipped_repeat_counts": null,         // only if the brief says whether a ladder step skipped because it would
@@ -255,3 +260,8 @@ Built-in behaviour (always carried out; never list these under unsupported_rules
 `unsupported_rules`: a list of rules from the materials (quoted, one string each) that no field of this spec can
 carry: a rounding, minimum, date rule, exception or condition the format has no place for. Never approximate such
 a rule with a nearby field value; list it here instead. The build reports every item.
+
+`event_changes`: only if the brief changes an outcome/reason/queue/note code from a given calendar date (e.g. "from 2
+November the code PAID is replaced by CLAIMED_PAID"): a list of {"event": "<event key>", "from": "YYYY-MM-DD",
+"set": {"outcome": "..."}}. The base `events` entry then holds the code BEFORE that date; the change applies to calls
+on or after it.

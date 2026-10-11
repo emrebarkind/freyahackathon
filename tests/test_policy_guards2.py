@@ -181,3 +181,40 @@ def test_a_customer_reference_under_another_name_reaches_every_node():
         if n in wf["nodes"]:
             b = wf["nodes"][n]["pre_actions"][0]["function"]["parameters"]["properties"]["body"]["properties"]
             assert b["client_ref"]["default"] == "{{customer_id}}", (n, b["client_ref"])
+
+
+def test_dated_event_changes_apply_from_their_date(monkeypatch):
+    spec = comp.apply_defaults(copy.deepcopy(E.A), O)
+    paid = spec["events"]["paid"]["outcome"]
+    spec["event_changes"] = [{"event": "paid", "from": "2026-11-02", "set": {"outcome": "claims_paid"}}]
+    monkeypatch.setattr(engine, "S", spec)
+    monkeypatch.setattr(engine, "TODAY", [__import__("datetime").date(2026, 11, 1)])
+    assert engine.ev("paid")["outcome"] == paid
+    engine.TODAY[0] = __import__("datetime").date(2026, 11, 2)
+    assert engine.ev("paid")["outcome"] == "claims_paid"
+    from builder import extract
+    assert any("event_changes" in e for e in extract.validate({**spec, "event_changes": [{"event": "nope", "from": "x", "set": {}}]}, O))
+
+
+def test_hardship_can_transfer_without_a_question():
+    from sim import run_case
+    spec = copy.deepcopy(E.A)
+    spec["rules"]["hardship_transfer"] = "direct"
+    led, tr = run_case(spec, E.CASES["PUB-01"], E.ids("PUB-01") + [dict(k="hardship")])
+    assert [t["queue"] for t in led["transfers"]] == [spec["events"]["transfer_support"]["queue"]], E.agent_lines(tr)
+    spec["rules"].pop("hardship_transfer")
+    led, tr = run_case(spec, E.CASES["PUB-01"], E.ids("PUB-01") + [dict(k="hardship")])
+    assert led["transfers"] == [], E.agent_lines(tr)        # the default: the support transfer is offered first
+
+
+def test_roll_when_earlier_than_today_differs_from_roll_when_today():
+    spec = copy.deepcopy(E.A)
+    spec["calendar"]["holidays"] = []
+    b = spec["bands"][0]
+    b.update(min=1, max=30)
+    spec["bands"] = [b]
+    rec = dict(type="credit_card", days_late=5, past_due=100.0)
+    b["deadline"] = {"kind": "last_business_day_of_month", "roll_if_before_today": True}
+    assert facts(spec, rec, "2026-11-30T10:00")["deadline"] == "2026-11-30"     # today is that day: stays
+    b["deadline"] = {"kind": "last_business_day_of_month", "roll_if_not_after_today": True}
+    assert facts(spec, rec, "2026-11-30T10:00")["deadline"] == "2026-12-31"     # today is that day: rolls

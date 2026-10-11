@@ -160,9 +160,17 @@ def today_of(V):
     return parse_now(V.get("now")).date()
 
 
+TODAY = [None]    # the call's date, set once per run: dated code changes in the brief read it
+
+
 def ev(name):
-    """Event -> dict(outcome, reason, queue, note)."""
-    return S.get("events", dict()).get(name, dict())
+    """Event -> dict(outcome, reason, queue, note), with the brief's dated changes applied (S['event_changes']:
+    [{"event": "paid", "from": "YYYY-MM-DD", "set": {"outcome": "..."}}])."""
+    e = S.get("events", dict()).get(name, dict())
+    for c in S.get("event_changes") or []:
+        if c.get("event") == name and TODAY[0] is not None and iso(TODAY[0]) >= str(c.get("from", "9999-12-31")):
+            e = dict(e, **(c.get("set") or {}))
+    return e
 
 
 # ----------------------------------------------------------------------------------------------- products
@@ -292,7 +300,7 @@ def product_facts(V, raw):
     floor = min(floor, full)                      # a floor above the amount owed is the amount owed
     rule = (b.get("deadline_by_type") or dict()).get(typ) or b["deadline"]   # a product type with its own deadline
     deadline = band_deadline(today, rule)
-    if rule.get("roll_if_not_after_today") and deadline <= today:     # e.g. 'or next month's if today is that day'
+    if (rule.get("roll_if_not_after_today") and deadline <= today) or (rule.get("roll_if_before_today") and deadline < today):
         deadline = band_deadline(end_of_month(today) + datetime.timedelta(days=1), rule, today)
     return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
                 band=b.get("name", ""), deadline=iso(deadline), attempts=int(b.get("attempts", 1)), ladder=b.get("ladder") or None,
@@ -1329,6 +1337,12 @@ def special(V, s, k, p, scope="none"):
         return True
     if k == "hardship":
         s["hardship_offered"] = True
+        if S.get("rules", dict()).get("hardship_transfer") == "direct" and ev("transfer_support").get("queue"):
+            for q in s["products"]:                         # the brief: sympathy, then transfer, no question
+                if q["status"] in ("open", "agreed"):
+                    q["status"] = "hardship"
+            transfer(V, s, "support", L("hardship"))
+            return True
         if not ev("transfer_support").get("queue"):        # the brief offers no support transfer
             for q in s["products"]:
                 if q["status"] == "open":
@@ -2211,6 +2225,7 @@ def dispatch(V, s, stage, k, t, dtxt, a, scope):
 
 
 def main(V):
+    TODAY[0] = today_of(V)
     CTX.clear()
     CTX.update(names(V))
     V["next"] = ""

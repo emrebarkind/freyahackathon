@@ -176,6 +176,15 @@ def validate(spec, openapi):
         if t not in (spec["products"].get("floor_field") or {}) and "*" not in (spec["products"].get("floor_field") or {}) \
                 and spec["products"].get("floor_pct") is None:
             errs.append(f"products.floor_field missing for product type {t}")
+    for c in spec.get("event_changes") or []:
+        if not isinstance(c, dict) or c.get("event") not in spec["events"] or not isinstance(c.get("set"), dict) \
+                or not re.fullmatch(r"\d{4}-\d\d-\d\d", str(c.get("from", ""))) or not set(c["set"]) <= {"outcome", "reason", "queue", "note"}:
+            errs.append(f"event_changes entry {c!r} must be {{event: <event key>, from: YYYY-MM-DD, set: {{outcome|reason|queue|note}}}}")
+        else:
+            for f, enum_tool, param in (("outcome", "close_call", "c_outcome"), ("reason", "close_call", "c_reason"),
+                                        ("queue", "transfer_to_agent", "t_queue"), ("note", "add_note", "n_reason")):
+                if f in c["set"] and c["set"][f]:
+                    check_enum(enum_tool, param, c["set"][f], f"event_changes.{c['event']}.{f}")
     amt_key = next((k for k, v in (spec.get("tool_bodies") or {}).get("create_promise", {}).items() if v == "p_amount"), "amount")
     if (tool_props(openapi, "create_promise") or {}).get(amt_key, {}).get("type") == "integer" \
             and not (spec["products"].get("promise_scale") or spec["products"].get("amount_scale")):
@@ -204,6 +213,7 @@ def validate(spec, openapi):
                           ("rules.week_end_today", ("next_week", "today")),
                           ("rules.skipped_repeat_counts", (True, False)),
                           ("rules.promise_retries", (0, 1, 2, 3)),
+                          ("rules.hardship_transfer", ("direct",)),
                           ("products.promise_round", ("up", "down", "nearest"))):
         v = get(spec, path)
         if v is not None and v not in allowed:
