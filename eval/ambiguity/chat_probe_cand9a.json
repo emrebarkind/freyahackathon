@@ -1,0 +1,636 @@
+{
+ "amount-digits-pieces": {
+  "call_id": "6c244b72-af68-479e-ab99-e18d8d145869",
+  "turns": [
+   {
+    "user": "Hello?",
+    "agent": "Hello?",
+    "s": 7.3
+   },
+   {
+    "user": "Yes, this is Daniel Reyes.",
+    "agent": "Before we continue, I need to ask you two security questions. What is your date of birth?",
+    "s": 3.0
+   },
+   {
+    "user": "14 March 1988.",
+    "agent": "What are the last four digits of the phone number on file?",
+    "s": 21.1
+   },
+   {
+    "user": "4471.",
+    "agent": "Thank you. I am calling from the collections team about a late payment. Your credit card ending 4821 has 420 dollars past due and is 6 days late. Can you make this payment today?",
+    "s": 23.3
+   },
+   {
+    "user": "I cannot pay today. I can pay 300...",
+    "agent": "Sorry, please go on.",
+    "s": 5.8
+   },
+   {
+    "user": "50 on Friday.",
+    "agent": "Sorry, I want to be sure I have the amount right. How much can you pay in total?",
+    "s": 15.9
+   },
+   {
+    "user": "Three hundred dollars and fifty cents, on Friday.",
+    "agent": "Let me read that back. Credit card ending 4821: 300.50 dollars on Friday 16 October. Do you confirm?",
+    "s": 4.1
+   },
+   {
+    "user": "Yes, I confirm.",
+    "agent": "Your promise is recorded. You will receive a text message confirming this promise. Is there anything else I can help you with?",
+    "s": 4.2
+   },
+   {
+    "user": "No, thank you.",
+    "agent": "Thank you for your time. Goodbye.",
+    "s": 3.6
+   }
+  ],
+  "extracted": [
+   [
+    "nego_amount",
+    300.0,
+    "I cannot pay today. I can pay 300..."
+   ],
+   [
+    "nego_kind",
+    "proposes",
+    "I cannot pay today. I can pay 300..."
+   ],
+   [
+    "nego_cut",
+    "yes",
+    "I cannot pay today. I can pay 300..."
+   ],
+   [
+    "nego_amount",
+    50.0,
+    "50 on Friday."
+   ],
+   [
+    "nego_date",
+    "Friday",
+    "50 on Friday."
+   ],
+   [
+    "nego_kind",
+    "proposes",
+    "50 on Friday."
+   ],
+   [
+    "nego_cut",
+    "no",
+    "50 on Friday."
+   ],
+   [
+    "nego_amount",
+    300.5,
+    "Three hundred dollars and fifty cents, on Friday."
+   ],
+   [
+    "nego_date",
+    "Friday",
+    "Three hundred dollars and fifty cents, on Friday."
+   ],
+   [
+    "nego_kind",
+    "proposes",
+    "Three hundred dollars and fifty cents, on Friday."
+   ],
+   [
+    "nego_cut",
+    "no",
+    "Three hundred dollars and fifty cents, on Friday."
+   ],
+   [
+    "confirm_kind",
+    "yes",
+    "Yes, I confirm."
+   ],
+   [
+    "confirm_cut",
+    "no",
+    "Yes, I confirm."
+   ]
+  ],
+  "ledger": [
+   [
+    "verify_identity",
+    {
+     "field": "date_of_birth",
+     "answer": "1988-03-14"
+    },
+    {
+     "ok": true,
+     "verified": true,
+     "wrong_answers_left": 3,
+     "all_verified": false
+    }
+   ],
+   [
+    "verify_identity",
+    {
+     "field": "phone_last4",
+     "answer": "4471"
+    },
+    {
+     "ok": true,
+     "verified": true,
+     "wrong_answers_left": 3,
+     "all_verified": true
+    }
+   ],
+   [
+    "get_account",
+    {},
+    {
+     "ok": true,
+     "products": [
+      {
+       "product_id": "p1",
+       "type": "credit_card",
+       "card_last4": "4821",
+       "past_due": 420,
+       "days_late": 6,
+       "minimum_payment": 126
+      }
+     ]
+    }
+   ],
+   [
+    "create_promise",
+    {
+     "date": "2026-10-16",
+     "amount": 300.5,
+     "product_id": "p1"
+    },
+    {
+     "ok": true,
+     "promise_id": "pr1"
+    }
+   ],
+   [
+    "close_call",
+    {
+     "outcome": "promise"
+    },
+    {
+     "ok": true
+    }
+   ]
+  ]
+ },
+ "repeat-question": {
+  "call_id": "41322fe1-bcb7-44cd-8a4c-0c01cdc5e560",
+  "turns": [
+   {
+    "user": "Hello?",
+    "agent": "Hello?",
+    "s": 3.3
+   },
+   {
+    "user": "Yes, this is Daniel Reyes.",
+    "agent": "Before we continue, I need to ask you two security questions. What is your date of birth?",
+    "s": 13.4
+   },
+   {
+    "user": "14 March 1988.",
+    "agent": "What are the last four digits of the phone number on file?",
+    "s": 4.0
+   },
+   {
+    "user": "4471.",
+    "agent": "Thank you. I am calling from the collections team about a late payment. Your credit card ending 4821 has 420 dollars past due and is 6 days late. Can you make this payment today?",
+    "s": 4.0
+   },
+   {
+    "user": "Why is it so much?",
+    "agent": "Your credit card ending 4821 has 420 dollars past due and is 6 days late. Can you make this payment today?",
+    "s": 13.3
+   },
+   {
+    "user": "Why is it so much?",
+    "agent": "I understand. Could you pay the minimum payment of 126 dollars on Friday 16 October? The rest stays overdue.",
+    "s": 6.3
+   },
+   {
+    "user": "Why is it so much?",
+    "agent": "Thank you for your time. Goodbye.",
+    "s": 4.6
+   },
+   {
+    "user": "OK. I can pay the full amount today.",
+    "error": "POST /api/v2/chat/message -> 504: error code: 504\n"
+   }
+  ],
+  "extracted": [
+   [
+    "nego_kind",
+    "details",
+    "Why is it so much?"
+   ],
+   [
+    "nego_cut",
+    "no",
+    "Why is it so much?"
+   ],
+   [
+    "nego_kind",
+    "too_much",
+    "Why is it so much?"
+   ],
+   [
+    "nego_cut",
+    "no",
+    "Why is it so much?"
+   ],
+   [
+    "nego_kind",
+    "too_much",
+    "Why is it so much?"
+   ],
+   [
+    "nego_cut",
+    "no",
+    "Why is it so much?"
+   ]
+  ],
+  "ledger": [
+   [
+    "verify_identity",
+    {
+     "field": "date_of_birth",
+     "answer": "1988-03-14"
+    },
+    {
+     "ok": true,
+     "verified": true,
+     "wrong_answers_left": 3,
+     "all_verified": false
+    }
+   ],
+   [
+    "verify_identity",
+    {
+     "field": "phone_last4",
+     "answer": "4471"
+    },
+    {
+     "ok": true,
+     "verified": true,
+     "wrong_answers_left": 3,
+     "all_verified": true
+    }
+   ],
+   [
+    "get_account",
+    {},
+    {
+     "ok": true,
+     "products": [
+      {
+       "product_id": "p1",
+       "type": "credit_card",
+       "card_last4": "4821",
+       "past_due": 420,
+       "days_late": 6,
+       "minimum_payment": 126
+      }
+     ]
+    }
+   ],
+   [
+    "close_call",
+    {
+     "reason": "refused",
+     "outcome": "no_promise"
+    },
+    {
+     "ok": true
+    }
+   ]
+  ]
+ },
+ "rejected-day": {
+  "call_id": "59a7b4fe-9197-4991-a0f3-3a829421b570",
+  "turns": [
+   {
+    "user": "Hello?",
+    "agent": "Hello?",
+    "s": 2.7
+   },
+   {
+    "user": "Yes, this is Daniel Reyes.",
+    "agent": "Before we continue, I need to ask you two security questions. What is your date of birth?",
+    "s": 4.1
+   },
+   {
+    "user": "14 March 1988.",
+    "agent": "What are the last four digits of the phone number on file?",
+    "s": 22.4
+   },
+   {
+    "user": "4471.",
+    "agent": "Thank you. I am calling from the collections team about a late payment. Your credit card ending 4821 has 420 dollars past due and is 6 days late. Can you make this payment today?",
+    "s": 5.5
+   },
+   {
+    "user": "Yes... no, Friday does not work.",
+    "agent": "Let me read that back. Credit card ending 4821: 420 dollars on Friday 16 October. Do you confirm?",
+    "s": 4.9
+   },
+   {
+    "user": "Yes.",
+    "agent": "Your promise is recorded. You will receive a text message confirming this promise. Is there anything else I can help you with?",
+    "s": 3.7
+   },
+   {
+    "user": "I can pay the full amount on the 20th.",
+    "agent": "A promise cannot be changed on this call, but you can change it in the mobile app. Thank you for your time. Goodbye.",
+    "s": 4.7
+   },
+   {
+    "user": "Yes, I confirm.",
+    "error": "POST /api/v2/chat/message -> 504: error code: 504\n"
+   }
+  ],
+  "extracted": [
+   [
+    "nego_date",
+    "Friday",
+    "Yes... no, Friday does not work."
+   ],
+   [
+    "nego_kind",
+    "proposes",
+    "Yes... no, Friday does not work."
+   ],
+   [
+    "nego_cut",
+    "no",
+    "Yes... no, Friday does not work."
+   ],
+   [
+    "confirm_kind",
+    "yes",
+    "Yes."
+   ],
+   [
+    "confirm_cut",
+    "no",
+    "Yes."
+   ]
+  ],
+  "ledger": [
+   [
+    "verify_identity",
+    {
+     "field": "date_of_birth",
+     "answer": "1988-03-14"
+    },
+    {
+     "ok": true,
+     "verified": true,
+     "wrong_answers_left": 3,
+     "all_verified": false
+    }
+   ],
+   [
+    "verify_identity",
+    {
+     "field": "phone_last4",
+     "answer": "4471"
+    },
+    {
+     "ok": true,
+     "verified": true,
+     "wrong_answers_left": 3,
+     "all_verified": true
+    }
+   ],
+   [
+    "get_account",
+    {},
+    {
+     "ok": true,
+     "products": [
+      {
+       "product_id": "p1",
+       "type": "credit_card",
+       "card_last4": "4821",
+       "past_due": 420,
+       "days_late": 6,
+       "minimum_payment": 126
+      }
+     ]
+    }
+   ],
+   [
+    "create_promise",
+    {
+     "date": "2026-10-16",
+     "amount": 420,
+     "product_id": "p1"
+    },
+    {
+     "ok": true,
+     "promise_id": "pr1"
+    }
+   ],
+   [
+    "close_call",
+    {
+     "outcome": "promise"
+    },
+    {
+     "ok": true
+    }
+   ]
+  ]
+ },
+ "fragmented-amount": {
+  "call_id": "4f66ce88-b08f-4425-bfed-a8267d2a4974",
+  "turns": [
+   {
+    "user": "Hello?",
+    "agent": "Hello?",
+    "s": 2.6
+   },
+   {
+    "user": "Yes, this is Daniel Reyes.",
+    "agent": "Before we continue, I need to ask you two security questions. What is your date of birth?",
+    "s": 5.3
+   },
+   {
+    "user": "14 March 1988.",
+    "agent": "What are the last four digits of the phone number on file?",
+    "s": 18.3
+   },
+   {
+    "user": "4471.",
+    "agent": "Thank you. I am calling from the collections team about a late payment. Your credit card ending 4821 has 420 dollars past due and is 6 days late. Can you make this payment today?",
+    "s": 8.0
+   },
+   {
+    "user": "I cannot pay today. My salary...",
+    "agent": "Which exact day would that be?",
+    "s": 3.1
+   },
+   {
+    "user": "I can pay three hundred and",
+    "agent": "Sorry, please go on.",
+    "s": 5.3
+   },
+   {
+    "user": "fifty dollars on Friday.",
+    "agent": "Let me read that back. Credit card ending 4821: 350 dollars on Friday 16 October. Do you confirm?",
+    "s": 7.0
+   },
+   {
+    "user": "aaa...",
+    "agent": "Sorry, please go on.",
+    "s": 4.3
+   },
+   {
+    "user": "Yes, I confirm.",
+    "agent": "Your promise is recorded. You will receive a text message confirming this promise. Is there anything else I can help you with?",
+    "s": 6.2
+   },
+   {
+    "user": "No.",
+    "agent": "Thank you for your time. Goodbye.",
+    "s": 7.9
+   }
+  ],
+  "extracted": [
+   [
+    "nego_kind",
+    "vague",
+    "I cannot pay today. My salary..."
+   ],
+   [
+    "nego_cut",
+    "yes",
+    "I cannot pay today. My salary..."
+   ],
+   [
+    "nego_kind",
+    "proposes",
+    "I can pay three hundred and"
+   ],
+   [
+    "nego_cut",
+    "yes",
+    "I can pay three hundred and"
+   ],
+   [
+    "nego_amount",
+    350.0,
+    "fifty dollars on Friday."
+   ],
+   [
+    "nego_date",
+    "Friday",
+    "fifty dollars on Friday."
+   ],
+   [
+    "nego_kind",
+    "proposes",
+    "fifty dollars on Friday."
+   ],
+   [
+    "nego_cut",
+    "no",
+    "fifty dollars on Friday."
+   ],
+   [
+    "confirm_kind",
+    "unclear",
+    "aaa..."
+   ],
+   [
+    "confirm_cut",
+    "yes",
+    "aaa..."
+   ],
+   [
+    "confirm_kind",
+    "yes",
+    "Yes, I confirm."
+   ],
+   [
+    "confirm_cut",
+    "no",
+    "Yes, I confirm."
+   ]
+  ],
+  "ledger": [
+   [
+    "verify_identity",
+    {
+     "field": "date_of_birth",
+     "answer": "1988-03-14"
+    },
+    {
+     "ok": true,
+     "verified": true,
+     "wrong_answers_left": 3,
+     "all_verified": false
+    }
+   ],
+   [
+    "verify_identity",
+    {
+     "field": "phone_last4",
+     "answer": "4471"
+    },
+    {
+     "ok": true,
+     "verified": true,
+     "wrong_answers_left": 3,
+     "all_verified": true
+    }
+   ],
+   [
+    "get_account",
+    {},
+    {
+     "ok": true,
+     "products": [
+      {
+       "product_id": "p1",
+       "type": "credit_card",
+       "card_last4": "4821",
+       "past_due": 420,
+       "days_late": 6,
+       "minimum_payment": 126
+      }
+     ]
+    }
+   ],
+   [
+    "create_promise",
+    {
+     "date": "2026-10-16",
+     "amount": 350,
+     "product_id": "p1"
+    },
+    {
+     "ok": true,
+     "promise_id": "pr1"
+    }
+   ],
+   [
+    "close_call",
+    {
+     "outcome": "promise"
+    },
+    {
+     "ok": true
+    }
+   ]
+  ]
+ }
+}

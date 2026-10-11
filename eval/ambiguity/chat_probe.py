@@ -14,6 +14,12 @@ SCRIPTS = {
  "correction-and-noise": ["Hello?", "Yes, this is Daniel Reyes.", "14 March 1988.", "4471.", "Yes... no, Friday does not work.",
                           "hmm...", "thought\nThe user is asking for the payment date", "Traffic was awful today. I can pay the full amount on the 20th.",
                           "Yes, I confirm.", "No, thank you."],
+ "amount-digits-pieces": ["Hello?", "Yes, this is Daniel Reyes.", "14 March 1988.", "4471.", "I cannot pay today. I can pay 300...",
+                          "50 on Friday.", "Three hundred dollars and fifty cents, on Friday.", "Yes, I confirm.", "No, thank you."],
+ "repeat-question": ["Hello?", "Yes, this is Daniel Reyes.", "14 March 1988.", "4471.", "Which account is this about?",
+                     "Which account is this about?", "Which account is this about?", "OK. I can pay the full amount today.", "Yes, I confirm.", "No, thank you."],
+ "rejected-day": ["Hello?", "Yes, this is Daniel Reyes.", "14 March 1988.", "4471.", "Yes... no, Friday does not work.", "Yes.",
+                  "I can pay the full amount on the 20th.", "Yes, I confirm.", "No, thank you."],
  "fragmented-amount": ["Hello?", "Yes, this is Daniel Reyes.", "14 March 1988.", "4471.", "I cannot pay today. My salary...",
                        "I can pay three hundred and", "fifty dollars on Friday.", "aaa...", "Yes, I confirm.", "No."],
 }
