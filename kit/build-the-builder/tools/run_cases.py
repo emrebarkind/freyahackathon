@@ -4,7 +4,7 @@
 
 Needs FREYA_API_KEY (your workspace) and FREYA_BANK_TEAM_KEY (any secret of 16+ characters your team picks, the same one every time).
 """
-import argparse, hashlib, json, os, pathlib, sys, time
+import argparse, hashlib, json, os, pathlib, subprocess, sys, time
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tools"))
 import freya
@@ -96,15 +96,22 @@ def run_once(agent_id, cases, ids):
     t0 = time.time()
     journal = ROOT / "results" / "sim-journal.jsonl"
     journal.parent.mkdir(exist_ok=True)
+    def record(entry):                # flushed to disk at once; with SIM_JOURNAL_GIT=1 also committed and pushed at once
+        line = json.dumps(entry) + "\n"
+        targets = [journal] + ([ROOT.parent.parent / "eval" / "sim-journal.jsonl"] if os.environ.get("SIM_JOURNAL_GIT") else [])
+        for t in targets:
+            with open(t, "a") as f:
+                f.write(line); f.flush(); os.fsync(f.fileno())
+        if len(targets) > 1:
+            subprocess.Popen([str(ROOT.parent.parent / "scripts" / "persist_journal.sh"), entry["sim_id"], entry["event"]],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     def started(sim_id):              # written before waiting: scripts/recover_sim.py rebuilds a lost run from this line
-        with open(journal, "a") as f:
-            f.write(json.dumps({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "event": "started", "sim_id": sim_id, "agent_id": agent_id,
-                                "cases": [c["id"] for c in cases], "personas": {c["id"]: ids[c["id"]] for c in cases},
-                                "customer_ids": {c["id"]: sessions[c["id"]].get("customer_id") for c in cases},
-                                "label": os.environ.get("RUN_LABEL", "")}) + "\n")
+        record({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "event": "started", "sim_id": sim_id, "agent_id": agent_id,
+                "cases": [c["id"] for c in cases], "personas": {c["id"]: ids[c["id"]] for c in cases},
+                "customer_ids": {c["id"]: sessions[c["id"]].get("customer_id") for c in cases},
+                "label": os.environ.get("RUN_LABEL", "")})
     sim_id, it_id, status = freya.run_simulation(agent_id, f"cases {time.strftime('%H:%M:%S')}", {ids[c["id"]]: sessions[c["id"]] for c in cases}, on_start=started)
-    with open(journal, "a") as f:
-        f.write(json.dumps({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "event": "finished", "sim_id": sim_id, "status": status}) + "\n")
+    record({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "event": "finished", "sim_id": sim_id, "status": status})
     took = time.time() - t0
     judge = {r["personaId"]: r for r in freya.get_iteration(sim_id, it_id)["runs"]}
     rows = []
