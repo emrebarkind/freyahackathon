@@ -116,6 +116,8 @@ use the default shown and record it in `assumptions`.
                                                    // "deadline" (full amount by the deadline); a plain yes agrees to that
            "too_much_floor": "attempt_1",
            "ladder_repeat_last": false,            // true only if the brief says the last step is repeated for further attempts
+           "notes_before_transfer": false,        // true only if the brief says to note each product before that direct
+                                                   // transfer (otherwise a transfer writes no notes)
            "hardship_transfer": null,             // "direct" only if the brief says: sympathy, then transfer, no question
                                                    // (omit when the brief has the agent offer the support transfer first)
            "promise_retries": null,               // only if the brief says how often a failed create_promise is retried
@@ -143,7 +145,10 @@ use the default shown and record it in `assumptions`.
  "after_promise": {"ask_anything_else": true},     // give the customer one more turn after a recorded promise
  "notes": {"enabled": false},                      // true if the brief requires add_note for products that end without a promise
  "multi": {"clamp_single_date": true,              // one date for all products: a product whose deadline is earlier gets its own deadline
-           "continue_after_paid": true, "continue_after_dispute": true},
+           "continue_after_paid": true, "continue_after_dispute": true,
+           "outcome_priority": []},                // only if the brief ranks product endings for the call's close when no
+                                                   // promise was recorded, e.g. ["refused", "dispute", "service_error"]
+                                                   // (event keys, highest first); otherwise the first product's ending
  "human": {"ask_first": true},                     // asks once whether it can help before transferring to a human
  "max_not_talk": 2,                                // "I don't want to talk" this many times ends the call
  "events": {                                       // how each situation ends in the bank's records. Use the brief's exact codes.
@@ -275,7 +280,7 @@ Built-in behaviour (always carried out; never list these under unsupported_rules
   event, after it every open product ends refused (the refused event); the first time gets one `not_talk_once` line;
 - several products: the call closes with the promise event if any promise was recorded (a product whose write failed
   gets its own service_error note); otherwise with paid if every product was paid; otherwise with the ending of the
-  first product in account order (a brief that ranks endings, e.g. "dispute over refused", is not carried: list it);
+  first product in account order, unless `multi.outcome_priority` ranks the endings;
 - hardship: once the customer has declined the support offer there is no further persuasion; open products end with
   the hardship event;
 - a transfer (restructuring, human, support) ends the call: a promise agreed but not yet read back is not recorded;
@@ -298,8 +303,8 @@ on or after it.
 
 `policy`: the evidence for every critical policy, keyed by dotted path. Critical paths: rules.skipped_repeat_counts,
 opening_is_attempt, opening_blocks_repeat, too_much_skips_full, too_much_floor, ladder_repeat_last,
-refuse_deadline_is_refusal, promise_retries, hardship_transfer, deadline_adjust, first_ask, week_end_today;
-products.floor_pct, floor_min, floor_full_below, floor_round, step_round, promise_scale, promise_round; event_changes. A path you
+refuse_deadline_is_refusal, promise_retries, hardship_transfer, notes_before_transfer, deadline_adjust, first_ask, week_end_today;
+products.floor_pct, floor_min, floor_full_below, floor_round, step_round, promise_scale, promise_round; multi.outcome_priority; event_changes. A path you
 leave unset still has a value (the engine default: skipped_repeat_counts true, opening_is_attempt false,
 opening_blocks_repeat false, too_much_skips_full false, too_much_floor "attempt_1", ladder_repeat_last false,
 refuse_deadline_is_refusal true, promise_retries 1, hardship_transfer "ask_first", deadline_adjust

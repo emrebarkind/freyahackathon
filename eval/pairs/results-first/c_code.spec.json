@@ -1,0 +1,627 @@
+{
+ "currency_word": "euros",
+ "calendar": {
+  "workdays": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "holidays": [
+   "2026-10-26",
+   "2026-12-24",
+   "2026-12-25",
+   "2026-12-28",
+   "2027-01-01",
+   "2027-03-17"
+  ]
+ },
+ "date_rules": {
+  "next_weekday": "following_week"
+ },
+ "confirm": {
+  "max_asks": 2
+ },
+ "callback": {
+  "days": [
+   "today",
+   "next_business_day"
+  ],
+  "start": "09:30",
+  "end": "18:00",
+  "after_now": true,
+  "business_days_only": false,
+  "windows": {},
+  "max_asks": 2
+ },
+ "identity": {
+  "questions": [
+   {
+    "field": "phone_last4",
+    "kind": "digits",
+    "length": 4,
+    "ask": "What are the last four digits of the phone number we have on file for you?"
+   },
+   {
+    "field": "date_of_birth",
+    "kind": "date",
+    "format": "%Y-%m-%d",
+    "ask": "What is your date of birth?"
+   }
+  ],
+  "max_wrong": 2,
+  "max_wrong_per_question": null,
+  "date_order": "dmy",
+  "hints": {
+   "day_month_swapped": "I think the day and month may have been swapped. Could you give me your date of birth again, day first?"
+  },
+  "purpose_is_decline": true,
+  "question_is_decline": false,
+  "response": {
+   "ok": "ok",
+   "verified": "verified",
+   "all_verified": "all_verified",
+   "left": "wrong_answers_left",
+   "hint": "hint",
+   "pass_values": [],
+   "reject_values": []
+  }
+ },
+ "products": {
+  "names": {
+   "card": "credit card ending {card_last4}",
+   "loan": "personal loan",
+   "overdraft": "overdraft"
+  },
+  "amount_field": "overdue_eur",
+  "days_field": "days_past_due",
+  "floor_field": {
+   "card": "min_due_eur",
+   "loan": "monthly_instalment_eur"
+  },
+  "floor_pct": {
+   "overdraft": 25
+  },
+  "floor_min": null,
+  "floor_full_below": {
+   "overdraft": 100
+  },
+  "floor_names": {
+   "card": "minimum payment",
+   "loan": "monthly instalment",
+   "overdraft": "minimum amount"
+  },
+  "amount_scale": 1,
+  "promise_scale": 100,
+  "promise_round": null,
+  "floor_round": "up_unit",
+  "step_round": "up_unit",
+  "list_field": "products",
+  "id_field": "product_id",
+  "type_field": "kind",
+  "promise_integer": true
+ },
+ "bands": [
+  {
+   "name": "Tier 1",
+   "min": 1,
+   "max": 20,
+   "deadline": {
+    "kind": "business_days_after",
+    "n": 6
+   },
+   "floor": null,
+   "floor_full_types": [],
+   "deadline_by_type": {},
+   "attempts": 2,
+   "ladder": null
+  },
+  {
+   "name": "Tier 2",
+   "min": 21,
+   "max": 60,
+   "deadline": {
+    "kind": "day_of_month",
+    "n": 15,
+    "roll_if_before_today": true,
+    "roll_before_adjust": true
+   },
+   "floor": null,
+   "floor_full_types": [],
+   "deadline_by_type": {},
+   "attempts": 3,
+   "ladder": null
+  }
+ ],
+ "ladder": [
+  {
+   "amount": "full",
+   "date": "today"
+  },
+  {
+   "amount": "full",
+   "date": "deadline"
+  },
+  {
+   "amount": "pct:50",
+   "date": "deadline"
+  },
+  {
+   "amount": "floor",
+   "date": "deadline"
+  }
+ ],
+ "rules": {
+  "refuse_deadline_is_refusal": true,
+  "deadline_adjust": "next_business_day",
+  "first_ask": "today",
+  "too_much_floor": "attempt_1",
+  "ladder_repeat_last": false,
+  "hardship_transfer": "direct",
+  "promise_retries": 1,
+  "skipped_repeat_counts": false,
+  "opening_blocks_repeat": true,
+  "too_much_skips_full": false,
+  "opening_is_attempt": true
+ },
+ "after_promise": {
+  "ask_anything_else": true
+ },
+ "notes": {
+  "enabled": true
+ },
+ "multi": {
+  "clamp_single_date": true,
+  "continue_after_paid": true,
+  "continue_after_dispute": true
+ },
+ "human": {
+  "ask_first": true
+ },
+ "max_not_talk": 2,
+ "events": {
+  "promise": {
+   "outcome": "promise",
+   "reason": ""
+  },
+  "paid": {
+   "outcome": "paid",
+   "reason": "",
+   "note": "paid"
+  },
+  "transfer_restructuring": {
+   "outcome": "transferred",
+   "reason": "restructuring",
+   "queue": "restructuring"
+  },
+  "transfer_human": {
+   "outcome": "transferred",
+   "reason": "human",
+   "queue": "general"
+  },
+  "transfer_support": {
+   "outcome": "no_promise",
+   "reason": "hardship",
+   "queue": ""
+  },
+  "refused": {
+   "outcome": "no_promise",
+   "reason": "refused",
+   "note": "refused"
+  },
+  "hardship": {
+   "outcome": "no_promise",
+   "reason": "hardship",
+   "note": "hardship"
+  },
+  "dispute": {
+   "outcome": "no_promise",
+   "reason": "dispute",
+   "note": "dispute"
+  },
+  "service_error": {
+   "outcome": "no_promise",
+   "reason": "service_error",
+   "note": "service_error"
+  },
+  "id_failed": {
+   "outcome": "not_verified",
+   "reason": "failed"
+  },
+  "id_declined": {
+   "outcome": "not_verified",
+   "reason": "declined"
+  },
+  "callback": {
+   "outcome": "not_reached",
+   "reason": "callback"
+  },
+  "no_callback": {
+   "outcome": "not_reached",
+   "reason": "no_callback"
+  },
+  "wrong_number": {
+   "outcome": "not_reached",
+   "reason": "wrong_number"
+  },
+  "deceased": {
+   "outcome": "not_reached",
+   "reason": "deceased"
+  },
+  "unclear": {
+   "outcome": "not_reached",
+   "reason": "unclear"
+  }
+ },
+ "event_changes": [
+  {
+   "event": "dispute",
+   "from": "2026-11-05",
+   "set": {
+    "reason": "contested"
+   }
+  }
+ ],
+ "tool_bodies": {
+  "verify_identity": {
+   "field": "q_field",
+   "answer": "q_answer"
+  },
+  "get_account": {},
+  "create_promise": {
+   "product_id": "p_product",
+   "amount": "p_amount",
+   "date": "p_date"
+  },
+  "add_note": {
+   "product_id": "n_product",
+   "reason": "n_reason"
+  },
+  "schedule_callback": {
+   "date": "cb_date",
+   "time": "cb_time"
+  },
+  "transfer_to_agent": {
+   "queue": "t_queue"
+  },
+  "close_call": {
+   "outcome": "c_outcome",
+   "reason": "c_reason"
+  }
+ },
+ "responses": {
+  "verify_identity": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "get_account": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "create_promise": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "add_note": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "schedule_callback": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "transfer_to_agent": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "close_call": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  }
+ },
+ "intents": {
+  "hardship": "Financial hardship (job loss, illness, bereavement).",
+  "dispute": "The customer disputes the debt.",
+  "already_paid": "The customer says the product is already paid.",
+  "restructure": "Asks for a repayment plan or lower instalments.",
+  "too_much": "\"That is too much\": the next proposal is the floor.",
+  "human": "Asks for a person."
+ },
+ "call_variables": [],
+ "lines": {
+  "opening": "Hello, this is the automated assistant of Corrib Valley Bank. We record this call.",
+  "confirm_ask": "May I speak with {first_name} {last_name}?",
+  "robot": "Yes, I am the automated assistant of Corrib Valley Bank.",
+  "scam": "I understand your concern. You can check that this call is genuine by calling Corrib Valley Bank on the number on its official website.",
+  "purpose_before_verify": "I can explain the reason for my call once I have confirmed I am speaking with the right person.",
+  "no_info": "I'm sorry, I can't share any details on this call.",
+  "not_talk_once": "I understand. This will only take a few minutes.",
+  "tp_ask": "When would be a good time to reach {first_name} {last_name}?",
+  "tp_ask_time": "What time between 9:30 am and 6 pm, today or on the next business day, would suit?",
+  "tp_outside_window": "I'm sorry, I can only arrange a call today or on the next business day, between 9:30 am and 6 pm, and later than now.",
+  "tp_no_info": "I'm sorry, I can only discuss this with {first_name} {last_name}.",
+  "tp_booked": "Thank you. We will call back on {date} at {time}.",
+  "wrong_number": "I'm sorry for the trouble, and thank you for letting me know.",
+  "condolence": "I'm very sorry for your loss, and thank you for letting me know.",
+  "id_intro": "Before we continue, I need to ask you two security questions.",
+  "id_why": "These questions protect your privacy and make sure I only speak with the right person.",
+  "id_explain": "I can only continue once I have confirmed your identity.",
+  "id_declined": "I understand. Without verification I can't continue this call.",
+  "id_repeat": "Sorry, could you repeat that?",
+  "id_continue": "Please go on.",
+  "id_wrong": "I'm sorry, that doesn't match our records.",
+  "id_failed": "I'm sorry, I couldn't verify your identity, so I can't continue. Please visit your branch or use the Corrib Valley Bank app.",
+  "disclose_intro": "Thank you. I'm calling about overdue payments on your account.",
+  "product_line": "Your {name} is {days} days past due, with {amount} overdue.",
+  "ask_today": "Can you pay the full overdue amount of {amount} today?",
+  "ask_today_multi": "Can you pay the full overdue amount of {amount} on the {name} today?",
+  "next_product": "Now let's look at your {name}.",
+  "offer": "Could you pay {amount} on {date}?",
+  "offer_floor_date": "Could you pay {amount} on {date}?",
+  "offer_floor": "Could you pay {amount}?",
+  "below_floor": "I'm sorry, I can't accept less than {floor} for this product.",
+  "below_floor_again": "I'm sorry, I can't accept that amount.",
+  "date_past": "I'm sorry, that date has already passed.",
+  "not_business_day": "That day is not a business day. The next business day is {date}. Would that work?",
+  "after_deadline": "I'm sorry, the latest date I can accept is {date}. Could you pay by then?",
+  "vague_ask": "Which exact day could you pay?",
+  "propose_deadline": "Could you pay {amount} on {date}?",
+  "ask_date_for_amount": "On which date could you pay {amount}?",
+  "repeat_offer": "To repeat, that would be {amount} on {date}.",
+  "readback_intro": "Let me read that back to you.",
+  "readback_item": "For your {name}, {amount} on {date}.",
+  "clamped_note": "For your {name}, the latest possible date is {date}.",
+  "confirm_q": "Do you confirm this promise?",
+  "recorded": "Thank you, your promise has been recorded.",
+  "sms_line": "",
+  "record_failed": "I'm sorry, the promise could not be recorded because of a technical problem.",
+  "paid_line": "Thank you. Payments can take up to two business days to show on your account.",
+  "dispute_line": "I understand, and I won't take that further on this call.",
+  "hardship": "I'm very sorry to hear about your situation.",
+  "hardship_declined": "I understand.",
+  "hardship_short": "Would you like that?",
+  "restructure_line": "I'll put you through to our restructuring team.",
+  "human_ask_help": "Is there anything I can help you with before I transfer you?",
+  "transfer": "Please hold while I transfer you to a colleague.",
+  "offer_short": "Would that work for you?",
+  "offer_short_date": "That would be on {date}.",
+  "anything_else": "Is there anything else I can help you with?",
+  "promise_change": "I'm sorry, a promise that is already saved can't be changed on this call.",
+  "go_on": "Sorry, please go on.",
+  "goodbye": "Thank you for your time. Goodbye.",
+  "callback_failed": "I'm sorry, I couldn't book the callback.",
+  "transfer_failed": "I'm sorry, the transfer did not go through.",
+  "confirm_again": "Sorry, I did not catch that. Do you confirm, yes or no?",
+  "system_error": "I'm sorry, our systems are not available at the moment, so I can't continue this call.",
+  "below_floor_final": "I'm sorry, I can't accept less than {amount}.",
+  "no_band_line": "I'm sorry, I can't discuss your {name} on this call."
+ },
+ "unsupported_rules": [],
+ "policy": {
+  "rules.opening_is_attempt": {
+   "kind": "explicit",
+   "quotes": [
+    "This opening question is proposal 1 and counts towards the product's persuasion limit."
+   ]
+  },
+  "rules.opening_blocks_repeat": {
+   "kind": "explicit",
+   "quotes": [
+    "A step whose amount and date are both identical to a proposal already made for that product (the opening question included) is skipped."
+   ]
+  },
+  "rules.skipped_repeat_counts": {
+   "kind": "explicit",
+   "quotes": [
+    "A skipped step is not a proposal and does not count towards the limit; go straight to the next step."
+   ]
+  },
+  "rules.too_much_skips_full": {
+   "kind": "unspecified",
+   "assumption": "The brief only says the next proposal after 'too much' is the floor; later full-amount steps are not skipped automatically."
+  },
+  "rules.too_much_floor": {
+   "kind": "derived",
+   "quotes": [
+    "\"That is too much\" means the next proposal you make is the floor.",
+    "This opening question is proposal 1 and counts towards the product's persuasion limit."
+   ],
+   "derivation": "The floor offer after 'too much' is the next proposal. It uses a proposal (attempt) and takes the date of the next step, which is the deadline."
+  },
+  "rules.ladder_repeat_last": {
+   "kind": "explicit",
+   "quotes": [
+    "Stop proposing when the product's persuasion limit is reached or the ladder has no steps left, whichever comes first."
+   ]
+  },
+  "rules.refuse_deadline_is_refusal": {
+   "kind": "derived",
+   "quotes": [
+    "Each flat refusal (a no with no date and no amount) moves to the next step of the ladder"
+   ],
+   "derivation": "Turning down a deadline proposal is a flat refusal, so it moves to the next ladder step."
+  },
+  "rules.promise_retries": {
+   "kind": "derived",
+   "quotes": [
+    "If `create_promise` fails twice, note `service_error` on that product."
+   ],
+   "derivation": "Two failures are needed before service_error, so a failed create_promise is retried once."
+  },
+  "rules.hardship_transfer": {
+   "kind": "derived",
+   "quotes": [
+    "Financial hardship (job loss, illness, bereavement): one sentence of sympathy, make no proposals, note `hardship` on each remaining product and close `no_promise` / `hardship`."
+   ],
+   "derivation": "No support transfer is offered or asked about. The agent gives sympathy and closes directly. The support queue is left empty, so no transfer is made."
+  },
+  "rules.deadline_adjust": {
+   "kind": "explicit",
+   "quotes": [
+    "Only then, if the date you have is not a business day, move it forward to the next business day.",
+    "A customer who names a non-business day on or before the deadline is offered the next business day; a date after the deadline is answered with the deadline."
+   ]
+  },
+  "rules.first_ask": {
+   "kind": "explicit",
+   "quotes": [
+    "For each product, the first thing the agent asks is: \"Can you pay the full overdue amount of EUR {amount} today?\""
+   ]
+  },
+  "rules.week_end_today": {
+   "kind": "unspecified",
+   "assumption": "No ladder step uses the last business day of the week, so this does not apply."
+  },
+  "products.floor_pct": {
+   "kind": "explicit",
+   "quotes": [
+    "overdraft: one quarter of `overdue_eur`, rounded up to the next whole euro (a whole-euro result stays as it is)."
+   ]
+  },
+  "products.floor_min": {
+   "kind": "unspecified",
+   "assumption": "There is no minimum floor beyond the per-product rules."
+  },
+  "products.floor_full_below": {
+   "kind": "explicit",
+   "quotes": [
+    "If `overdue_eur` is below 100, the floor is the whole overdue amount."
+   ]
+  },
+  "products.floor_round": {
+   "kind": "explicit",
+   "quotes": [
+    "overdraft: one quarter of `overdue_eur`, rounded up to the next whole euro (a whole-euro result stays as it is)."
+   ]
+  },
+  "products.step_round": {
+   "kind": "explicit",
+   "quotes": [
+    "half the overdue amount, rounded up to the next whole euro (a whole-euro result stays), on the deadline; if that is below the floor, the floor instead;"
+   ]
+  },
+  "products.promise_scale": {
+   "kind": "explicit",
+   "quotes": [
+    "`create_promise` takes the amount in euro cents, as a whole number (EUR 45.10 is 4510)."
+   ]
+  },
+  "products.promise_round": {
+   "kind": "unspecified",
+   "assumption": "The brief gives no rounding rule for cents. Amounts in euro and cents times 100 are already whole numbers."
+  },
+  "event_changes": {
+   "kind": "explicit",
+   "quotes": [
+    "For calls made on or after 5 November 2026, the `close_call` reason `dispute` is replaced by `contested` (outcome stays `no_promise`)."
+   ]
+  }
+ },
+ "code_tables": {
+  "outcome": [
+   "promise",
+   "paid",
+   "transferred",
+   "no_promise",
+   "not_verified",
+   "not_reached"
+  ],
+  "reason": {
+   "promise": [],
+   "paid": [],
+   "transferred": [
+    "restructuring",
+    "human"
+   ],
+   "no_promise": [
+    "refused",
+    "dispute",
+    "hardship",
+    "service_error"
+   ],
+   "not_verified": [
+    "failed",
+    "declined"
+   ],
+   "not_reached": [
+    "callback",
+    "no_callback",
+    "wrong_number",
+    "deceased",
+    "unclear"
+   ]
+  },
+  "note": [
+   "refused",
+   "hardship",
+   "dispute",
+   "paid",
+   "service_error"
+  ],
+  "queue": [
+   "restructuring",
+   "general",
+   "support"
+  ]
+ },
+ "assumptions": [
+  "max_wrong is 2. Brief C.2 ('The second wrong answer, counted across both questions, ends verification') is more specific than the API summary, which says three wrong answers, so the brief wins.",
+  "Memo OPS-26-31 replaces the close reason 'dispute' with 'contested' for calls on or after 2026-11-05. The base event keeps 'dispute' and event_changes applies the new code. The add_note reason stays 'dispute'.",
+  "Brief B.1 prescribes the words 'This call is recorded.' The spec format requires active voice, so the opening says 'We record this call.'",
+  "opening_is_attempt is true, so the ladder starts with the opening ask (full amount today). Tier attempts are the brief's totals: Tier 1 has 2, Tier 2 has 3.",
+  "Ladder step 2 (half the overdue amount, rounded up to the whole euro) is written as pct:50 with step_round up_unit. It is never below the floor, which is built in.",
+  "Overdraft floor: 25% of overdue_eur, rounded up to the whole euro (a whole-euro result stays). If overdue_eur is below 100, the floor is the full overdue amount. Card floor is min_due_eur; loan floor is monthly_instalment_eur.",
+  "Tier 2 deadline: the 15th of this month. If that date is before today, use the 15th of next month. Only then move a non-business day forward. So when today is the 15th, the deadline is today, and the 'full amount on the deadline' step equals the opening ask and is skipped without counting.",
+  "deadline_adjust is next_business_day, from D.3 and D.4 (a non-business day is offered the next business day). Tier 1 deadlines are always business days.",
+  "Hardship (G.3) has no transfer: sympathy, no proposals, a hardship note on each remaining product, then close no_promise / hardship. hardship_transfer is set to 'direct' and the support queue is empty, so no transfer happens. transfer_support maps to the hardship close code.",
+  "date_rules.next_weekday is the default 'following_week'. The brief is silent.",
+  "max_not_talk is the default 2. The brief is silent.",
+  "after_promise.ask_anything_else is the default true. The brief is silent.",
+  "purpose_is_decline is the default true. The brief is silent.",
+  "The brief has no title variable, so the confirm question uses {first_name} {last_name}, as B.1 says.",
+  "Callbacks: today or the next business day, 09:30 to 18:00 inclusive, later than now. Two tries in total before no_callback.",
+  "A spoken all-numeric date of birth is read day, month, year (dmy). It is sent to verify_identity as YYYY-MM-DD.",
+  "The brief prescribes no confirmation question, read-back wording or SMS line. Neutral wording is used, and sms_line is empty.",
+  "The brief says nothing about changing a saved promise, so the agent says it can't be changed on this call."
+ ],
+ "policy_audit": {
+  "verdicts": {
+   "rules.skipped_repeat_counts": "supported",
+   "rules.opening_is_attempt": "supported",
+   "rules.opening_blocks_repeat": "supported",
+   "rules.too_much_skips_full": "not_decided",
+   "rules.too_much_floor": "supported",
+   "rules.ladder_repeat_last": "supported",
+   "rules.refuse_deadline_is_refusal": "supported",
+   "rules.promise_retries": "supported",
+   "rules.hardship_transfer": "supported",
+   "rules.deadline_adjust": "supported",
+   "rules.first_ask": "supported",
+   "rules.week_end_today": "not_decided",
+   "products.floor_pct": "supported",
+   "products.floor_min": "not_decided",
+   "products.floor_full_below": "supported",
+   "products.floor_round": "supported",
+   "products.step_round": "supported",
+   "products.promise_scale": "supported",
+   "products.promise_round": "not_decided",
+   "event_changes": "supported"
+  },
+  "unresolved": []
+ }
+}

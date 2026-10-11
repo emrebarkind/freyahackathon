@@ -1,0 +1,11 @@
+[    0.0s] START 2026-10-11T07:53:47+0000
+[    0.0s] NOTE briefs=['eval/pairs/results-first/brief.md'] tool_api=eval/pairs/results-first/openapi.json slot=pair-results-first
+Traceback (most recent call last):
+  File "/home/user/oop/builder/build.py", line 222, in <module>
+    main()
+    ~~~~^^
+  File "/home/user/oop/builder/build.py", line 132, in main
+    openapi = json.load(open(tool_api[0]))
+                        ~~~~^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'eval/pairs/results-first/openapi.json'
+exit 1

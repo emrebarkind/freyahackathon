@@ -488,6 +488,10 @@ def finish(V, s, pre=""):
                 if not note_reason:            # the brief keeps no note for this outcome
                     continue
                 return call(V, s, "api_note", n_product=p["id"], n_reason=note_reason)
+    if s.get("transfer_after_notes"):
+        kind, line = s.pop("transfer_after_notes")
+        s["pre"] = ""
+        return transfer(V, s, kind, line)
     pre = s.pop("pre", "")
     if s.get("transferred"):
         return close(V, s, "transfer_" + s["transferred"], pre)
@@ -496,7 +500,8 @@ def finish(V, s, pre=""):
     reasons = [p["status"] for p in prods]
     if reasons and all(r == "paid" for r in reasons):
         return close(V, s, "paid", pre)
-    for r in reasons:
+    order = (S.get("multi") or dict()).get("outcome_priority") or []
+    for r in [x for x in order if x in reasons] + reasons:          # the brief's ranking first, then account order
         if r != "paid" and r in S.get("events", dict()):
             return close(V, s, r, pre)
     return close(V, s, "refused", pre)
@@ -1349,6 +1354,10 @@ def special(V, s, k, p, scope="none"):
             for q in s["products"]:                         # the brief: sympathy, then transfer, no question
                 if q["status"] in ("open", "agreed"):
                     q["status"] = "hardship"
+            if S.get("rules", dict()).get("notes_before_transfer") and S.get("notes", dict()).get("enabled"):
+                s["transfer_after_notes"] = ["support", L("hardship")]   # the brief: note each product, then transfer
+                finish(V, s)
+                return True
             transfer(V, s, "support", L("hardship"))
             return True
         if not ev("transfer_support").get("queue"):        # the brief offers no support transfer

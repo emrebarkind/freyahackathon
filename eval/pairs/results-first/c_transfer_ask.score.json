@@ -1,0 +1,57 @@
+{
+ "ok": 17,
+ "total": 21,
+ "accuracy": 0.8095,
+ "rules": 9,
+ "missed_rules": [
+  "MEMO"
+ ],
+ "failed": [
+  {
+   "id": "C15",
+   "rule": "MEMO",
+   "type": "close",
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "hardship"
+   },
+   "got": {
+    "outcome": "transferred",
+    "reason": "support"
+   }
+  },
+  {
+   "id": "C16",
+   "rule": "MEMO",
+   "type": "close",
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "financial_difficulty"
+   },
+   "got": {
+    "outcome": "transferred",
+    "reason": "support"
+   }
+  },
+  {
+   "id": "C17",
+   "rule": "MEMO",
+   "type": "close",
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "financial_difficulty"
+   },
+   "got": {
+    "outcome": "transferred",
+    "reason": "support"
+   }
+  },
+  {
+   "id": "C19",
+   "rule": "MEMO",
+   "type": "note",
+   "expect": "hardship",
+   "got": null
+  }
+ ]
+}

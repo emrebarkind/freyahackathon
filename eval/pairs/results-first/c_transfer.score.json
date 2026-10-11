@@ -1,0 +1,18 @@
+{
+ "ok": 20,
+ "total": 21,
+ "accuracy": 0.9524,
+ "rules": 9,
+ "missed_rules": [
+  "MEMO"
+ ],
+ "failed": [
+  {
+   "id": "C19",
+   "rule": "MEMO",
+   "type": "note",
+   "expect": "hardship",
+   "got": null
+  }
+ ]
+}

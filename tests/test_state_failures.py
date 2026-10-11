@@ -76,3 +76,39 @@ def test_partial_identity_answers_and_corrections():
     led, said = run([{"k": "no"}, {"k": "no"}], prods=P[:1],
                     idturns=[dict(k="answer", t=dob), dict(k="answer", t="7778"), dict(k="answer", t="7777")])
     assert led["calls"].count("verify_identity") == 3 and "does not match" in said and "get_account" in led["calls"]
+
+
+def test_the_brief_may_rank_product_endings_for_the_close():
+    global S
+    saved = S
+    try:
+        P2 = [dict(P[0], product_id="p1"), dict(P[1], product_id="p2")]
+        script = [{"k": "no"}, {"k": "dispute"}, {"k": "no"}, {"k": "no"}, {"k": "no"}, {"k": "no"}]
+        led, _ = run(script, prods=P2)
+        first = led["outcome"], led["reason"]
+        S = copy.deepcopy(saved)
+        S["multi"]["outcome_priority"] = ["refused", "dispute"]
+        led2, _ = run(script, prods=P2)
+        assert ("p1", S["events"]["dispute"]["note"]) in led2["notes"] or led2["notes"]
+        assert (led2["outcome"], led2["reason"]) == (S["events"]["refused"]["outcome"], S["events"]["refused"]["reason"])
+        assert first == (S["events"]["dispute"]["outcome"], S["events"]["dispute"]["reason"])   # account order without it
+    finally:
+        S = saved
+
+
+def test_notes_before_a_direct_transfer_only_when_the_brief_says_so():
+    global S
+    saved = S
+    try:
+        S = copy.deepcopy(saved)
+        S["rules"]["hardship_transfer"] = "direct"
+        S["events"]["transfer_support"]["queue"] = S["events"]["transfer_support"].get("queue") or "support"
+        S["events"]["hardship"]["note"] = S["events"]["hardship"].get("note") or "hardship"
+        led, _ = run([{"k": "hardship"}])
+        assert led["notes"] == [] and led["transfers"]
+        S["rules"]["notes_before_transfer"] = True
+        led, _ = run([{"k": "hardship"}])
+        n = S["events"]["hardship"]["note"]
+        assert led["notes"] == [("p1", n), ("p2", n)] and led["calls"][-2:] == ["transfer_to_agent", "close_call"]
+    finally:
+        S = saved

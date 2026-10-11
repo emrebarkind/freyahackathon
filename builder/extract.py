@@ -180,6 +180,9 @@ def validate(spec, openapi, docs_text=""):
         if t not in (spec["products"].get("floor_field") or {}) and "*" not in (spec["products"].get("floor_field") or {}) \
                 and spec["products"].get("floor_pct") is None:
             errs.append(f"products.floor_field missing for product type {t}")
+    for x in (spec.get("multi") or {}).get("outcome_priority") or []:
+        if x not in spec["events"]:
+            errs.append(f"multi.outcome_priority: '{x}' is not an event key (use keys of events, e.g. refused, dispute)")
     for c in spec.get("event_changes") or []:
         if not isinstance(c, dict) or c.get("event") not in spec["events"] or not isinstance(c.get("set"), dict) \
                 or not re.fullmatch(r"\d{4}-\d\d-\d\d", str(c.get("from", ""))) or not set(c["set"]) <= {"outcome", "reason", "queue", "note"}:
@@ -228,6 +231,7 @@ def validate(spec, openapi, docs_text=""):
                           ("rules.skipped_repeat_counts", (True, False)),
                           ("rules.promise_retries", (0, 1, 2, 3)),
                           ("rules.hardship_transfer", ("direct", "ask_first")),
+                          ("rules.notes_before_transfer", (True, False)),
                           ("rules.opening_blocks_repeat", (True, False)),
                           ("rules.too_much_skips_full", (True, False)),
                           ("products.promise_round", ("up", "down", "nearest"))):

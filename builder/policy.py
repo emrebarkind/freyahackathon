@@ -29,6 +29,7 @@ CRITICAL = {
     "rules.refuse_deadline_is_refusal": (True, "attempts"),
     "rules.promise_retries": (1, "retries"),
     "rules.hardship_transfer": ("ask_first", "transfers"),
+    "rules.notes_before_transfer": (False, "transfers"),
     "rules.deadline_adjust": ("previous_business_day", "dates"),
     "rules.first_ask": ("today", "dates"),
     "rules.week_end_today": ("literal", "dates"),
@@ -39,6 +40,7 @@ CRITICAL = {
     "products.step_round": ("cents", "amounts"),
     "products.promise_scale": (1, "amounts"),
     "products.promise_round": (None, "amounts"),
+    "multi.outcome_priority": ([], "codes"),
     "event_changes": ([], "codes"),
 }
 KINDS = ("explicit", "derived", "unspecified", "unsupported")
@@ -63,7 +65,7 @@ def get(d, path):
 def effective(spec, path):
     """(value, is_default)"""
     v = get(spec, path)
-    if v in (None, "") or (path == "event_changes" and not v):
+    if v in (None, "") or (path in ("event_changes", "multi.outcome_priority") and not v):
         return CRITICAL[path][0], True
     return v, False
 
