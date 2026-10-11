@@ -2296,8 +2296,51 @@ def dispatch(V, s, stage, k, t, dtxt, a, scope):
     go(V, "end")
 
 
+def set_in(d, path, value):
+    keys = str(path).split(".")
+    for i, k in enumerate(keys[:-1]):
+        if isinstance(d, list):
+            d = d[int(k)]
+            continue
+        if not isinstance(d.get(k), (dict, list)):
+            d[k] = [] if keys[i + 1].isdigit() else dict()
+        d = d[k]
+    if isinstance(d, list):
+        d[int(keys[-1])] = value
+    else:
+        d[keys[-1]] = value
+
+
+def effective(spec, day):
+    """The spec in force on `day`: the brief's dated changes (spec["changes"]: [{"from": "YYYY-MM-DD", "until"?:
+    "YYYY-MM-DD", "set": {"<dotted path>": value}}]) applied in date order on a copy. The base is never changed."""
+    ch = [c for c in spec.get("changes") or [] if isinstance(c, dict) and str(c.get("from", "9999-12-31")) <= iso(day)
+          and (not c.get("until") or iso(day) <= str(c["until"]))]
+    if not ch:
+        return spec
+    s = json.loads(json.dumps(spec))
+    for c in sorted(ch, key=lambda c: str(c.get("from"))):
+        for path, value in (c.get("set") or dict()).items():
+            set_in(s, path, value)
+    return s
+
+
 def main(V):
+    global S
+    base, G = S, is_business_day.__globals__          # G: where the calendar (P) lives, here and in the code node
+    base_p = G.get("P")
     TODAY[0] = today_of(V)
+    if base.get("changes"):
+        S = effective(base, TODAY[0])
+        G["P"] = dict(workdays=S["calendar"]["workdays"], holidays=S["calendar"]["holidays"])
+    try:
+        main_turn(V)
+    finally:
+        S = base
+        G["P"] = base_p
+
+
+def main_turn(V):
     CTX.clear()
     CTX.update(names(V))
     V["next"] = ""

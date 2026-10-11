@@ -1,6 +1,7 @@
 """Brief(s) + tool API file -> spec (builder/spec_doc.md), with validation, a second independent reading,
 and an adjudication pass on disagreements."""
 import copy
+import datetime
 import json
 import os
 import pathlib
@@ -199,6 +200,28 @@ def validate(spec, openapi, docs_text=""):
         if t not in (spec["products"].get("floor_field") or {}) and "*" not in (spec["products"].get("floor_field") or {}) \
                 and spec["products"].get("floor_pct") is None:
             errs.append(f"products.floor_field missing for product type {t}")
+    from .runtime import engine as _eng
+    for c in spec.get("changes") or []:
+        if not isinstance(c, dict) or not re.fullmatch(r"\d{4}-\d\d-\d\d", str(c.get("from", ""))) \
+                or not isinstance(c.get("set"), dict) or not c["set"] \
+                or (c.get("until") and not re.fullmatch(r"\d{4}-\d\d-\d\d", str(c["until"]))):
+            errs.append(f"changes entry {c!r} must be {{from: YYYY-MM-DD, until?: YYYY-MM-DD, set: {{<dotted path>: value}}}}")
+            continue
+        for path in c["set"]:
+            top = str(path).split(".")[0]
+            if top not in spec or top in ("changes", "event_changes", "policy", "code_tables", "tool_bodies", "sources"):
+                errs.append(f"changes from {c['from']}: '{path}' must change a value of the spec (calendar, bands, products, "
+                            f"ladder, rules, identity...); codes change with event_changes")
+        try:
+            day = datetime.date.fromisoformat(c["from"])
+            eff = dict(_eng.effective(spec, day))
+            eff.pop("changes", None)
+            seen = set(errs)
+            for e in validate(eff, openapi):
+                if e not in seen:
+                    errs.append(f"changes from {c['from']}: the spec in force from that day: {e}")
+        except Exception as e:
+            errs.append(f"changes from {c['from']}: cannot be applied ({type(e).__name__}: {e})")
     for x in (spec.get("multi") or {}).get("outcome_priority") or []:
         if x not in spec["events"] or x in ("paid", "promise"):
             errs.append(f"multi.outcome_priority: '{x}' is not a ranking entry (use event keys of the endings that share a "
@@ -558,7 +581,7 @@ def prune_hint(spec, openapi):
 
 
 COVERAGE_KEYS = ("calendar", "callback", "identity", "products", "bands", "bands_outside", "ladder", "rules", "events",
-                 "notes", "multi", "date_rules", "confirm", "code_tables", "event_changes")
+                 "notes", "multi", "date_rules", "confirm", "code_tables", "event_changes", "changes")
 
 
 def coverage(spec):

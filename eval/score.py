@@ -85,6 +85,11 @@ def blank(x):
 
 def answer(spec, c):
     t, i = c["type"], c.get("input") or {}
+    day = cal.datetime.date.fromisoformat(i["now"][:10]) if i.get("now") else \
+        (cal.datetime.date.fromisoformat(i["date"]) if t == "business_day" and i.get("date") else None)
+    spec = engine.effective(spec, day) if day and spec.get("changes") else spec      # the brief's dated changes
+    engine.S = spec
+    cal.P = dict(workdays=spec["calendar"]["workdays"], holidays=spec["calendar"]["holidays"])
     events = spec.get("events") or {}
 
     def ev(sit):

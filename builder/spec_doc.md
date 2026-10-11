@@ -309,6 +309,14 @@ Built-in behaviour (always carried out; never list these under unsupported_rules
 carry: a rounding, minimum, date rule, exception or condition the format has no place for. Never approximate such
 a rule with a nearby field value; list it here instead. The build reports every item.
 
+`changes`: only if the materials change a VALUE (not a code) from a given calendar date, e.g. "from 30 October the
+band A deadline is the 5th business day", "13 November is no longer a closure day", "the overdraft floor becomes 20%":
+a list of {"from": "YYYY-MM-DD", "until": "YYYY-MM-DD" (only if the change ends), "set": {"<dotted path>": value}}.
+The base spec holds the values BEFORE the date; each change applies to calls on or after "from". Paths are dotted
+spec paths with list items by index, e.g. "bands.0.deadline": {"kind": "business_days_after", "n": 5},
+"calendar.holidays": [the whole new list], "products.floor_pct.overdraft": 20. Codes change with `event_changes`.
+An undated memo change is simply the value in the base spec.
+
 `event_changes`: only if the brief changes an outcome/reason/queue/note code from a given calendar date (e.g. "from 2
 November the code PAID is replaced by CLAIMED_PAID"): a list of {"event": "<event key>", "from": "YYYY-MM-DD",
 "set": {"outcome": "..."}}. The base `events` entry then holds the code BEFORE that date; the change applies to calls
@@ -317,7 +325,7 @@ on or after it.
 `policy`: the evidence for every critical policy, keyed by dotted path. Critical paths: rules.skipped_repeat_counts,
 opening_is_attempt, opening_blocks_repeat, too_much_skips_full, too_much_floor, ladder_repeat_last,
 refuse_deadline_is_refusal, promise_retries, hardship_transfer, notes_before_transfer, deadline_adjust, first_ask, week_end_today;
-products.floor_pct, floor_min, floor_full_below, floor_round, step_round, promise_scale, promise_round; multi.outcome_priority, multi.order; event_changes. A path you
+products.floor_pct, floor_min, floor_full_below, floor_round, step_round, promise_scale, promise_round; multi.outcome_priority, multi.order; event_changes; changes. A path you
 leave unset still has a value (the engine default: skipped_repeat_counts true, opening_is_attempt false,
 opening_blocks_repeat false, too_much_skips_full false, too_much_floor "attempt_1", ladder_repeat_last false,
 refuse_deadline_is_refusal true, promise_retries 1, hardship_transfer "ask_first", deadline_adjust

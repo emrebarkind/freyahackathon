@@ -57,3 +57,24 @@ def test_one_targeted_repair_is_accepted_only_if_disagreements_drop(monkeypatch)
     out = extract.oracle_round(copy.deepcopy(first), checks, "base", api, T(), None)
     assert out["bands"][0]["attempts"] == first["bands"][0]["attempts"]           # worse or no better: rejected
     assert len(out["oracle_report"]["disagreements"]) == 4                         # and reported, never silent
+
+
+def test_dated_value_changes_apply_from_their_day_and_never_change_the_base():
+    from builder.runtime import engine, cal
+    import datetime
+    s = json.load(open(ROOT / "eval/clean-runs/m12-h2/m12-h2.spec.json"))
+    api = json.load(open(ROOT / "eval/heldout/h2/openapi.json"))
+    s["bands"][0]["deadline"] = {"kind": "business_days_after", "n": 7}
+    s["products"]["floor_pct"]["overdraft"] = 25
+    s["changes"] = [{"from": "2026-10-30", "set": {"bands.0.deadline": {"kind": "business_days_after", "n": 5},
+                                                    "products.floor_pct.overdraft": 20}}]
+    assert extract.validate(copy.deepcopy(s), api) == []
+    eff = engine.effective(s, datetime.date(2026, 10, 30))
+    assert eff["bands"][0]["deadline"]["n"] == 5 and s["bands"][0]["deadline"]["n"] == 7
+    assert engine.effective(s, datetime.date(2026, 10, 29)) is s
+    checks, _ = blind("eval/heldout/h2")
+    live = json.load(open(ROOT / "eval/audit_cases/oracle_live_f1_h2.json"))["h2"]
+    assert oracle.compare(copy.deepcopy(s), api, live)[0] == []          # the calls on 29 Oct get the old rules
+    bad = copy.deepcopy(s)
+    bad["changes"][0]["set"]["bands.0.deadline"] = {"kind": "no_such_kind"}
+    assert any("changes from 2026-10-30" in e for e in extract.validate(bad, api))

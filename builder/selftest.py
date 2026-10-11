@@ -425,6 +425,8 @@ def every_band(spec, openapi, today, types):
                         continue                   # calls on business days; a weekend call day is a policy the brief rarely sets
                     raw = make_product(s, 0, typ, int(b.get("min", 1)))
                     V = dict(now=d.isoformat() + "T11:00")
+                    engine.S = engine.effective(s, d)          # the brief's dated changes in force that day
+                    cal.P = dict(workdays=engine.S["calendar"]["workdays"], holidays=engine.S["calendar"]["holidays"])
                     try:
                         p = engine.product_facts(V, raw)
                     except Exception as e:
