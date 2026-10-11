@@ -286,8 +286,19 @@ def make_product(spec, i, typ, days_late):
     return p
 
 
+NOW = [None]                      # the scenario date: the brief's dated code changes apply from their day on
+
+
+def event_at(spec, event):
+    e = spec["events"].get(event, {})
+    for c in spec.get("event_changes") or []:
+        if c.get("event") == event and NOW[0] is not None and NOW[0].isoformat() >= str(c.get("from", "9999-12-31")):
+            e = dict(e, **(c.get("set") or {}))
+    return e
+
+
 def expected(spec, event, promises=(), notes=(), callbacks=(), transfers=()):
-    e = spec["events"][event]
+    e = event_at(spec, event)
     return dict(outcome=e.get("outcome"), reason=e.get("reason") or "", promises=sorted(promises), notes=sorted(notes),
                 callbacks=sorted(callbacks), transfers=sorted(transfers))
 
@@ -296,6 +307,7 @@ def run_all(spec, openapi):
     out = []
     try:
         today = pick_now(spec)
+        NOW[0] = today
         V0 = dict(customer_id="c_test", first_name="Alex", last_name="Morgan", title="Mr", now=today.isoformat() + "T11:00")
         ident, wrong = identity_values(spec)
         types = list(spec["products"]["names"].keys()) or ["product"]
@@ -305,12 +317,12 @@ def run_all(spec, openapi):
         C = dict(k="confirmed", t="yes that's me")
         answers = [dict(k="answer", t=ident[q["field"]]) for q in spec["identity"]["questions"]]
         notes_on = spec.get("notes", {}).get("enabled")
-        T = spec["events"]["transfer_support"].get("queue")
-        R = spec["events"]["transfer_restructuring"].get("queue")
+        T = event_at(spec, "transfer_support").get("queue")
+        R = event_at(spec, "transfer_restructuring").get("queue")
         ev_ = spec["events"]
 
         def notes_for(event, pids=("p1",)):
-            n = ev_.get(event, {}).get("note")
+            n = event_at(spec, event).get("note")
             return [(p, n) for p in pids] if notes_on and n else []
         spoken = [dict(k="answer", t=spoken_form(q, ident[q["field"]])) for q in spec["identity"]["questions"]]
         P_ = spec["products"]
