@@ -176,6 +176,15 @@ def validate(spec, openapi):
         if t not in (spec["products"].get("floor_field") or {}) and "*" not in (spec["products"].get("floor_field") or {}) \
                 and spec["products"].get("floor_pct") is None:
             errs.append(f"products.floor_field missing for product type {t}")
+    for c in spec.get("event_changes") or []:
+        if not isinstance(c, dict) or c.get("event") not in spec["events"] or not isinstance(c.get("set"), dict) \
+                or not re.fullmatch(r"\d{4}-\d\d-\d\d", str(c.get("from", ""))) or not set(c["set"]) <= {"outcome", "reason", "queue", "note"}:
+            errs.append(f"event_changes entry {c!r} must be {{event: <event key>, from: YYYY-MM-DD, set: {{outcome|reason|queue|note}}}}")
+        else:
+            for f, enum_tool, param in (("outcome", "close_call", "c_outcome"), ("reason", "close_call", "c_reason"),
+                                        ("queue", "transfer_to_agent", "t_queue"), ("note", "add_note", "n_reason")):
+                if f in c["set"] and c["set"][f]:
+                    check_enum(enum_tool, param, c["set"][f], f"event_changes.{c['event']}.{f}")
     amt_key = next((k for k, v in (spec.get("tool_bodies") or {}).get("create_promise", {}).items() if v == "p_amount"), "amount")
     if (tool_props(openapi, "create_promise") or {}).get(amt_key, {}).get("type") == "integer" \
             and not (spec["products"].get("promise_scale") or spec["products"].get("amount_scale")):
@@ -204,6 +213,9 @@ def validate(spec, openapi):
                           ("rules.week_end_today", ("next_week", "today")),
                           ("rules.skipped_repeat_counts", (True, False)),
                           ("rules.promise_retries", (0, 1, 2, 3)),
+                          ("rules.hardship_transfer", ("direct",)),
+                          ("rules.opening_blocks_repeat", (True, False)),
+                          ("rules.too_much_skips_full", (True, False)),
                           ("products.promise_round", ("up", "down", "nearest"))):
         v = get(spec, path)
         if v is not None and v not in allowed:
@@ -311,6 +323,9 @@ dated change beats the rule it changes), quote them, and say whether the spec va
 say. Then list every rule in the materials that the spec does not carry at all (a holiday, a band, a code, a
 limit, a format, an exception). A rule that no spec field can carry goes, quoted, into "unsupported_rules" (a list);
 never approximate it with a nearby value.
+For every entry in "sources" (path -> quoted sentence), check that the value at that path is exactly what the quoted
+sentence requires; a value its own quote does not decide, or contradicts, is WRONG. A policy value without a source
+sentence is suspect: find the sentence or say the materials do not decide it.
 
 <spec>
 {spec}
@@ -376,8 +391,9 @@ def extract(briefs, openapi, trace, budget=None, mode=None):
     base = prompt_for(briefs, openapi)
     mode = mode or os.environ.get("BUILDER_EXTRACT_MODE", "B")
     trace.note(f"extraction mode {mode}")
+    docs_text = "\n".join(text for _, text in briefs) + "\n" + json.dumps(openapi)
     if mode == "B":
-        return validate_loop(read_and_audit(base, trace), base, openapi, trace, budget)
+        return validate_loop(read_and_audit(base, trace), base, openapi, trace, budget, docs_text)
     texts = claude.ask_many([(base, SYSTEM, "read the brief and tool API into a spec (reading 1)"),
                              (base, SYSTEM, "read the brief and tool API into a spec (reading 2, independent)")], trace)
     specs = []
@@ -400,7 +416,7 @@ def extract(briefs, openapi, trace, budget=None, mode=None):
                 spec = claude.json_block(out, keys=SPEC_KEYS)
             except Exception as e:
                 trace.note(f"adjudication answer did not parse ({e}); keeping reading 1")
-    return validate_loop(spec, base, openapi, trace, budget)
+    return validate_loop(spec, base, openapi, trace, budget, docs_text)
 
 
 def prune_hint(spec, openapi):
@@ -444,11 +460,53 @@ def progress(old, new, old_errs, new_errs):
     return len(new_errs) < len(old_errs) and set(new_errs) <= set(old_errs) and not lost and not more_unsupported, lost
 
 
-def validate_loop(spec, base, openapi, trace, budget):
+RULE_DEFAULTS = {"refuse_deadline_is_refusal": True, "deadline_adjust": "previous_business_day", "first_ask": "today",
+                 "too_much_floor": "attempt_1", "ladder_repeat_last": False, "opening_is_attempt": False,
+                 "opening_blocks_repeat": False, "too_much_skips_full": False}
+SOURCE_PATHS = ("products.floor_pct", "products.floor_min", "products.floor_round", "products.step_round",
+                "products.promise_scale", "products.promise_round", "identity.max_wrong")
+
+
+def needs_source(spec):
+    """Policy values that must name the sentence that decides them: every rule set, the amount rules, dated changes."""
+    out = ["rules." + k for k, v in (spec.get("rules") or {}).items()
+           if v not in (None, "", [], {}) and RULE_DEFAULTS.get(k, None) != v]     # a value the doc does not default to
+    out += [p for p in SOURCE_PATHS if get(spec, p) not in (None, "", [], {})]
+    if spec.get("event_changes"):
+        out.append("event_changes")
+    return out
+
+
+def _norm(t):
+    return re.sub(r"\s+", " ", re.sub(r"[`*_\"“”‘’']", "", str(t).lower())).strip()
+
+
+def provenance(spec, docs_text):
+    """(quotes not found in the materials, values without a quote). A quote that is not in the documents is an
+    invented basis: an error. A missing quote is passed to the audit and the trace."""
+    text = _norm(docs_text)
+    bad, missing = [], []
+    for p in needs_source(spec):
+        q = (spec.get("sources") or {}).get(p)
+        if not q:
+            missing.append(p)
+            continue
+        parts = [x for x in re.split(r"\.\.\.|…|\[\.\.\.\]", _norm(q)) if len(x.strip()) >= 12]
+        if parts and not all(x.strip() in text for x in parts):
+            bad.append(f"sources.{p}: the quoted sentence is not in the materials: {str(q)[:120]!r}")
+    return bad, missing
+
+
+def validate_loop(spec, base, openapi, trace, budget, docs_text=""):
     for attempt in range(10):                 # bounded by the shared repair budget
         spec_model.normalise(spec)
         prune_hint(spec, openapi)
         errs = validate(spec, openapi)
+        if docs_text:
+            bad, missing = provenance(spec, docs_text)
+            errs += bad
+            if missing and attempt == 0:
+                trace.note("policy values without a source sentence: " + ", ".join(missing))
         trace.note(f"validation round {attempt + 1}: {len(errs)} problem(s)" + ("".join("\n  - " + e for e in errs)))
         if not errs or (budget is not None and not budget.take(trace, f"repair {len(errs)} validation problem(s)")):
             break

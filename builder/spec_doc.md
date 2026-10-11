@@ -14,6 +14,8 @@ use the default shown and record it in `assumptions`.
  },
  "date_rules": {"next_weekday": "following_week"}, // "following_week": 'next Friday' = Friday of the next calendar week;
                                                    // "upcoming": 'next Friday' = the first Friday after today
+ "max_unclear": 3,                                  // only if the brief says how often an unclear answer to a payment question is
+                                                   // asked again before it counts as a refusal
  "confirm": {"max_asks": 2},                       // how many times the agent asks "Am I speaking with ...?" before closing as unclear
  "callback": {                                     // when someone else answers and a callback is booked
    "days": ["today", "next_business_day"],         // allowed callback days. Items: "today", "next_business_day", "tomorrow",
@@ -79,6 +81,9 @@ use the default shown and record it in `assumptions`.
                                                    // business_days_after_or_end_of_month (whichever is first),
                                                    // later_of / earlier_of with "of": [rule, rule] (e.g. the later of the
                                                    // last business day of the month and the 3rd business day).
+                                                   // "roll_if_before_today": true when the brief rolls only a date EARLIER than
+                                                   // today; "roll_if_not_after_today": true when it rolls a date that is today
+                                                   // or earlier. They differ on the day the date is today: read the wording.
                                                    // "roll_if_not_after_today": true when the brief says to use the next
                                                    // period's date if the computed one is today (e.g. 'or next month's')
     "floor": null,                                 // only if this band has its own floor: "full" = the whole amount owed
@@ -106,13 +111,23 @@ use the default shown and record it in `assumptions`.
                                                    // "deadline" (full amount by the deadline); a plain yes agrees to that
            "too_much_floor": "attempt_1",
            "ladder_repeat_last": false,            // true only if the brief says the last step is repeated for further attempts
+           "hardship_transfer": null,             // "direct" only if the brief says: sympathy, then transfer, no question
+                                                   // (omit when the brief has the agent offer the support transfer first)
            "promise_retries": null,               // only if the brief says how often a failed create_promise is retried
                                                    // (0 = never); unstated: once
-           "skipped_repeat_counts": null,         // only if the brief says whether a ladder step skipped because it would
-                                                   // repeat an earlier proposal still uses one of the band's proposals: true/false
+           "skipped_repeat_counts": null,         // a ladder step skipped because it would repeat an earlier proposal:
+                                                   // true ONLY if the brief says it still uses one of the band's proposals;
+                                                   // false if the brief says it is not a proposal / is not counted;
+                                                   // null (omit) if the brief says neither
            "week_end_today": null,                 // only if the brief says what a "last business day of this week" step
                                                    // means when today is that day: "next_week" (use next week's) or "today";
                                                    // omit when the brief is silent (the step is then read literally)
+           "opening_blocks_repeat": false,        // true only if the brief says a ladder step equal to the opening ask counts as
+                                                   // a repeat and is skipped ("the opening included"); false if the opening ask is
+                                                   // "not a proposal" (then a step may name the same amount and date)
+           "too_much_skips_full": false,          // true only if the brief says that once the customer calls the full amount too
+                                                   // much, later ladder steps naming the full amount are skipped (each skip then
+                                                   // counts as skipped_repeat_counts says)
            "opening_is_attempt": false},           // true only if the brief counts the opening ask ("can you pay the full amount
                                                    // today?") as persuasion attempt 1: its refusal then uses an attempt and the
                                                    // ladder's step 1 is that ask; the attempts of each band include it
@@ -255,3 +270,14 @@ Built-in behaviour (always carried out; never list these under unsupported_rules
 `unsupported_rules`: a list of rules from the materials (quoted, one string each) that no field of this spec can
 carry: a rounding, minimum, date rule, exception or condition the format has no place for. Never approximate such
 a rule with a nearby field value; list it here instead. The build reports every item.
+
+`event_changes`: only if the brief changes an outcome/reason/queue/note code from a given calendar date (e.g. "from 2
+November the code PAID is replaced by CLAIMED_PAID"): a list of {"event": "<event key>", "from": "YYYY-MM-DD",
+"set": {"outcome": "..."}}. The base `events` entry then holds the code BEFORE that date; the change applies to calls
+on or after it.
+
+`sources`: for every value you set under `rules`, for the amount rules (`products.floor_pct`, `floor_min`,
+`floor_round`, `step_round`, `promise_scale`, `promise_round`), for `identity.max_wrong` and for `event_changes`:
+{"<dotted path>": "<the sentence from the materials that decides it, copied word for word>"}, e.g.
+{"rules.skipped_repeat_counts": "If an attempt would repeat an earlier proposal exactly, skip it: it is not a
+proposal"}. The quote is checked against the materials; a value no sentence decides should not be set.

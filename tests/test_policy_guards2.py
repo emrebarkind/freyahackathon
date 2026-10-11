@@ -72,6 +72,7 @@ def test_a_skipped_repeat_counts_only_when_the_brief_says_so():
     b["attempts"], b["ladder"] = 2, None
     rec = {"product_id": "p1", "type": "credit_card", "past_due": 300.0, "days_late": b["min"],
            spec["products"]["floor_field"]["credit_card"]: 90.0}
+    spec["rules"]["opening_blocks_repeat"] = True                         # r2: "the opening included"
     # step 1 (full today) repeats the opening ask: skipped
     spec["rules"]["skipped_repeat_counts"] = True
     assert len(offers(spec, "2026-10-14T11:00", rec)) == 1
@@ -82,14 +83,17 @@ def test_a_skipped_repeat_counts_only_when_the_brief_says_so():
     assert spec_model.assumed(comp.apply_defaults(copy.deepcopy(spec), O))
 
 
-def test_the_opening_ask_is_never_proposed_again_as_a_step():
+def test_a_step_equal_to_the_opening_ask_follows_the_brief():
     spec = copy.deepcopy(E.A)
     spec["ladder"] = [dict(amount="full", date="today"), dict(amount="floor", date="deadline")]
     b = min(spec["bands"], key=lambda b: b["min"])
     b["attempts"], b["ladder"] = 2, None
     rec = {"product_id": "p1", "type": "credit_card", "past_due": 300.0, "days_late": b["min"],
            spec["products"]["floor_field"]["credit_card"]: 90.0}
+    spec["rules"]["opening_blocks_repeat"] = True              # r2: a step equal to the opening ask is a repeat
     assert [300.0, "2026-10-14"] not in offers(spec, "2026-10-14T11:00", rec)
+    spec["rules"]["opening_blocks_repeat"] = False             # p1: the opening ask "is not a proposal"
+    assert offers(spec, "2026-10-14T11:00", rec)[0] == [300.0, "2026-10-14"]
 
 
 def test_returning_to_a_product_repeats_its_open_offer():
@@ -181,3 +185,83 @@ def test_a_customer_reference_under_another_name_reaches_every_node():
         if n in wf["nodes"]:
             b = wf["nodes"][n]["pre_actions"][0]["function"]["parameters"]["properties"]["body"]["properties"]
             assert b["client_ref"]["default"] == "{{customer_id}}", (n, b["client_ref"])
+
+
+def test_dated_event_changes_apply_from_their_date(monkeypatch):
+    spec = comp.apply_defaults(copy.deepcopy(E.A), O)
+    paid = spec["events"]["paid"]["outcome"]
+    spec["event_changes"] = [{"event": "paid", "from": "2026-11-02", "set": {"outcome": "claims_paid"}}]
+    monkeypatch.setattr(engine, "S", spec)
+    monkeypatch.setattr(engine, "TODAY", [__import__("datetime").date(2026, 11, 1)])
+    assert engine.ev("paid")["outcome"] == paid
+    engine.TODAY[0] = __import__("datetime").date(2026, 11, 2)
+    assert engine.ev("paid")["outcome"] == "claims_paid"
+    from builder import extract
+    assert any("event_changes" in e for e in extract.validate({**spec, "event_changes": [{"event": "nope", "from": "x", "set": {}}]}, O))
+
+
+def test_hardship_can_transfer_without_a_question():
+    from sim import run_case
+    spec = copy.deepcopy(E.A)
+    spec["rules"]["hardship_transfer"] = "direct"
+    led, tr = run_case(spec, E.CASES["PUB-01"], E.ids("PUB-01") + [dict(k="hardship")])
+    assert [t["queue"] for t in led["transfers"]] == [spec["events"]["transfer_support"]["queue"]], E.agent_lines(tr)
+    spec["rules"].pop("hardship_transfer")
+    led, tr = run_case(spec, E.CASES["PUB-01"], E.ids("PUB-01") + [dict(k="hardship")])
+    assert led["transfers"] == [], E.agent_lines(tr)        # the default: the support transfer is offered first
+
+
+def test_roll_when_earlier_than_today_differs_from_roll_when_today():
+    spec = copy.deepcopy(E.A)
+    spec["calendar"]["holidays"] = []
+    b = spec["bands"][0]
+    b.update(min=1, max=30)
+    spec["bands"] = [b]
+    rec = dict(type="credit_card", days_late=5, past_due=100.0)
+    b["deadline"] = {"kind": "last_business_day_of_month", "roll_if_before_today": True}
+    assert facts(spec, rec, "2026-11-30T10:00")["deadline"] == "2026-11-30"     # today is that day: stays
+    b["deadline"] = {"kind": "last_business_day_of_month", "roll_if_not_after_today": True}
+    assert facts(spec, rec, "2026-11-30T10:00")["deadline"] == "2026-12-31"     # today is that day: rolls
+
+
+def test_policy_values_name_a_sentence_that_is_really_in_the_materials():
+    from builder import extract
+    docs = "27. Never propose the same amount on the same date twice. If an attempt would repeat an earlier proposal " \
+           "exactly, skip it: it is not a proposal and the customer is not asked again."
+    spec = {"rules": {"skipped_repeat_counts": False, "ladder_repeat_last": False}, "products": {}, "identity": {},
+            "sources": {"rules.skipped_repeat_counts": "If an attempt would repeat an earlier proposal exactly, skip it: "
+                                                       "it is not a proposal"}}
+    bad, missing = extract.provenance(spec, docs)
+    assert bad == [] and missing == []                       # false values are values too: ladder_repeat_last is unset
+    spec["rules"]["promise_retries"] = 0
+    spec["sources"]["rules.promise_retries"] = "A failed promise is never retried."      # not in the materials
+    bad, missing = extract.provenance(spec, docs)
+    assert len(bad) == 1 and "promise_retries" in bad[0]
+    spec["rules"]["week_end_today"] = "today"
+    assert "rules.week_end_today" in extract.provenance(spec, docs)[1]
+
+
+def test_too_much_skips_later_full_steps_only_when_the_brief_says_so():
+    import builder.runtime.engine as eng
+    spec = copy.deepcopy(E.A)
+    spec["rules"].pop("week_end_today", None)
+    spec["ladder"] = [dict(amount="floor", date="deadline"), dict(amount="full", date="deadline")]
+    s = comp.apply_defaults(copy.deepcopy(spec), O)
+    eng.S = s
+    cal.P = dict(workdays=s["calendar"]["workdays"], holidays=s["calendar"]["holidays"])
+    p = dict(full=300.0, floor=90.0, too_much=True, floor_offered=True, refused_offers=[], used=1, made=1, attempts=3,
+             deadline="2026-10-20", ladder=s["ladder"], status="open", name="card", offer=None, type="credit_card")
+    calls = []
+    saved = eng.say, eng.talk, eng.advance, eng.focus
+    eng.say = lambda *a: None; eng.talk = lambda *a: None; eng.focus = lambda *a: None
+    eng.advance = lambda V_, s_, pre="": calls.append("advance")
+    try:
+        V = {"now": "2026-10-14T11:00"}
+        s["rules"]["too_much_skips_full"] = True                    # r2 rule 19
+        eng.make_offer(V, {"products": [p]}, p, 2)
+        assert p["offer"] is None and p["status"] == "refused"
+        p.update(status="open", offer=None); s["rules"].pop("too_much_skips_full")
+        eng.make_offer(V, {"products": [p]}, p, 2)
+        assert p["offer"] == [300.0, "2026-10-20"]                  # brief silent: the step is offered
+    finally:
+        eng.say, eng.talk, eng.advance, eng.focus = saved

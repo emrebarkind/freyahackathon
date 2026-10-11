@@ -55,7 +55,9 @@ def offers(spec, now, rec):
     try:
         p["used"] = 0
         first = p["deadline"] if (spec.get("rules") or {}).get("first_ask") == "deadline" else engine.iso(engine.today_of(V))
-        p["refused_offers"].append([round(p["full"], 2), first])   # the refused opening ask, as the engine records it
+        R_ = spec.get("rules") or {}
+        if R_.get("opening_is_attempt") or R_.get("opening_blocks_repeat"):
+            p["refused_offers"].append([round(p["full"], 2), first])   # the opening ask is a proposal: no repeat of it
         if (spec.get("rules") or {}).get("opening_is_attempt"):
             p["used"] = 1                       # the opening ask already used attempt 1 (as the engine does on refusal)
             p["made"] = 1
@@ -86,11 +88,11 @@ def answer(spec, c):
     events = spec.get("events") or {}
 
     def ev(sit):
+        if sit != "hardship" or not (events.get("transfer_support") or {}).get("queue"):
+            return engine.ev(sit)
         # the engine offers the brief's hardship transfer through the transfer_support event; when that event has a
         # queue, a hardship call ends there (transfer, its close codes, no other note)
-        if sit == "hardship" and (events.get("transfer_support") or {}).get("queue"):
-            return events["transfer_support"]
-        return events.get(sit) or {}
+        return engine.ev("transfer_support")
     if t == "deadline":
         _, p = facts(spec, i["now"], i["product"])
         return p["deadline"] if p["status"] == "open" else None
@@ -104,6 +106,8 @@ def answer(spec, c):
         return cal.is_business_day(cal.datetime.date.fromisoformat(i["date"]))
     if t == "callback_ok":
         return bool(engine.callback_ok({"now": i["now"]}, cal.datetime.date.fromisoformat(i["date"]), i["time"]))
+    if t in ("close", "note", "transfer"):                # a dated code change applies on the key's date, else after it
+        engine.TODAY[0] = cal.datetime.date.fromisoformat(i["now"][:10]) if i.get("now") else cal.datetime.date(2099, 1, 1)
     if t == "close":
         e = ev(i["situation"])
         return {"outcome": e.get("outcome"), "reason": e.get("reason") or ""}

@@ -160,9 +160,17 @@ def today_of(V):
     return parse_now(V.get("now")).date()
 
 
+TODAY = [None]    # the call's date, set once per run: dated code changes in the brief read it
+
+
 def ev(name):
-    """Event -> dict(outcome, reason, queue, note)."""
-    return S.get("events", dict()).get(name, dict())
+    """Event -> dict(outcome, reason, queue, note), with the brief's dated changes applied (S['event_changes']:
+    [{"event": "paid", "from": "YYYY-MM-DD", "set": {"outcome": "..."}}])."""
+    e = S.get("events", dict()).get(name, dict())
+    for c in S.get("event_changes") or []:
+        if c.get("event") == name and TODAY[0] is not None and iso(TODAY[0]) >= str(c.get("from", "9999-12-31")):
+            e = dict(e, **(c.get("set") or {}))
+    return e
 
 
 # ----------------------------------------------------------------------------------------------- products
@@ -292,7 +300,7 @@ def product_facts(V, raw):
     floor = min(floor, full)                      # a floor above the amount owed is the amount owed
     rule = (b.get("deadline_by_type") or dict()).get(typ) or b["deadline"]   # a product type with its own deadline
     deadline = band_deadline(today, rule)
-    if rule.get("roll_if_not_after_today") and deadline <= today:     # e.g. 'or next month's if today is that day'
+    if (rule.get("roll_if_not_after_today") and deadline <= today) or (rule.get("roll_if_before_today") and deadline < today):
         deadline = band_deadline(end_of_month(today) + datetime.timedelta(days=1), rule, today)
     return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
                 band=b.get("name", ""), deadline=iso(deadline), attempts=int(b.get("attempts", 1)), ladder=b.get("ladder") or None,
@@ -758,7 +766,7 @@ def stage_id(V, s, k, t):
         s["why_answered"] = True          # explaining why the questions are needed is not a refusal
         say(V, L("id_why"), q["ask"])
         return talk(V, "id", s)
-    purpose_declines = S["identity"].get("purpose_is_decline", S["identity"].get("why_is_decline", True))
+    purpose_declines = S["identity"].get("purpose_is_decline", True)
     if k in ("refuses", "asks_why") or (k == "purpose" and purpose_declines) or (k == "question" and S["identity"].get("question_is_decline")):
         s["declined"] = s.get("declined", 0) + 1
         if s["declined"] >= 2:
@@ -1104,7 +1112,8 @@ def make_offer(V, s, p, step_idx, pre=""):
         d = dl
     offer = [round(amt, 2), iso(d)]
     repeat_ok = step_idx > len(ladder) and S.get("rules", dict()).get("ladder_repeat_last")   # the brief says so
-    if offer in p["refused_offers"] and not repeat_ok:
+    full_barred = p["too_much"] and S.get("rules", dict()).get("too_much_skips_full") and round(amt, 2) >= round(p["full"], 2)
+    if (offer in p["refused_offers"] and not repeat_ok) or full_barred:
         if S.get("rules", dict()).get("skipped_repeat_counts") is not False:
             p["made"] = p.get("made", 0) + 1     # a skipped step uses one of the band's proposals unless the brief says not
         if step_idx < len(ladder) and p.get("made", 0) < p["attempts"]:
@@ -1329,6 +1338,12 @@ def special(V, s, k, p, scope="none"):
         return True
     if k == "hardship":
         s["hardship_offered"] = True
+        if S.get("rules", dict()).get("hardship_transfer") == "direct" and ev("transfer_support").get("queue"):
+            for q in s["products"]:                         # the brief: sympathy, then transfer, no question
+                if q["status"] in ("open", "agreed"):
+                    q["status"] = "hardship"
+            transfer(V, s, "support", L("hardship"))
+            return True
         if not ev("transfer_support").get("queue"):        # the brief offers no support transfer
             for q in s["products"]:
                 if q["status"] == "open":
@@ -1484,10 +1499,13 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             p = cur(s)
             intro = L("next_product", name=p["name"], amount=money(p["full"])) if multi else ""
             first = (lambda q: q["deadline"]) if S.get("rules", dict()).get("first_ask") == "deadline" else (lambda q: iso(today_of(V)))
+            R_ = S.get("rules") or dict()
             for q in prods:
                 if q["status"] == "open" and q.get("used", 0) == 0:
-                    q["refused_offers"].append([round(q["full"], 2), first(q)])   # never proposed again as a step
-                    if (S.get("rules") or dict()).get("opening_is_attempt"):      # the brief counts it as attempt 1
+                    if R_.get("opening_is_attempt") or R_.get("opening_blocks_repeat"):
+                        # the brief makes the opening ask a proposal: a step equal to it is a repeat
+                        q["refused_offers"].append([round(q["full"], 2), first(q)])
+                    if R_.get("opening_is_attempt"):                    # the brief counts it as attempt 1
                         q["used"] = 1
                         q["made"] = 1
                 p = cur(s) or p
@@ -2211,6 +2229,7 @@ def dispatch(V, s, stage, k, t, dtxt, a, scope):
 
 
 def main(V):
+    TODAY[0] = today_of(V)
     CTX.clear()
     CTX.update(names(V))
     V["next"] = ""
