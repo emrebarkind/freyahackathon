@@ -28,7 +28,27 @@
     the yes.
   * `cbe10e8`: "Which account is this about?" ×3 (labelled `details`) → answered three times, no attempt used →
     promise.
-* **Not run on candidate 9:** A and B default simulations. The candidate-8 platform results are not carried over.
+* **Candidate 9 platform check, 16:10–16:14 UTC (A×1, B×1; clean builds of `cbe10e8`):**
+  * **A ×1** (agent `4d68ac0d`, sim `d1824584`): **9/10.**
+    * **PUB-10 FAIL.** The ledger holds:
+      * create_promise 500 "service unavailable";
+      * the retry, ok;
+      * then no close_call.
+    * **The customer hung up** (`customer-ended-call`, 22 s) right after the agent's "Is there anything else I can help
+      you with?". close_call waits for that answer.
+    * **The judge passed the conversation.**
+    * **Cause:** this flow is the same on candidates 7 and 8 and is not on a path candidate 9 changed. It is a design
+      risk (close_call depends on one more customer turn), not a regression.
+  * **B ×1** (agent `bb897158`, sim `0c2d4c91`): **3/3.**
+  * **A+B build: INCOMPLETE.** It flags that brief A never uses add_note while brief B notes every product; one spec
+    cannot carry both briefs. This comes from building two briefs together in development and does not arise for a
+    single final case. The oracle agreed 22/22.
+  * **`validation_errors` in code runs** (after_kind / after_cut "rejected by schema validation") appear the same
+    number of times on candidate 8 (121 per A run). They are an old, harmless warning.
+* **Decision: candidate 9 (`cbe10e8`) frozen. Candidate 8 (`9cb2300`) is the rollback.**
+* **Clean-checkout builds of `cbe10e8`** (`eval/clean-runs/cand9b-a`, `cand9-ab`) serve as the rehearsal of the final
+  command.
+* **Known risk:** a customer who hangs up after the promise sentence leaves no close_call.
 * **Correction to section 2.** "Two hidden briefs" comes from the published page. Your newer message says the final
   is one brand-new case that may contain several files; the final e-mail decides the exact file layout. When the
   files arrive, check which file is the OpenAPI and which are material (a code list or table must not be summarised

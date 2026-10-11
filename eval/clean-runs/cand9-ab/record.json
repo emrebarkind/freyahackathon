@@ -1,0 +1,24 @@
+{
+ "builder_commit": "cbe10e8ed1801ff4509276c1de9a3f9db4bb4a5a",
+ "exit_status": 3,
+ "inputs": {
+  "inputs/brief-a.md": "d57c049c89aec4615f5b939c5a96ee9bd194142d17045bc4036615cfbdf0f1c7",
+  "inputs/brief-b.md": "c59c70099148b91c13e9c5e40246a63b58638f09469d735f8eb65771bb63d550",
+  "inputs/openapi.json": "9a8410b12e5c82b6c6a30e9ed7030574d6f919cafdb1e035cef7bd876b0badb8"
+ },
+ "outputs": {
+  "cand9-ab.log": "ebf0906252b762b62e37aae2d74a6e23884bdf7ccf22e38d52f920d2f5bc3fa6",
+  "cand9-ab.spec.json": "3ab734bd29e32476cc26bfb580b6001b81b094e2f63d81f90864f72dac78a43a",
+  "cand9-ab.trace.log": "8cacc5ea7846d9549338e50d225223c30839d04c6acf30a740bee9b8b03cc883",
+  "cand9-ab.workflow.json": "2ba21d2086451a0f73b677f3f4ffb3c20be2e06e6400ff34a5b2de338803b0a7"
+ },
+ "seconds": 196.7,
+ "model_calls": 3,
+ "cost_usd": 1.09,
+ "result": "INCOMPLETE",
+ "reasons": [
+  "not carried: Brief A never uses `add_note`. (The spec follows Brief B, which notes every product without a promise; the format cannot switch notes off for calls governed by Brief A alone.)"
+ ],
+ "workflow_id": "e1bfdf4a-b43e-43f0-a07a-0d6f88f751ee",
+ "agent_id": "bb897158-5218-4c4c-88d6-521d61d450f4"
+}
