@@ -52,6 +52,17 @@ run.
 | Transfers, callbacks, hardship, dispute, paid | | | |
 | Required sentences (read-back, SMS line, disclosures) | | | |
 
+## Known gaps to check on the final (candidate 9)
+* **Bank record completeness, not only COMPLETE.** For the chosen agent, every promise path must end with
+  `close_call` after the SMS sentence and goodbye. The open risk: a customer who hangs up after "Is there anything
+  else?" leaves no `close_call` (1 in 60 calls). Check whether the final brief requires or forbids a closing question
+  and post-promise requests (like A rule 36 and B rule 10).
+* **Document precedence.** If the case has documents that change each other, check in the trace's assumptions that
+  the stated precedence (later, amending, "replaces") was applied. Investigate an INCOMPLETE note about it; do not
+  ignore it.
+* **Stale `_kind`/`_cut` after chained calls** (the platform rejects clearing enum variables): watch transcripts for
+  a turn the agent treats as answered when the customer said nothing new.
+
 ## Submission (local template: the agent and commit are filled in only after the chosen final run)
 ```json
 {

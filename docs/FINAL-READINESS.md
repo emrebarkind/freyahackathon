@@ -45,7 +45,39 @@
     single final case. The oracle agreed 22/22.
   * **`validation_errors` in code runs** (after_kind / after_cut "rejected by schema validation") appear the same
     number of times on candidate 8 (121 per A run). They are an old, harmless warning.
-* **Decision: candidate 9 (`cbe10e8`) frozen. Candidate 8 (`9cb2300`) is the rollback.**
+* **Corrected summary (16:25 UTC):** candidate 9 has A 9/10 and B 3/3, a known closing gap (PUB-10), and an
+  INCOMPLETE A+B build. "Passed the platform check" was too strong. Candidate 9 is kept for now; candidate 8
+  (`9cb2300`) is the rollback.
+* **PUB-10: a real design gap, not only "not a regression".**
+  * **What the brief requires** (A rules 37, 38, 46 and 47): say "recorded" only after ok:true; then the SMS
+    sentence; thank and say goodbye before `close_call`; exactly one `close_call`, as the last tool call.
+  * **What the brief does not require:** the "Is there anything else?" question. It is an engine default
+    (`after_promise.ask_anything_else: true`, `spec_doc.md`) that gives the customer a turn for post-promise
+    requests. The briefs anticipate such requests: A rule 36 (asks to change a recorded promise) and B rule 10
+    (restructuring after recorded promises).
+  * **Rate:** 1 of 60 stored calls that reached the question ended without `close_call` (this one).
+  * **No small fix keeps both:**
+    * closing right after the SMS sentence removes the turn that rules 36 and 10 need;
+    * calling `close_call` before the question breaks "last tool call" if a transfer follows.
+  * **Not changed.** On the final checklist.
+* **A+B INCOMPLETE: the precedence is stated, not a gap in the final reading.**
+  * Brief B says "Every rule of Brief A applies unless a rule below replaces it", and B rule 8 (add_note for products
+    without a promise) replaces A's "never uses add_note".
+  * The spec follows B (notes on), which B 3/3 observes.
+  * The audit flagged calls "governed by Brief A alone"; there are none when B amends A.
+  * The candidate-8 A+B build of the same inputs did not raise the flag, so the flag is audit variance.
+  * **Still:** a final case can contain documents that change each other. The reading must apply the stated
+    precedence, and an INCOMPLETE build does not count as fully verified.
+* **`validation_errors`: explained, not "harmless".**
+  * **The write:** `chain_plan` writes "" into `<stage>_kind`, `_cut` and `_text` before a planned talk node, to tell
+    later whether the customer answered (`heard`).
+  * **The rejection:** the platform rejects "" for the enum variables `_kind` and `_cut` ("rejected by schema
+    validation"). `_text` (a string) is cleared.
+  * **Possible effect:** on the chain-recovery path, a stale `_kind` or `_cut` from an earlier turn of the same stage
+    could make the engine treat a planned turn as answered.
+  * **Not observed** (in PUB-10 it was the first visit, so nothing was stale). The impact is unproven. Not fixed in
+    the 15-minute window; on the final checklist.
+* **Decision: candidate 9 (`cbe10e8`) kept for now. Candidate 8 (`9cb2300`) is the rollback.**
 * **Clean-checkout builds of `cbe10e8`** (`eval/clean-runs/cand9b-a`, `cand9-ab`) serve as the rehearsal of the final
   command.
 * **Known risk:** a customer who hangs up after the promise sentence leaves no close_call.
