@@ -125,4 +125,4 @@ Brief A never uses `add_note`.
 This memo changes two rules of this brief. Every other rule stays as written.
 
 1. Rule 32 changes. When the customer mentions illness, a death in the family or job loss, say one short sentence of sympathy and then do not ask anything: call `transfer_to_agent` with queue `support` straight away and close as `transferred` / `support`.
-2. From 12 October 2026, a customer who says they already paid (rule 39) is closed as `no_promise` with reason `paid_claimed`, no longer as `paid`. Calls before 12 October 2026 still close as `paid`.
+2. From 12 October 2026, a customer who says they already paid (rule 39) is closed as `no_promise` with reason `dispute`, no longer as `paid`. Calls before 12 October 2026 still close as `paid`.

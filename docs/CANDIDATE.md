@@ -1,6 +1,57 @@
 # Submission candidates
 
-## Candidate 3 (recommended): builder at `41de6d0` (merged as `87a6839`)
+## Candidate 4 (recommended): builder at `22f774a`
+
+Candidate 3 plus the skill-review fixes and the brief-stated rule options. The platform rehearsal below was built at
+`b913754`; `22f774a` changes only the spec doc (the extraction prompt): the built-in "I don't want to talk" handling
+is now listed, so a build no longer reports that rule as unsupported.
+
+Changes since candidate 3:
+* The opening ask enters the repeat check only if the brief says so (`rules.opening_blocks_repeat`,
+  `opening_is_attempt`). In candidate 3 this was a fixed rule taken from r2, and it broke p1 C9.
+* `rules.too_much_skips_full`: once the customer says the full amount is too much, later steps naming it are skipped,
+  and "too much" counts as a refusal of the current step. Both r2 readings had flagged rule 19 as unsupported.
+* The self-test expectations follow dated code changes (`event_changes`) on the scenario date.
+* A spec-doc/engine contract test, which found and removed a dead alias.
+* Source sentences for critical values (`sources`): a quote that is not in the materials counts as an error.
+
+Local checks: 159 tests pass, and the self-test passes on every stored spec (A, B, C, D, E, h1, p2, q1, A-prime).
+
+Re-extraction (new readings, keys frozen beforehand):
+
+| package | value written | key |
+|---|---|---|
+| p1 (two readings) | `skipped_repeat_counts: false`, `opening_blocks_repeat: false` | 30/30, 30/30 (candidate 3: 29/30) |
+| r2 (two readings) | `skipped_repeat_counts: true`, `opening_blocks_repeat: true` | 22/22, 22/22; both INCOMPLETE (rule 19) |
+| r2 (after the new option) | `too_much_skips_full: true` | 22/22 |
+| q1 | `skipped_repeat_counts: false` | 16/16 |
+
+Targeted platform rehearsal: A-prime (`eval/platform/aprime/`) is kit brief A plus a memo with two changes:
+(1) hardship gets one sentence of sympathy, then a transfer to the support queue with no question asked;
+(2) from 12 October 2026, "already paid" closes as `no_promise`/`dispute`.
+
+| | |
+|---|---|
+| build | 227 s, 3 model calls, $1.09, self-test 13/13; workflow `d7bbc462-6f01-43bc-95f4-8517400e0282`, agent `086f4e3c-2c7a-4762-8dca-dafde431b1be` |
+| PUB-01 | promise > close_call `promise` (as in brief A) |
+| PUB-05 | "I'm very sorry to hear that. I will connect you with our customer support team now." > `transfer_to_agent {queue: support}` > `close_call {transferred, support}`, no question asked |
+| PUB-08 (case date 14 Oct) | `close_call {no_promise, dispute}`, accepted by the bank |
+
+The kit scorer marks PUB-05 and PUB-08 as failed because it applies brief A's expected results; the bank ledger is
+what was checked here. The first A-prime run (`eval/platform/aprime/v1/`) used `paid_claimed`, a code made up in
+the test memo. The bank rejected it ("this outcome needs one of these reasons"). That was an error in the test brief,
+not in the builder: the API's `reason` field has no enum, so only the brief's table defines the allowed values.
+
+Artifacts (sha256):
+
+```
+3d2460c3553acf65088e9fe90b72dc5c8a9c028e97453d4d8b63ea878e3a9bc2  submission/rehearsal-aprime2.workflow.json
+c9b7a5c072bf7ecca0dc62e247245379273ffd5b4c4a322975bf8a3ddc2a41e2  submission/rehearsal-aprime2.spec.json
+9cacf7cb3c83935def5ea6621f86dbe0b0b4f627f6dc25a9ddc4f988ba110d0a  traces/rehearsal-aprime2.log
+5f37c640a9630912d55583a3478ba92088d37e7ff1702e61ea3f874556e35ead  traces/rehearsal-aprime2.trace.log
+```
+
+## Candidate 3: builder at `41de6d0` (merged as `87a6839`)
 
 Candidate 2 plus the robustness fixes (eval/robust r1-r3, eval/hard h1): floor percentage per product type, step
 rounding (up/nearest/down:<step>), minimum floor, a band whose floor is the whole debt, rounded percentage steps;

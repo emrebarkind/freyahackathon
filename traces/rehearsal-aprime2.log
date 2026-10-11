@@ -1,0 +1,79 @@
+[    0.0s] START 2026-10-11T06:50:07+0000
+[    0.0s] NOTE briefs=['eval/platform/aprime/brief.md'] tool_api=eval/platform/aprime/openapi.json slot=rehearsal-aprime2
+[    0.0s] STEP 1. spec extraction
+[    0.8s] NOTE extraction mode B
+[  103.7s] MODEL CALL #1 model=claude-opus-5-5 seconds=102.9 cost_usd=0.409 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  162.5s] MODEL CALL #2 model=claude-opus-5-5 seconds=58.7 cost_usd=0.343 purpose: audit the high-risk fields of the reading against the source documents
+[  162.5s] NOTE audit: **Audit of the spec**
+[  162.5s] 
+[  162.5s] - calendar: OK. "Business days are Monday to Friday, except Freya Bank holidays: 2026-10-26, 2026-11-11, 2026-11-26, 2026-12-25, 2027-01-01."
+[  162.5s] - date_rules: OK. "'Next <weekday>' means that weekday in the following calendar week." This gives `following_week`.
+[  162.5s] - confirm: OK. "Ask once more. If it is still unclear after the second ask, close as `not_reached` / `unclear`." This gives `max_asks` 2.
+[  162.5s] - callback: OK. "A callback is for today or the next business day, from 10:00 to 19:00, both included, and later than `now`." Rule 7 adds "ask once for another time. If that is also outside it, do not schedule." This gives `max_asks` 2. `business_days_only` false is right because "today" is not limited to business days.
+[  162.5s] - identity.questions: OK. "first the date of birth, then the last four digits of the phone number on file", "Send a date of birth as `YYYY-MM-DD`". The API enum is `date_of_birth`/`phone_last4`, and the answer is "four digits".
+[  162.5s] - identity.max_wrong: OK. "Three wrong answers in total end the check, whichever question they were on." `max_wrong_per_question` null is right.
+[  162.5s] - identity.hints: OK. "returns `hint: "day_month_swapped"`. Ask them to say the month as a word."
+[  162.5s] - identity (other fields): OK. "Read a date given only as numbers as day, then month, then year." This gives `dmy`. "Asking what the call is about instead of answering counts as declining." This gives `purpose_is_decline` true. "An unreadable value is rejected with ok=false and is not counted". The `ok` field already handles this, so `reject_values` stays empty.
+[  162.5s] - products.floor_field: OK. "The floor is `minimum_payment` for a credit card and `instalment_amount` for a personal loan or a car loan."
+[  162.5s] - products.amount_field: OK. "State the past-due amount". The API field is `past_due`.
+[  162.5s] - products.floor_pct: OK as null. The floor is a field, not a percentage. `floor_min`, rounding and scale are not stated, so null is right.
+[  162.5s] - products (other fields): OK. Names follow "credit card ending 4821", "personal loan" or "car loan". `list_field`, `id_field` and `type_field` match the API.
+[  162.5s] - bands: OK. "1 to 7 | early | the 12th business day after today | 1" and "8 to 45 | late | the 7th business day after today | 2".
+[  162.5s] - ladder: OK. "Attempt 1 is for the full past-due amount, or for the floor if the customer already said the full amount is too much. Attempt 1: propose the last business day of this week… Attempt 2, late band only: propose the floor amount on the deadline."
+[  162.5s] - rules.deadline_adjust: WRONG. "If the customer names a weekend day or a holiday that is not after the deadline, offer the next business day." The engine moves dates off non-business days by `deadline_adjust`, so this must be `next_business_day`. The old source ("A promise date must be today or later, a business day…") does not say which direction to move.
+[  162.5s] - rules.too_much_floor: OK. "offer the floor, once … Attempt 2 may name the floor again, on the deadline." Together with "Attempt 1 is … for the floo
+[  162.5s] NOTE audit changed: ['rules.deadline_adjust', 'sources', 'unsupported_rules']
+[  162.5s] NOTE validation round 1: 1 problem(s)
+[  162.5s]   - lines.promise_change uses the word 'recorded'; a judge can hear it as a false claim that a promise was recorded. Rephrase in the active voice ('we record this call') or use 'noted'
+[  162.5s] NOTE repair round 1/3: repair 1 validation problem(s)
+[  209.6s] MODEL CALL #3 model=claude-opus-5-5 seconds=47.2 cost_usd=0.339 purpose: repair 1 validation problem(s) in the spec
+[  209.6s] NOTE validation round 2: 0 problem(s)
+[  209.6s] NOTE assumption: The brief names no currency, so currency_word uses the default 'dollars'.
+[  209.6s] NOTE assumption: The memo of 1 October 2026 overrides rule 32. On hardship the agent says one sentence of sympathy and transfers straight to queue 'support' without asking (hardship_transfer = direct). The 'no_promise / hardship' event is kept only as a fallback. The end of rule 32 ('If the customer still names a date or an amount themselves, record the promise') is treated as replaced by 'straight away'.
+[  209.6s] NOTE assumption: The memo of 1 October 2026 also changes 'already paid': from 2026-10-12 it closes as no_promise / dispute (event_changes). Before that date it closes as paid with no reason. The paid_line (payments can take one business day to appear) is still said after the change.
+[  209.6s] NOTE assumption: Rules 26 and 30 read together: the one floor offer after 'too much' is attempt 1 (the floor on the last business day of this week). In the late band, attempt 2 names the floor again on the deadline (rule 26: 'Attempt 2 may name the floor again, on the deadline'). So too_much_floor = attempt_1.
+[  209.6s] NOTE assumption: Ladder: attempt 1 is the full amount (or the floor after 'too much') on the last business day of this week, or next week's if today is that day. Attempt 2 (late band only, attempts = 2) is the floor on the deadline. The early band has 1 attempt, so it uses only step 1.
+[  209.6s] NOTE assumption: Attempts count the proposals after the opening ask 'Can you make this payment today?' (opening_is_attempt = false). A no to that question is the flat refusal that uses attempt 1.
+[  209.6s] NOTE assumption: Deadlines are the Nth business day after today, so they are always business days. deadline_adjust = next_business_day follows rule 20, which moves a weekend day or holiday to the next business day.
+[  209.6s] NOTE assumption: Rule 30 says a non-answer uses one persuasion attempt. max_unclear is not set because the brief gives no re-ask count.
+[  209.6s] NOTE assumption: Callback days are 'today or the next business day'. business_days_only = false because 'today' is not limited to business days.
+[  209.6s] NOTE assumption: A date of birth given only as numbers is read day, month, year (date_order = dmy), per rule 11.
+[  209.6s] NOTE assumption: Rule 45 before verification (close as not_verified / declined) may not be carried by max_not_talk. It is also listed in unsupported_rules.
+[  209.6s] NOTE assumption: The brief requires saying the call is recorded. The opening uses 'We record this call.'
+[  209.6s] NOTE assumption: after_promise.ask_anything_else uses the default (true) because the brief is silent.
+[  209.6s] NOTE assumption: Brief A never uses add_note, so notes.enabled = false and all note values are empty.
+[  209.6s] NOTE assumption: Brief A has only one product per call, so the multi settings keep their defaults.
+[  209.6s] NOTE assumption: The brief gives no rule for days late outside 1 to 45, so bands_outside is not set.
+[  209.6s] STEP 2. local checks: structure, tool API, engine self-test on synthetic customers
+[  210.5s] TEST PASS local happy path, pays in full today
+[  210.5s] TEST PASS local someone else answers, books a callback
+[  210.5s] TEST PASS local wrong number
+[  210.5s] TEST PASS local identity fails
+[  210.5s] TEST PASS local identity answered the way people speak
+[  210.5s] TEST PASS local already paid
+[  210.5s] TEST PASS local dispute
+[  210.5s] TEST PASS local hardship, accepts support
+[  210.5s] TEST PASS local restructuring request
+[  210.5s] TEST PASS local flat refusals
+[  210.5s] TEST PASS local the bank fails to record the promise twice
+[  210.5s] TEST PASS local the callback booking fails once, then works
+[  210.5s] TEST PASS local several products, all paid today
+[  210.5s] NOTE local checks: structural 0, tool API 0, self-test 13/13
+[  210.5s] NOTE assumption (engine default, the brief is silent): the brief does not say whether a ladder step skipped as a repeat of an earlier proposal uses one of the band's proposals: it does
+[  210.5s] NOTE UNSUPPORTED by the engine (policy kept as the brief states it): rule the spec cannot carry, not applied: Before identity is verified, the same customer is closed as `not_verified` / `declined`.
+[  210.5s] NOTE repair budget used: 1/3
+[  210.5s] STEP 3. compile workflow
+[  210.5s] NOTE workflow: 25 nodes, 16 engine-run calls, 195045 bytes
+[  210.5s] STEP 4. validate, save, publish
+[  211.8s] TEST PASS platform dry-run validation
+[  213.2s] NOTE FREYA workflow_id=d7bbc462-6f01-43bc-95f4-8517400e0282 agent_id=086f4e3c-2c7a-4762-8dca-dafde431b1be version=1
+[  213.2s] STEP 5. chat smoke test on Freya
+[  226.1s] TEST PASS chat the engine runs on the platform (asks the first security question) -- Hello? / Before we continue, I need to ask you two security questions. What is your date of birth?
+[  226.1s] TEST PASS chat no unfilled placeholder spoken
+[  226.1s] TEST PASS chat nothing about the debt before verification
+[  226.1s] STEP 6. export
+[  227.0s] NOTE exported submission/rehearsal-aprime2.workflow.json
+{"workflow_id": "d7bbc462-6f01-43bc-95f4-8517400e0282", "agent_id": "086f4e3c-2c7a-4762-8dca-dafde431b1be", "export": "submission/rehearsal-aprime2.workflow.json"}
+[  227.0s] NOTE RESULT: INCOMPLETE -- the agent does not meet these:
+[  227.0s]   - not carried: Before identity is verified, the same customer is closed as `not_verified` / `declined`.
+[  227.0s] END 2026-10-11T06:53:54+0000 total_seconds=227.0 model_calls=3 model_cost_usd=1.09
