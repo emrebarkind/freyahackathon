@@ -1,0 +1,447 @@
+{
+ "currency_word": "pounds",
+ "calendar": {
+  "workdays": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "holidays": [
+   "2026-11-27",
+   "2026-12-21"
+  ]
+ },
+ "date_rules": {
+  "next_weekday": "following_week"
+ },
+ "confirm": {
+  "max_asks": 2
+ },
+ "callback": {
+  "days": [],
+  "start": "10:00",
+  "end": "19:00",
+  "after_now": true,
+  "business_days_only": false,
+  "windows": {},
+  "max_asks": 2
+ },
+ "identity": {
+  "questions": [
+   {
+    "field": "birth_date",
+    "kind": "date",
+    "format": "%Y-%m-%d",
+    "ask": "What is your date of birth?"
+   },
+   {
+    "field": "postcode",
+    "kind": "upper",
+    "ask": "What is the postcode we have on file for you?"
+   }
+  ],
+  "max_wrong": 2,
+  "max_wrong_per_question": null,
+  "date_order": null,
+  "hints": {},
+  "purpose_is_decline": true,
+  "question_is_decline": false,
+  "response": {
+   "ok": "ok",
+   "verified": "verified",
+   "all_verified": "all_verified",
+   "left": "wrong_answers_left",
+   "hint": "",
+   "pass_values": [],
+   "reject_values": []
+  }
+ },
+ "products": {
+  "names": {
+   "store_card": "store card ending {card_last4}",
+   "personal_loan": "personal loan",
+   "motor_loan": "motor loan"
+  },
+  "amount_field": "arrears",
+  "days_field": "days_late",
+  "floor_field": {
+   "store_card": "min_due",
+   "personal_loan": "monthly_repayment",
+   "motor_loan": "monthly_repayment"
+  },
+  "floor_pct": null,
+  "floor_min": null,
+  "floor_names": {
+   "store_card": "minimum due",
+   "personal_loan": "monthly repayment",
+   "motor_loan": "monthly repayment"
+  },
+  "amount_scale": 1,
+  "promise_scale": null,
+  "promise_round": null,
+  "floor_round": null,
+  "step_round": null,
+  "list_field": "products",
+  "id_field": "product_id",
+  "type_field": "type",
+  "promise_integer": false
+ },
+ "bands": [
+  {
+   "name": "A",
+   "min": 1,
+   "max": 10,
+   "deadline": {
+    "kind": "business_days_after",
+    "n": 12
+   },
+   "floor": null,
+   "floor_full_types": [],
+   "deadline_by_type": {},
+   "attempts": 1,
+   "ladder": null
+  },
+  {
+   "name": "B",
+   "min": 11,
+   "max": 30,
+   "deadline": {
+    "kind": "business_days_after",
+    "n": 9
+   },
+   "floor": null,
+   "floor_full_types": [],
+   "deadline_by_type": {},
+   "attempts": 2,
+   "ladder": null
+  },
+  {
+   "name": "C",
+   "min": 31,
+   "max": 60,
+   "deadline": {
+    "kind": "business_days_after",
+    "n": 7
+   },
+   "floor": null,
+   "floor_full_types": [],
+   "deadline_by_type": {},
+   "attempts": 3,
+   "ladder": null
+  },
+  {
+   "name": "D",
+   "min": 61,
+   "max": 90,
+   "deadline": {
+    "kind": "business_days_after",
+    "n": 5
+   },
+   "floor": null,
+   "floor_full_types": [],
+   "deadline_by_type": {},
+   "attempts": 4,
+   "ladder": null
+  }
+ ],
+ "bands_outside": null,
+ "ladder": [
+  {
+   "amount": "full",
+   "date": "today"
+  },
+  {
+   "amount": "full",
+   "date": "last_business_day_this_week"
+  },
+  {
+   "amount": "full",
+   "date": "deadline"
+  },
+  {
+   "amount": "floor",
+   "date": "deadline"
+  }
+ ],
+ "rules": {
+  "refuse_deadline_is_refusal": true,
+  "deadline_adjust": "previous_business_day",
+  "first_ask": "today",
+  "too_much_floor": "attempt_1",
+  "ladder_repeat_last": false,
+  "promise_retries": 1,
+  "skipped_repeat_counts": false,
+  "week_end_today": null,
+  "opening_is_attempt": true
+ },
+ "after_promise": {
+  "ask_anything_else": true
+ },
+ "notes": {
+  "enabled": false
+ },
+ "multi": {
+  "clamp_single_date": true,
+  "continue_after_paid": true,
+  "continue_after_dispute": true
+ },
+ "human": {
+  "ask_first": false
+ },
+ "max_not_talk": 2,
+ "events": {
+  "promise": {
+   "outcome": "agreed",
+   "reason": ""
+  },
+  "paid": {
+   "outcome": "already_paid",
+   "reason": "",
+   "note": ""
+  },
+  "transfer_restructuring": {
+   "outcome": "handed_over",
+   "reason": "plan",
+   "queue": "repayment_plans"
+  },
+  "transfer_human": {
+   "outcome": "handed_over",
+   "reason": "advisor",
+   "queue": "advisor"
+  },
+  "transfer_support": {
+   "outcome": "handed_over",
+   "reason": "care",
+   "queue": "vulnerable_care"
+  },
+  "refused": {
+   "outcome": "no_agreement",
+   "reason": "refused",
+   "note": ""
+  },
+  "hardship": {
+   "outcome": "no_agreement",
+   "reason": "hardship",
+   "note": ""
+  },
+  "dispute": {
+   "outcome": "no_agreement",
+   "reason": "dispute",
+   "note": ""
+  },
+  "service_error": {
+   "outcome": "no_agreement",
+   "reason": "system_error",
+   "note": ""
+  },
+  "id_failed": {
+   "outcome": "id_not_passed",
+   "reason": "failed"
+  },
+  "id_declined": {
+   "outcome": "id_not_passed",
+   "reason": "failed"
+  },
+  "callback": {
+   "outcome": "not_contacted",
+   "reason": "wrong_number"
+  },
+  "no_callback": {
+   "outcome": "not_contacted",
+   "reason": "wrong_number"
+  },
+  "wrong_number": {
+   "outcome": "not_contacted",
+   "reason": "wrong_number"
+  },
+  "deceased": {
+   "outcome": "not_contacted",
+   "reason": "wrong_number"
+  },
+  "unclear": {
+   "outcome": "not_contacted",
+   "reason": "wrong_number"
+  }
+ },
+ "tool_bodies": {
+  "verify_identity": {
+   "field": "q_field",
+   "answer": "q_answer"
+  },
+  "get_account": {},
+  "create_promise": {
+   "product_id": "p_product",
+   "amount": "p_amount",
+   "date": "p_date"
+  },
+  "add_note": {
+   "product_id": "n_product",
+   "reason": "n_reason"
+  },
+  "schedule_callback": {
+   "date": "cb_date",
+   "time": "cb_time"
+  },
+  "transfer_to_agent": {
+   "queue": "t_queue"
+  },
+  "close_call": {
+   "outcome": "c_outcome",
+   "reason": "c_reason"
+  }
+ },
+ "responses": {
+  "verify_identity": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "get_account": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "create_promise": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "add_note": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "schedule_callback": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "transfer_to_agent": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "close_call": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  }
+ },
+ "intents": {
+  "hardship": "Illness, bereavement or job loss.",
+  "dispute": "\"This is not my debt\".",
+  "already_paid": "\"I already paid\".",
+  "restructure": "A request for a payment plan.",
+  "human": "A request for a person."
+ },
+ "call_variables": [],
+ "lines": {
+  "opening": "Hello, this is Marrow & Pike's automated assistant. We record this call.",
+  "confirm_ask": "Is this {title} {last_name}?",
+  "robot": "Yes, I am Marrow & Pike's automated assistant.",
+  "scam": "This is a genuine call from Marrow & Pike, and I will never ask for your card details or passwords.",
+  "purpose_before_verify": "I can explain once I have confirmed I am speaking with the right person.",
+  "no_info": "I'm sorry, I can't share that information.",
+  "not_talk_once": "I understand. This will only take a few minutes.",
+  "tp_ask": "When would be a good time to reach them?",
+  "tp_ask_time": "What time would suit them?",
+  "tp_outside_window": "I'm sorry, we can't call at that time.",
+  "tp_no_info": "I'm sorry, I can only speak with the person I am calling.",
+  "tp_booked": "Thank you, we will call back on {date} at {time}.",
+  "wrong_number": "Thank you for letting me know, and sorry for the trouble.",
+  "condolence": "I'm very sorry for your loss.",
+  "id_intro": "Before we go on, I need to ask you two security questions.",
+  "id_why": "These questions make sure I am speaking with the right person.",
+  "id_explain": "I can only discuss the reason for my call with the account holder, once I have checked who I am speaking with.",
+  "id_declined": "I understand. Without these checks I can't go on with this call.",
+  "id_repeat": "Sorry, could you repeat that?",
+  "id_continue": "Please go on.",
+  "id_wrong": "I'm sorry, that does not match our records.",
+  "id_failed": "I'm sorry, I couldn't confirm your identity, so I can't go on with this call.",
+  "disclose_intro": "Thank you, {title} {last_name}. I'm calling about a late payment with Marrow & Pike.",
+  "product_line": "Your {name} has arrears of {amount} and is {days} days late.",
+  "ask_today": "Can you pay the full {amount} today?",
+  "ask_today_multi": "Can you pay the full amounts today?",
+  "next_product": "Now for your next product.",
+  "offer": "Could you pay {amount} on {date}?",
+  "offer_floor_date": "Could you pay {amount} on {date}?",
+  "offer_floor": "Could you pay {amount}?",
+  "below_floor": "I'm sorry, the lowest amount I can accept is {floor}.",
+  "below_floor_again": "I'm sorry, I can't accept less than that.",
+  "date_past": "I'm sorry, that date has already passed. Which date from today on would suit you?",
+  "not_business_day": "That day is not a business day. The next business day is {date}.",
+  "after_deadline": "I'm sorry, the latest date I can accept is {date}.",
+  "vague_ask": "Which exact day would that be?",
+  "propose_deadline": "Could you pay {amount} on {date}?",
+  "ask_date_for_amount": "On which date could you pay {amount}?",
+  "repeat_offer": "To repeat, could you pay {amount} on {date}?",
+  "readback_intro": "Let me read that back.",
+  "readback_item": "Your {name}: {amount} on {date}.",
+  "clamped_note": "For your {name}, the date is {date}, which is the latest date we can accept.",
+  "confirm_q": "Is that right?",
+  "recorded": "Thank you, your promise is recorded.",
+  "sms_line": "",
+  "record_failed": "I'm sorry, the promise could not be recorded.",
+  "paid_line": "Thank you for letting me know. If the payment has not reached us yet, we may contact you again.",
+  "dispute_line": "I understand. The account will be reviewed and we will contact you about it.",
+  "hardship": "I'm very sorry to hear that. I can put you through to our care team, who can help. Would you like that?",
+  "hardship_declined": "I understand. Thank you for telling me.",
+  "hardship_short": "Would you like that?",
+  "restructure_line": "I'll put you through to our repayment plans team.",
+  "human_ask_help": "Is there anything I can help you with first?",
+  "transfer": "I'm putting you through now. Please hold.",
+  "offer_short": "Would that work for you?",
+  "offer_short_date": "That would be on {date}.",
+  "anything_else": "Is there anything else I can help you with?",
+  "promise_change": "I'm sorry, the promise can't be changed on this call.",
+  "go_on": "Sorry, please go on.",
+  "goodbye": "Thank you for your time. Goodbye.",
+  "below_floor_final": "I'm sorry, I can't accept less than {amount}.",
+  "system_error": "I'm sorry, our system is not responding right now.",
+  "transfer_failed": "I'm sorry, I couldn't put you through.",
+  "callback_failed": "I'm sorry, I couldn't book the callback.",
+  "confirm_again": "Sorry, I didn't catch that. Is that right, yes or no?",
+  "no_band_line": "I'm sorry, I can't arrange a payment for your {name} on this call."
+ },
+ "unsupported_rules": [],
+ "assumptions": [
+  "Currency is pounds: section 1 says all amounts are in pounds and the API describes arrears, min_due and monthly_repayment as pounds. amount_scale is 1. create_promise takes pounds as a plain number (84.5 for £84.50), so promise_scale and promise_round are null.",
+  "Holidays are 2026-11-27 and 2026-12-21. Business days are Monday to Friday.",
+  "The brief does not say what 'next Friday' means, so the default 'following_week' is used.",
+  "The brief does not say how many times to ask 'Is this {title} {last_name}?', so the default of 2 is used.",
+  "The brief says it never uses schedule_callback, so callback.days is []. Someone else answering is told nothing and the call closes with no_callback.",
+  "The outcome table's only code for a call where the customer was not reached is not_contacted / wrong_number. It is used for no_callback, callback (never used), deceased and unclear as well as wrong_number, because the API requires a reason for not_contacted.",
+  "The brief gives no separate code for refusing the security questions. id_declined uses id_not_passed / failed, the only id_not_passed reason in the table.",
+  "Identity uses 2 wrong answers in total (rule 3, matching the API summary). birth_date is sent as %Y-%m-%d. postcode is 'upper' with no spaces (rule 3 and the API). No fixed length is set, because postcodes vary in length.",
+  "The verify_identity response has no hint field, so hints is empty and response.hint is ''. An unreadable answer comes back with ok=false and does not count as wrong.",
+  "Defaults are kept where the brief is silent: asking what the call is about instead of answering counts as declining; date_order is null because the answer format YYYY-MM-DD fixes the order.",
+  "Products have a 'type' field. Spoken names follow rule 4: 'store card ending {card_last4}', 'personal loan', 'motor loan'.",
+  "The floor (rule 7) is min_due for a store card and monthly_repayment for personal and motor loans. There is no percentage floor and no minimum floor. A floor above the arrears becomes the arrears (built in).",
+  "The brief calls these amounts 'floor'. The spoken names 'minimum due' and 'monthly repayment' come from the field names.",
+  "Bands, from table rule 5: A is 1-10 days late with a deadline on the 12th business day after today (today never counts); B is 11-30, 9th business day; C is 31-60, 7th business day; D is 61-90, 5th business day.",
+  "Rules 10 and 11 say the opening question counts as proposal 1, so opening_is_attempt is true. Band attempts are the brief's totals with the opening included: A=1, B=2, C=3, D=4.",
+  "The ladder starts with the opening ask (full arrears today), then the brief's steps 1 to 3: full arrears on the last business day of this week, full arrears on the deadline, then the floor on the deadline.",
+  "Rule 12 says a step that repeats an earlier proposal (same amount and date, the opening included) is skipped and not counted, so skipped_repeat_counts is false. week_end_today is null. If today is the last business day of the week, step 1 equals the opening ask and is skipped by rule 12.",
+  "Rule 13: when the band's total is reached or the ladder runs out, the call closes as no_agreement / refused. ladder_repeat_last is false.",
+  "Rule 20 says to close as system_error if create_promise fails twice, so promise_retries is 1 (one retry after the first failure).",
+  "Rule 19 says to transfer straight away when the customer asks for a person, so human.ask_first is false. The advisor queue is used.",
+  "Payment plan requests go to the repayment_plans queue (handed_over / plan). Hardship that is accepted goes to vulnerable_care (handed_over / care); declined hardship closes as no_agreement / hardship (rule 17).",
+  "The brief never uses add_note, so notes are off and every note value is ''.",
+  "A promise date must be a business day, not before today and not after the deadline (rule 6). Computed deadlines already fall on business days. deadline_adjust stays at the default, previous_business_day.",
+  "The brief does not say what to do if the customer says the full amount is too much before a ladder step, so too_much_floor stays at the default, attempt_1.",
+  "Other defaults are kept where the brief is silent: refuse_deadline_is_refusal true, ask_anything_else true, max_not_talk 2, the multi-product defaults (Q1 has one product), and a promise that cannot be changed on this call.",
+  "Rule 1 requires telling the customer the call is recorded. The opening says 'We record this call.' The confirm question uses the brief's words 'Is this {title} {last_name}?'.",
+  "The opening ask uses the brief's words 'Can you pay the full {amount} today?' ({amount} is spoken with the currency). The read-back question is 'Is that right?' (rule 20).",
+  "No days_late outside 1-90 is expected (section 1), so bands_outside is null.",
+  "Rule 8 ('never ask how much can you pay') and rule 14 (no discounts, waivers or plans) are handled by the lines, which never ask the customer for an amount and never offer other terms."
+ ]
+}
