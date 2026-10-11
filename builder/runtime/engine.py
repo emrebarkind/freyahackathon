@@ -866,7 +866,7 @@ def normalize_answer(q, text):
     if not text:
         return ""
     if kind == "date":
-        order = S["identity"].get("date_order", "dmy")
+        order = S["identity"].get("date_order") or "dmy"
         d = digits_only(text)
         # eight digits only in an order the brief states: the answer format (%d%m%Y, %m%d%Y, %Y%m%d) or an explicit
         # identity.date_order. Without either, no digit order is assumed and the answer is asked for again.

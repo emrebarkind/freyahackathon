@@ -395,9 +395,19 @@ def extract(briefs, openapi, trace, budget=None, mode=None):
     return validate_loop(spec, base, openapi, trace, budget)
 
 
+def prune_hint(spec, openapi):
+    """identity.response.hint names a field the verify response does not have: the engine would read nothing there,
+    so the mapping is dropped instead of spending a repair round on it. The other response fields stay checked."""
+    vprops = comp.response_props(openapi, "verify_identity")
+    r = (spec.get("identity") or {}).get("response")
+    if vprops and isinstance(r, dict) and r.get("hint") and r["hint"] not in vprops:
+        r.pop("hint")
+
+
 def validate_loop(spec, base, openapi, trace, budget):
     for attempt in range(10):                 # bounded by the shared repair budget
         spec_model.normalise(spec)
+        prune_hint(spec, openapi)
         errs = validate(spec, openapi)
         trace.note(f"validation round {attempt + 1}: {len(errs)} problem(s)" + ("".join("\n  - " + e for e in errs)))
         if not errs or (budget is not None and not budget.take(trace, f"repair {len(errs)} validation problem(s)")):

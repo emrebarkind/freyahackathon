@@ -1,2 +1,33 @@
 [    0.0s] START 2026-10-11T04:46:12+0000
 [    0.0s] NOTE extraction mode B
+[   94.5s] MODEL CALL #1 model=claude-opus-5-5 seconds=94.5 cost_usd=0.430 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  123.3s] MODEL CALL #2 model=claude-opus-5-5 seconds=28.8 cost_usd=0.240 purpose: audit the high-risk fields of the reading against the source documents
+[  123.3s] NOTE audit: calendar: OK -- "Business days are Monday to Friday, except two Marrow & Pike holidays: 2026-11-27 and 2026-12-21." -- workdays 0–4 and both holidays match.
+[  123.3s] date_rules: OK -- the materials never say what "next Friday" means -- the default `following_week` is kept and listed in assumptions.
+[  123.3s] confirm: OK -- "Ask "Is this {title} {last_name}?"" -- the materials give no number of asks, so the default of 2 is kept and listed in assumptions.
+[  123.3s] callback: OK -- "This brief never uses `add_note` or `schedule_callback`." -- every weekday window is null, so no callback can be booked. The other values are unused defaults.
+[  123.3s] identity.questions: OK -- "date of birth (`birth_date`, sent as `YYYY-MM-DD`), then the postcode on file (`postcode`, sent in capitals without spaces)"; the API says "For postcode: capitals, no spaces (e.g. LS27QR)" -- the order is right, birth_date is kind date with format %Y-%m-%d, and postcode is kind upper with no space format. No length is set, which is correct because postcode lengths vary.
+[  123.3s] identity.max_wrong: OK -- "Two wrong answers in total end the check" (the brief and the API both say this) -- the value is 2, and max_wrong_per_question is null.
+[  123.3s] identity.hints: OK -- the verify_identity response has no hint field or hint values -- so the value is {}.
+[  123.3s] identity: OK -- "An unreadable value is rejected with ok=false and is not counted as a wrong answer." -- the response field names match the API (ok, verified, all_verified, wrong_answers_left). There is no pass or reject value to list, date_order is null because the stated format already sets the order, and the decline flags are defaults.
+[  123.3s] products.floor_field: OK -- "The **floor** is the record's `min_due` for a store card and its `monthly_repayment` for a personal loan or a motor loan." -- the mapping matches.
+[  123.3s] products.amount_field: OK -- "the arrears amount"; the API has "arrears: pounds overdue" -- the value is `arrears`.
+[  123.3s] products.floor_pct: OK -- the floor is a record field, not a percentage -- so the value is null.
+[  123.3s] products: OK -- "store card ending 1234", "personal loan" or "motor loan"; "£84.50 is sent as `84.5`" -- the names use {card_last4}. Amounts are in pounds in both get_account and create_promise, so amount_scale is 1 and promise_scale and promise_round are null. The list, id and type fields match the API.
+[  123.3s] bands: OK -- "1 to 10 | A | the 12th business day after today | 1 … 11 to 30 | B | 9th | 2 … 31 to 60 | C | 7th | 3 … 61 to 90 | D | 5th | 4" -- the bounds, deadlines and totals match. Each total counts the opening question, as rules.opening_is_attempt=true requires ("Count every proposal made, the opening question included, against the band's total").
+[  123.3s] ladder: OK -- "That question is itself a proposal… Step 1: the full arrears on the last business day of the current week. Step 2: the full arrears on the deadline. Step 3: the floor on the deadline." -- the ladder is full/today, then full/last_business_day_this_week, then full/deadline, then floor/deadline. The skip-duplica
+[  123.3s] NOTE audit changed: nothing
+[  123.3s] NOTE validation round 1: 1 problem(s)
+[  123.3s]   - identity.date_order: Input should be 'dmy' or 'mdy'
+[  123.3s] NOTE repair round 1/3: repair 1 validation problem(s)
+[  175.0s] MODEL CALL #3 model=claude-opus-5-5 seconds=51.7 cost_usd=0.300 purpose: repair 1 validation problem(s) in the spec
+[  175.1s] NOTE validation round 2: 1 problem(s)
+[  175.1s]   - identity.response.hint 'hint' is not a field of the verify_identity response (fields: ['all_verified', 'error', 'ok', 'verified', 'wrong_answers_left'])
+[  175.1s] NOTE repair round 2/3: repair 1 validation problem(s)
+[  219.9s] MODEL CALL #4 model=claude-opus-5-5 seconds=44.8 cost_usd=0.305 purpose: repair 1 validation problem(s) in the spec
+[  219.9s] NOTE validation round 3: 1 problem(s)
+[  219.9s]   - identity.response.hint 'hint' is not a field of the verify_identity response (fields: ['all_verified', 'error', 'ok', 'verified', 'wrong_answers_left'])
+[  219.9s] NOTE repair round 3/3: repair 1 validation problem(s)
+[  263.7s] MODEL CALL #5 model=claude-opus-5-5 seconds=43.9 cost_usd=0.132 purpose: repair 1 validation problem(s) in the spec
+[  263.7s] NOTE validation round 4: 0 problem(s)
+[  263.7s] END 2026-10-11T04:50:36+0000 total_seconds=263.7 model_calls=5 model_cost_usd=1.41

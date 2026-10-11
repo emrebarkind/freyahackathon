@@ -138,4 +138,6 @@ a type and amounts in pence, no transfers, notes only for some outcomes, one dat
   integer type); the engine sends whole values there.
 * Extraction accuracy was measured on three frozen packages with 2 runs per mode (docs/EXPERIMENTS.md): a small
   sample. The one rule both extractors missed (a brief counting the opening ask as attempt 1) is now a spec option
-  (`rules.opening_is_attempt`); it was checked on a separate small package, eval/holdout/q1.
+  (`rules.opening_is_attempt`); on a separate small package (eval/holdout/q1) both runs set it and scored 15/16.
+* The ladder date "last business day of this week" moves to next week when today is that day (brief A's rule); a
+  brief that instead skips that step is not expressible yet (q1, check C5).

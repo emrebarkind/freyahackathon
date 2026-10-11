@@ -66,3 +66,13 @@ def test_digit_order_comes_from_the_brief_never_assumed(monkeypatch):
     assert engine.normalize_answer({"kind": "date", "format": "%d/%m/%Y"}, "21061985") == ""   # not a digit-string format
     monkeypatch.setattr(engine, "S", {"identity": {"date_order": "mdy"}})
     assert engine.normalize_answer({"kind": "date"}, "06211985") == "1985-06-21"
+
+
+def test_a_null_date_order_reads_written_dates(monkeypatch):
+    from builder.runtime import engine
+    from builder import spec_model
+    monkeypatch.setattr(engine, "S", {"identity": {"date_order": None}})
+    assert engine.normalize_answer({"kind": "date"}, "7 March 1988") == "1988-03-07"
+    assert engine.normalize_answer({"kind": "date"}, "21061985") == ""
+    assert not any("date_order" in e for e in spec_model.check(dict(
+        __import__("test_engine_edge").A, identity=dict(__import__("test_engine_edge").A["identity"], date_order=None))))

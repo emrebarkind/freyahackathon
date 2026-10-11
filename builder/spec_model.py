@@ -86,7 +86,7 @@ class Identity(Loose):
     # wrong answers that END the check: 'no wrong answer tolerated' is 1 (the first wrong answer ends it)
     max_wrong: Optional[int] = Field(default=None, ge=1)
     max_wrong_per_question: Optional[int] = Field(default=None, ge=1)
-    date_order: Literal["dmy", "mdy"] = "dmy"
+    date_order: Optional[Literal["dmy", "mdy"]] = None   # only when the brief states it (engine reads dmy otherwise)
     hints: Dict[str, str] = {}
     response: Dict[str, Union[str, List[str]]] = {}
 

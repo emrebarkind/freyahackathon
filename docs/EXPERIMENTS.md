@@ -49,3 +49,16 @@ declared `number` on the node, so the simulator sends `300.0`; what the platform
 
 A local build without model calls takes ~3.5 s (engine minify + LZW ~1.5-2 s, Agent SDK import ~1.3 s). No bottleneck
 worth changing; build time is model time.
+
+## Holdout q1: opening ask counted toward the limit (Oct 11)
+
+A new small package (`eval/holdout/q1`, blind author, second reader 16/16 agree, frozen before extraction): four bands
+with limits 1-4 proposals, the first ask included, worded differently from p2. Two extractions with the default:
+both set `rules.opening_is_attempt`, wrote the brief's totals (1/2/3/4) and a ladder whose step 1 is the opening ask;
+15/16 checks each (264-267 s, $1.41-1.44, 3 repair rounds each).
+- The miss (C5, both runs) is an engine limit, not a reading: the ladder date "last business day of this week"
+  moves to next week when today is that day (brief A's rule). q1 says such a step repeats the opening ask and is
+  skipped. Not expressible in the spec today; recorded, not added before the final.
+- The repair rounds came from two builder issues, both fixed: a null `identity.date_order` (allowed by the spec doc,
+  rejected by the typed model) and an `identity.response.hint` naming a field the API lacks (now dropped, it was
+  never read).
