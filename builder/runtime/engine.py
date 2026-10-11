@@ -2197,6 +2197,17 @@ def handle_result(V, s, aw):
 
 NUM_RUN = r"(?:(?:%s|\d+(?:\.\d+)?)[\s,-]*)+" % "|".join(sorted(list(NUM_WORDS) + ["hundred", "thousand"], key=len, reverse=True))
 NEG_DATE = re.compile(r"(do(es)?\s*n[o']?t\s+work|won'?t\s+work|no\s+good|not\s+good|can'?t\s+(do|make)|cannot\s+(do|make)|is\s*n'?t\s+(good|possible)|not\s+(on\s+)?(that|this|monday|tuesday|wednesday|thursday|friday|saturday|sunday))", re.I)
+def rejects_day(t, dtxt):
+    """True when the message says the day it names does not work ("Yes... no, Friday does not work", "not on
+    Friday"), whatever the intent label: the negation must be attached to that day, so "Monday doesn't work, but
+    Tuesday is fine" (day = Tuesday) is still a proposal."""
+    tl, d = str(t or "").lower(), re.escape(str(dtxt or "").lower().strip())
+    if not d:
+        return False
+    neg = r"(do(es)?\s*n[o']?t\s+work|won'?t\s+work|is\s+no\s+good|is\s*n'?t\s+(good|possible)|is\s+not\s+(good|possible)|isn'?t\s+ok)"
+    return bool(re.search(d + r"\W{0,3}\s*" + neg, tl) or re.search(r"(not|never|can'?t|cannot|can\s+not)\s+(do\s+|make\s+|pay\s+)?(it\s+)?(on\s+)?" + d, tl))
+
+
 CORRECTION = re.compile(r"^\W*(no\b|nope|sorry|i mean|actually|wait|not\b|make that|rather)", re.I)
 
 
@@ -2281,7 +2292,7 @@ def run_turn(V, s, stage):
             return stalled_out(V, s)
     if s.pop("day_asked", False) and k in ("yes", "agrees") and not dtxt and a is None:
         k = "unclear"                                  # "yes" to "which day?" names no day: nothing is accepted
-    if stage in ("nego", "confirm") and k in ("no", "refuses", "cannot") and dtxt and a is None and NEG_DATE.search(t or ""):
+    if stage in ("nego", "confirm") and dtxt and a is None and k not in ("yes", "agrees") and rejects_day(t, dtxt):
         # "Yes... no, Friday does not work": the day named is rejected, not proposed (never read back as the plan)
         pv = cur(s) if stage == "nego" and s.get("products") else None
         dd = parse_spoken_date(dtxt, today_of(V), S.get("date_rules"))

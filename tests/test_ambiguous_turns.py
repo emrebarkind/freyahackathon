@@ -93,3 +93,13 @@ def test_questions_alternating_with_fragments_stay_bounded_only_by_the_briefs_ru
     assert led["outcome"] == "no_promise" and led["promises"] == [] and len(said) < 40
     led, said = run("PUB-01", [T("question", "What?"), frag] * 20, na=False)
     assert "close_call" not in led["calls"] and led["notes"] == []   # no outcome code invented
+
+
+def test_a_rejected_day_is_caught_whatever_the_intent_label():
+    led, said = run("PUB-01", [T("proposes", "Yes... no, Friday does not work.", d="Friday"), T("yes", "Yes.")])
+    assert led["promises"] == [] and not any("16 October" in x for x in said)      # platform label in probe 59a7b4fe
+
+
+def test_a_proposal_after_rejecting_another_day_is_kept():
+    led, _ = run("PUB-01", [T("proposes", "Monday doesn't work, but Tuesday the 20th is fine.", d="Tuesday the 20th"), YES])
+    assert led["promises"] == [("p1", 420.0, "2026-10-20")]
