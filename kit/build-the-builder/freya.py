@@ -9,15 +9,35 @@ URL = os.environ.get("FREYA_API_URL", "https://staging-app.freyavoice.ai")
 # Cloudflare rejects requests without a browser-like User-Agent (error 1010).
 HEADERS = {"Authorization": "Bearer " + os.environ.get("FREYA_API_KEY", ""), "Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (build-the-builder)"}
 
+RETRY_STATUS = (500, 502, 503, 504, 520, 522, 524)   # organisers: wait and retry 5xx (e.g. 3 tries, 10 s apart)
+
 def api(method, path, body=None, **params):
-    """Call the API and return the `result` part of its {success, data: {message, result}} envelope."""
+    """Call the API and return the `result` part of its {success, data: {message, result}} envelope.
+    A 5xx answer or a lost connection is retried after 10 s, up to 3 tries in all."""
     q = "?" + urllib.parse.urlencode(params) if params else ""
-    req = urllib.request.Request(URL + path + q, data=json.dumps(body).encode() if body is not None else None, headers=HEADERS, method=method)
-    try:
-        with urllib.request.urlopen(req, timeout=120) as r: out = json.load(r)
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(f"{method} {path} -> {e.code}: {e.read().decode()[:1500]}") from None
+    tries = int(os.environ.get("FREYA_RETRIES", "3"))
+    for attempt in range(tries):
+        req = urllib.request.Request(URL + path + q, data=json.dumps(body).encode() if body is not None else None, headers=HEADERS, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r: out = json.load(r)
+            break
+        except urllib.error.HTTPError as e:
+            msg = f"{method} {path} -> {e.code}: {e.read().decode()[:1500]}"
+            if e.code not in RETRY_STATUS or attempt == tries - 1: raise RuntimeError(msg) from None
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            msg = f"{method} {path} -> {type(e).__name__}: {e}"
+            if attempt == tries - 1: raise RuntimeError(msg) from None
+        print(f"freya: {msg[:200]}; retrying in 10 s ({attempt + 2}/{tries})", flush=True); time.sleep(10)
     return out.get("data", {}).get("result", out) if isinstance(out, dict) else out
+
+def list_simulations(limit=10):
+    """The workspace's latest simulations. Only one runs at a time; a new test waits for a running one."""
+    r = api("GET", "/api/v2/simulations", limit=limit)
+    return r.get("simulations") or r.get("items") or (r if isinstance(r, list) else [])
+
+def cancel_simulation(sim_id):
+    """Stop a simulation that is stuck in 'running' (organisers saw one stay 'running' for 9 hours)."""
+    return api("POST", f"/api/v2/simulations/{sim_id}/cancel")
 
 _ws = None
 def workspace_id():

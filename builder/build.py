@@ -56,6 +56,50 @@ def finalize(spec, openapi):
 DOCS_TEXT = [""]                              # the materials, for the quote and code checks
 
 
+PROTECTED = {"currency_word", "calendar", "callback", "confirm", "identity", "products", "bands", "ladder", "events",
+             "tool_bodies", "lines", "max_not_talk", "calendar.workdays", "identity.questions", "products.names",
+             "callback.days", "callback.start", "callback.end"}
+
+
+def degrade(spec, openapi, rounds=12):
+    """Last resort after the repair budget: remove the optional values the structural check rejects (a value the
+    format cannot hold), one at a time, and list each under unsupported_rules so the build is INCOMPLETE, never
+    silently 'fixed'. Required parts (bands, events, lines, identity questions...) are never removed: if those are
+    still malformed the build stops as before."""
+    from builder import spec_model
+    spec, dropped = copy.deepcopy(spec), []
+    for _ in range(rounds):
+        errs = spec_model.check(finalize(copy.deepcopy(spec), openapi))
+        if not errs:
+            break
+        raw_keys = [k for k in errs[0].split(":", 1)[0].strip().split(".") if k]
+        keys, node = [], spec                  # Pydantic adds union-member tags (".str", ".dict[str,str]"): stop at the
+        for k in raw_keys:                     # deepest key that really exists in the spec
+            if isinstance(node, dict) and k in node:
+                node = node[k]
+            elif isinstance(node, list) and k.isdigit() and int(k) < len(node):
+                node = node[int(k)]
+            else:
+                break
+            keys.append(k)
+        path = ".".join(keys)
+        if not keys or path in PROTECTED or len(keys) == 1 and keys[0] in PROTECTED:
+            break
+        parent = spec
+        for k in keys[:-1]:
+            parent = parent[int(k)] if isinstance(parent, list) else parent[k]
+        last = keys[-1]
+        if not isinstance(parent, dict):
+            break
+        if isinstance(parent.get(last), (dict, list)) and path.count(".") < 1:
+            break
+        val = parent.pop(last)
+        msg = f"{path} = {json.dumps(val, ensure_ascii=False)[:160]} could not be expressed ({errs[0].split(':', 1)[-1].strip()[:120]}); dropped"
+        dropped.append(msg)
+        spec.setdefault("unsupported_rules", []).append(msg)
+    return spec, dropped
+
+
 def local_checks(spec, openapi):
     from builder import extract, policy, spec_model
     results = selftest.run_all(spec, openapi)
@@ -172,6 +216,13 @@ def main():
         trace.note("uncertain (no evidence recorded for a critical policy): " + u_)
     for u in spec_model.unsupported(spec):    # valid policy the engine cannot carry out as written: say so, never change it
         trace.note("UNSUPPORTED by the engine (policy kept as the brief states it): " + u)
+    if chk["structural"]:                     # never zero: drop what cannot be expressed, say so, deploy the rest
+        spec, dropped = degrade(spec, openapi)
+        if dropped:
+            trace.note("DEGRADED: values the format cannot hold were dropped so an agent can still be deployed "
+                       "(each is listed as not carried):" + "".join("\n  - " + d for d in dropped))
+            chk = local_checks(spec, openapi)
+            report_checks(trace, chk, "degraded")
     (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
     if chk["structural"]:                     # the engine only ever gets a structurally valid spec
         trace.note("STOP: the spec is still malformed; not deploying:" + "".join("\n  - " + e for e in chk["structural"]))

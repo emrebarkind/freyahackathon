@@ -172,3 +172,17 @@ def test_a_rule_for_one_product_type_does_not_apply_to_the_other_types():
         assert (f("credit_card"), f("personal_loan")) == (312.34, 47.0)
     finally:
         S = saved
+
+
+def test_never_zero_drops_an_inexpressible_optional_value_and_flags_it():
+    from builder import build, spec_model
+    raw = json.load(open(ROOT / "submission" / "brief-b.spec.json"))
+    raw["products"]["step_round"] = {"credit_card": "up:5"}                  # not a form step_round accepts
+    raw["events"]["refused"]["note"] = 7                                     # wrong type in an optional field
+    assert spec_model.check(build.finalize(copy.deepcopy(raw), O))
+    fixed, dropped = build.degrade(raw, O)
+    assert not spec_model.check(build.finalize(copy.deepcopy(fixed), O)) and len(dropped) == 2
+    assert all(any(d[:20] in u for u in fixed["unsupported_rules"]) for d in dropped)   # INCOMPLETE, never silent
+    broken = json.load(open(ROOT / "submission" / "brief-b.spec.json"))
+    broken["bands"] = "early"                                                # a required part: not dropped
+    assert build.degrade(broken, O)[1] == []

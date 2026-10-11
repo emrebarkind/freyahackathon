@@ -65,6 +65,15 @@ def main():
     for rep in range(a.reps):
         for attempt in range(1 + a.rerun_if_slow):                   # organisers: a run made while the model was slow is thrown away and repeated
             rows, sim_id, it_id, status, took, med = run_once(a.agent_id, cases, ids)
+            # organisers: no tool call for any customer and a 0 s agent turn is an outage, not your agent. Do not
+            # "fix" the workflow after such a run: wait and run it again.
+            if all(not r["tools"] for r in rows) and all(not r.get("slowest_turn_s") for r in rows):
+                print("-- OUTAGE: no tool calls and 0 s agent turns in every call. This run is not a result. Waiting 5 minutes, then repeating it.\n", flush=True)
+                time.sleep(300)
+                rows, sim_id, it_id, status, took, med = run_once(a.agent_id, cases, ids)
+                if all(not r["tools"] for r in rows) and all(not r.get("slowest_turn_s") for r in rows):
+                    print("-- OUTAGE again: stop here and rerun later; nothing below is a measurement of the agent.", flush=True)
+                    for r in rows: r["outage"] = True
             if med <= 10 or attempt == a.rerun_if_slow: break
             print(f"-- run discarded: median slowest turn {med:.0f} s. Waiting 5 minutes, then repeating it.\n", flush=True); time.sleep(300)
         reps.append(rows); total_s += took
@@ -76,7 +85,7 @@ def main():
         for f in final: print(("PASS" if f["pass"] else "FAIL"), f["id"], f"{f['passes']}/{f['runs']}")
     print(f"\n{n} / {len(final)} passed (bank records and conversation checks){'' if a.reps == 1 else f', a customer counts with {need} of {a.reps} runs'}. Last simulation {sim_id}, status {status}, {total_s:.0f} s.")
     with open(ROOT / "results" / "log.jsonl", "a") as f:      # one line per run, the record of how the score moved over time
-        f.write(json.dumps({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "agent_id": a.agent_id, "brief": a.brief, "runs": a.reps, "passed": n, "total": len(final), "seconds": round(total_s), "failed": [f["id"] for f in final if not f["pass"]]}) + "\n")
+        f.write(json.dumps({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "agent_id": a.agent_id, "brief": a.brief, "runs": a.reps, "passed": n, "total": len(final), "seconds": round(total_s), "failed": [f["id"] for f in final if not f["pass"]], "outage": any(r.get("outage") for rep in reps for r in rep)}) + "\n")
     if a.out:
         pathlib.Path(a.out).parent.mkdir(parents=True, exist_ok=True)
         json.dump({"agent_id": a.agent_id, "simulation_id": sim_id, "iteration_id": it_id, "seconds": round(total_s), "passed": n, "total": len(final), "runs": a.reps, "final": final, "rows": reps[-1], "all_rows": reps}, open(a.out, "w"), indent=1)

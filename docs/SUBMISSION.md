@@ -60,3 +60,14 @@ the Freya workflow id, agent id, node and call counts, and every test the builde
 
 Keys stay in `env.sh` (git-ignored). Every trace is scrubbed of `fak_…` and `sk-ant-…` before it is written, and
 `final_run.sh` refuses a trace that still contains one.
+
+## Platform rules of thumb (organisers, 11 Oct)
+
+1. Check the parts one by one: a 504 from `/api/v2/chat/message` does not mean simulations are down.
+2. See what runs in the workspace: `python3 scripts/sims.py` (GET /api/v2/simulations?limit=10). Only one
+   simulation runs at a time.
+3. Never stop `run_cases.py` on our side: the simulation keeps running on Freya and the next test waits for it.
+4. A simulation stuck in "running" can be cancelled: `python3 scripts/sims.py cancel <id>`.
+5. 5xx answers are retried: `kit/build-the-builder/freya.py` now waits 10 s and tries up to 3 times.
+6. No tool call for any customer and a 0 s agent turn is an outage, not our agent: `run_cases.py` reports
+   "OUTAGE", waits 5 minutes and repeats the run once. Never "fix" the workflow after such a run.
