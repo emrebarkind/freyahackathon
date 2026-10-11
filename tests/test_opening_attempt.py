@@ -53,3 +53,16 @@ def test_eight_digit_birth_dates_in_the_briefs_order(monkeypatch):
     assert engine.normalize_answer({"kind": "date"}, "1988-03-14") == "1988-03-14"   # written dates are not digit strings
     monkeypatch.setattr(engine, "S", {"identity": {"date_order": "mdy"}})
     assert engine.normalize_answer({"kind": "date"}, "06211985") == "1985-06-21"
+
+
+
+def test_digit_order_comes_from_the_brief_never_assumed(monkeypatch):
+    from builder.runtime import engine
+    monkeypatch.setattr(engine, "S", {"identity": {}})                       # the brief states no order
+    assert engine.normalize_answer({"kind": "date"}, "21061985") == ""      # asked again, not guessed
+    assert engine.normalize_answer({"kind": "date", "format": "%Y%m%d"}, "19850621") == "1985-06-21"
+    assert engine.normalize_answer({"kind": "date", "format": "%m%d%Y"}, "06211985") == "1985-06-21"
+    assert engine.normalize_answer({"kind": "date", "format": "%d%m%Y"}, "21061985") == "1985-06-21"
+    assert engine.normalize_answer({"kind": "date", "format": "%d/%m/%Y"}, "21061985") == ""   # not a digit-string format
+    monkeypatch.setattr(engine, "S", {"identity": {"date_order": "mdy"}})
+    assert engine.normalize_answer({"kind": "date"}, "06211985") == "1985-06-21"

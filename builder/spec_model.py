@@ -235,6 +235,11 @@ def unsupported(spec):
             if not b.get("ladder") and 0 < steps < b.get("attempts", 0) and not repeat:
                 out.append(f"band {b.get('name')} allows {b['attempts']} attempts but the ladder has {steps} step(s) and the "
                            f"brief does not say to repeat the last one: persuasion stops after {steps} attempt(s)")
+        P_ = spec.get("products") or {}
+        if P_.get("promise_integer") and float(P_.get("promise_scale") or P_.get("amount_scale") or 1) == 1 \
+                and P_.get("promise_round") not in ("up", "down", "nearest"):
+            out.append("create_promise takes whole units and the brief gives no rounding rule (products.promise_round): "
+                       "an amount with a fraction is sent as is and the bank may refuse it")
         if not (spec.get("callback") or {}).get("days", ["x"]):
             out.append("no callback day is allowed: every callback request closes as no_callback")
     except Exception as e:

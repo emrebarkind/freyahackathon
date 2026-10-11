@@ -867,12 +867,21 @@ def normalize_answer(q, text):
         return ""
     if kind == "date":
         order = S["identity"].get("date_order", "dmy")
-        d = digits_only(text)                       # eight digits in the brief's order: 21061985 (dmy) or 06211985 (mdy)
+        d = digits_only(text)
+        # eight digits only in an order the brief states: the answer format (%d%m%Y, %m%d%Y, %Y%m%d) or an explicit
+        # identity.date_order. Without either, no digit order is assumed and the answer is asked for again.
+        fm = re.fullmatch(r"%([dmY])%([dmY])%([dmY])", str(q.get("format") or ""))
+        seq = "".join(fm.groups()) if fm and sorted(fm.groups()) == ["Y", "d", "m"] else \
+            {"dmy": "dmY", "mdy": "mdY"}.get(S["identity"].get("date_order") or "", "")
         t_ = str(text).strip().lower()
         one_by_one = bool(re.fullmatch(r"(\d\s*)+", t_)) or bool(re.fullmatch(
             r"(oh|zero|one|two|three|four|five|six|seven|eight|nine)(\s+(oh|zero|one|two|three|four|five|six|seven|eight|nine))*", t_))
-        if len(d) == 8 and one_by_one:               # only when the answer is nothing but digits, never a written date
-            day, mon, yr = (d[0:2], d[2:4], d[4:8]) if order == "dmy" else (d[2:4], d[0:2], d[4:8])
+        if len(d) == 8 and one_by_one and seq:       # only when the answer is nothing but digits, never a written date
+            pos, i = dict(), 0
+            for c in seq:
+                n = 4 if c == "Y" else 2
+                pos[c], i = d[i:i + n], i + n
+            day, mon, yr = pos["d"], pos["m"], pos["Y"]
             try:
                 return datetime.date(int(yr), int(mon), int(day)).isoformat()
             except ValueError:
@@ -1764,12 +1773,24 @@ def record_next(V, s):
 
 
 def promise_amount(p):
-    # create_promise may take another unit than get_account gives (pounds in, pence out): promise_scale, else amount_scale
+    """The amount sent to create_promise, in the unit the tool API takes (promise_scale, else amount_scale). Minor units
+    and integer fields take whole numbers. A value that is not whole after conversion is never cut silently: the brief's
+    rounding rule (products.promise_round) applies, and without one the value is sent as is, so the bank's refusal ends
+    on the service_error path instead of recording an amount nobody agreed."""
     scale = float(S["products"].get("promise_scale") or S["products"].get("amount_scale") or 1)
-    a = round(p["agreed"][0] * scale, 2)
-    if S["products"].get("promise_integer"):           # the API declares an integer: whole units, rounded to nearest
+    a = p["agreed"][0] * scale
+    if not (S["products"].get("promise_integer") or scale != 1):
+        return round(a, 2)
+    if abs(a - round(a)) < 1e-6:                       # whole after conversion (float noise only): 85.5 -> 8550
         return int(round(a))
-    return int(round(a)) if scale != 1 else a
+    rule = S["products"].get("promise_round")
+    if rule == "up":
+        return int(a) + 1
+    if rule == "down":
+        return int(a)
+    if rule == "nearest":
+        return int(a + 0.5)
+    return round(a, 6)
 
 
 def for_products(prods, key, name_them):

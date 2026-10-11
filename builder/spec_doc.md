@@ -39,7 +39,8 @@ use the default shown and record it in `assumptions`.
    ],
    "max_wrong": 3,                                 // wrong answers in total that end the check
    "max_wrong_per_question": null,                 // only if the brief counts wrong answers per question instead
-   "date_order": "dmy",                            // how a numeric-only date is read: "dmy" or "mdy"
+   "date_order": null,                             // only if the brief states how a numeric date is ordered: "dmy" or "mdy"
+                                                   // (a stated answer format such as %d%m%Y also decides it)
    "hints": {"<hint value from the tool API>": "<what the agent says when that hint comes back>"},
    "purpose_is_decline": true,                     // asking what the call is about instead of answering counts as declining
    "question_is_decline": false,
@@ -58,6 +59,8 @@ use the default shown and record it in `assumptions`.
    "amount_scale": 1,                              // 100 only if get_account gives amounts in cents/pence (minor units)
    "promise_scale": null,                          // only if create_promise takes another unit than get_account gives:
                                                    // 100 when get_account is in pounds/euros but create_promise wants pence/cents
+   "promise_round": null,                          // only if the brief says how to round a promise to the unit create_promise
+                                                   // takes: "up", "down" or "nearest"; never invent one
    "floor_round": null                             // with floor_pct only: "up_unit" (round up to a whole unit) or "nearest_unit"
    // If the account records have no product type, use the key "*" in names / floor_field / floor_names.
    // Optional, normally read from the tool API file: "list_field" (the array of products in the get_account

@@ -45,3 +45,30 @@ def test_integer_api_without_a_stated_unit_is_an_error():
     assert any("integer amount" in e for e in extract.validate(s, o))
     s["products"]["promise_scale"] = 1
     assert not any("integer amount" in e for e in extract.validate(s, o))
+
+
+def _amount(monkeypatch, agreed, **products):
+    monkeypatch.setattr(engine, "S", {"products": products})
+    return engine.promise_amount({"agreed": [agreed, ""]})
+
+
+def test_no_silent_rounding_after_unit_conversion(monkeypatch):
+    assert _amount(monkeypatch, 85.5, promise_scale=100, promise_integer=True) == 8550
+    assert _amount(monkeypatch, 0.29, promise_scale=100, promise_integer=True) == 29          # 28.999999... is float noise
+    # whole-pound integer field, 412.37 agreed: the brief's rule decides; without one nothing is cut
+    assert _amount(monkeypatch, 412.37, promise_integer=True, promise_round="up") == 413
+    assert _amount(monkeypatch, 412.37, promise_integer=True, promise_round="down") == 412
+    assert _amount(monkeypatch, 412.5, promise_integer=True, promise_round="nearest") == 413
+    assert _amount(monkeypatch, 412.37, promise_integer=True) == 412.37
+    assert _amount(monkeypatch, 85.555, promise_scale=100, promise_integer=True) == 8555.5   # a fraction of a penny: sent as is
+    assert _amount(monkeypatch, 85.5) == 85.5                                                  # kit API: pounds, number
+
+
+def test_unstated_rounding_for_whole_units_is_reported():
+    from builder import spec_model
+    o = integer_api()
+    s = comp.apply_defaults(copy.deepcopy(E.A), o)
+    s["products"]["promise_scale"] = 1
+    assert any("no rounding rule" in r for r in spec_model.unsupported(s))
+    s["products"]["promise_round"] = "down"
+    assert not any("no rounding rule" in r for r in spec_model.unsupported(s))
