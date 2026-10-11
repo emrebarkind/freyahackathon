@@ -494,6 +494,16 @@ def apply_defaults(spec, openapi):
     except KeyError:
         amt = {}
     spec.setdefault("products", {})["promise_integer"] = amt.get("type") == "integer"   # the API takes whole units only
+    paths = openapi.get("paths") or {}
+    if "/schedule_callback" not in paths:     # tools the API does not offer: the policy that needs them cannot apply
+        spec.setdefault("callback", {})["days"] = []
+    for e in (spec.get("events") or {}).values():
+        if "/transfer_to_agent" not in paths and e.get("queue"):
+            e["queue"] = ""
+        if "/add_note" not in paths and e.get("note"):
+            e["note"] = ""
+    if "/add_note" not in paths:
+        spec.setdefault("notes", {})["enabled"] = False
     spec.setdefault("products", {}).update({k: v for k, v in account_shape(openapi, spec).items()
                                             if k not in spec["products"]})
     rs = spec.setdefault("responses", {})
@@ -526,7 +536,10 @@ def compile_workflow(spec, openapi):
     nodes["talk_open_again"] = dict(talk_node("open", spec), name="talk_open_again")
     allv = spec["identity"].get("response", {}).get("all_verified")
     for node, tool in API_NODES.items():
-        schema = openapi["paths"]["/" + tool]["post"]["requestBody"]["content"]["application/json"]["schema"]
+        try:
+            schema = openapi["paths"]["/" + tool]["post"]["requestBody"]["content"]["application/json"]["schema"]
+        except KeyError:                # a tool the API does not offer: the engine never routes to it (apply_defaults)
+            schema = {"properties": {}}
         types = {k: ("number" if v.get("type") in ("number", "integer") else v.get("type", "string"))
                  for k, v in schema.get("properties", {}).items()}
         types = {k: (t if t in ("string", "number", "boolean") else "string") for k, t in types.items()}
@@ -534,7 +547,9 @@ def compile_workflow(spec, openapi):
         if node == "api_close_nr":      # close without a reason field (outcomes whose table lists no reason)
             mapping = {k: v for k, v in mapping.items() if v != "c_reason"}
         sfx = re.search(r"_[23]$", node).group(0) if re.search(r"_[23]$", node) else ""
-        body = {k: (v if str(v).startswith("const:") else "{{" + v + sfx + "}}") for k, v in mapping.items()}
+        # customer_id is the call's own variable (the customer reference, whatever the API calls it): never suffixed
+        body = {k: (v if str(v).startswith("const:") else "{{customer_id}}" if v == "customer_id" else "{{" + v + sfx + "}}")
+                for k, v in mapping.items()}
         if "customer_id" in schema.get("properties", {}):
             body["customer_id"] = "{{customer_id}}"
         if node in ("api_close", "api_close_nr"):

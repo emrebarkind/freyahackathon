@@ -172,7 +172,7 @@ def test_postcode_and_year_identity_from_variant_c():
     V0 = dict(customer_id="c", first_name="Alex", last_name="Morgan", title="Mr", now="2026-10-14T11:00")
     turns = [dict(k="confirmed"), dict(k="answer", t="it's S W one A, one A A"), dict(k="answer", t="nineteen"),
              dict(k="answer", t="eighty-five"), dict(k="already_paid")]
-    led, tr = selftest.simulate(spec, V0, bank, turns)
+    led, tr = selftest.simulate(spec, V0, bank, turns, openapi=json.load(open(ROOT / "variants" / "brief-c.openapi.json")))
     assert led["outcome"] == spec["events"]["paid"]["outcome"], tr
 
 

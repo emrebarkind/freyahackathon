@@ -1,6 +1,6 @@
 """Policies that differ between briefs must come from the brief, never from brief A by default.
 1. "Last business day of this week" when today is that day: next week only if the brief says so.
-2. A ladder step that would repeat an earlier proposal is skipped and uses no attempt (attempts are proposals)."""
+2. A ladder step that would repeat an earlier proposal is skipped; whether it uses an attempt is the brief's call."""
 import copy
 import datetime
 import pathlib
@@ -45,7 +45,7 @@ def offers_on_friday(spec, attempts):
 
 def test_a_skipped_repeat_uses_no_attempt():
     spec = copy.deepcopy(E.A)
-    spec["rules"] = dict(spec["rules"], opening_is_attempt=True)
+    spec["rules"] = dict(spec["rules"], opening_is_attempt=True, skipped_repeat_counts=False)   # q1's own rule
     spec["rules"].pop("week_end_today", None)                 # the step is read literally: today
     spec["ladder"] = [dict(amount="full", date="today"), dict(amount="full", date="last_business_day_this_week"),
                       dict(amount="full", date="deadline")]

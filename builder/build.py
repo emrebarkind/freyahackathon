@@ -78,20 +78,33 @@ def repair_loop(spec, chk, openapi, docs, trace, budget):
             cand = finalize(extract.repair_behaviour(copy.deepcopy(spec), "\n".join(problems), docs, openapi, trace), openapi)
         except Exception as e:
             trace.note(f"repair failed ({type(e).__name__}: {e}); keeping the current spec")
-            continue
+            break
         c2 = local_checks(cand, openapi)
         report_checks(trace, c2, "candidate")
         touched = extract.diff(spec, cand)
         id_failed = any("identity" in n for n in chk["failed"])
         score = lambda c: (len(c["structural"]), len(c["api"]), len(c["failed"]))
         not_worse = all(x <= y for x, y in zip(score(c2), score(chk)))
+        new_failed = set(c2["failed"]) - set(chk["failed"])     # a scenario that passed before must still pass
+        lost = extract.coverage(spec) - extract.coverage(cand)  # no stated value may be dropped
+        more_unsup = len(cand.get("unsupported_rules") or []) > len(spec.get("unsupported_rules") or [])
+        if new_failed or lost:
+            trace.note("repair rejected: " + (f"new failures {sorted(new_failed)}" if new_failed else "") +
+                       (f" dropped stated values {sorted(lost)[:6]}" if lost else ""))
+            not_worse = False
         if "identity.questions" in touched and not id_failed and not chk["structural"]:
             trace.note("repair changed the identity questions although no identity scenario failed; rejected")
-        elif not_worse and score(c2) < score(chk):
+        elif not_worse and score(c2) < score(chk) and not more_unsup:
             spec, chk = cand, c2
             trace.note("repaired spec accepted")
         else:
-            trace.note("repaired spec not better; rejected")
+            new_unsup = [r for r in cand.get("unsupported_rules") or [] if r not in (spec.get("unsupported_rules") or [])]
+            if new_unsup:                     # the failure is a rule the format cannot carry: report it, change nothing else
+                spec["unsupported_rules"] = list(spec.get("unsupported_rules") or []) + new_unsup
+                trace.note(f"repair named {len(new_unsup)} rule(s) the spec cannot carry; reported, the spec is unchanged")
+            trace.note("repaired spec not better; rejected. No further repair rounds: a failure a repair does not improve "
+                       "is not a reading mistake (an engine limit or the synthetic test)")
+            break
     return spec, chk
 
 
@@ -139,6 +152,8 @@ def main():
     report_checks(trace, chk, "local")
     if not a.spec:
         spec, chk = repair_loop(spec, chk, openapi, docs, trace, budget)
+    for a_ in spec_model.assumed(spec):          # a default where the brief is silent: visible, never hidden
+        trace.note("assumption (engine default, the brief is silent): " + a_)
     for u in spec_model.unsupported(spec):    # valid policy the engine cannot carry out as written: say so, never change it
         trace.note("UNSUPPORTED by the engine (policy kept as the brief states it): " + u)
     (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
@@ -155,7 +170,7 @@ def main():
     (out_dir / f"{slot}.compiled.json").write_text(json.dumps(wf, indent=1))
 
     if a.no_deploy:
-        trace.end()
+        finish(trace, spec, chk)
         return
     import freya
     trace.step("4. validate, save, publish")
@@ -174,6 +189,19 @@ def main():
     freya.export_workflow(ids["workflow_id"], str(path))
     trace.note(f"exported {path.relative_to(ROOT)}")
     print(json.dumps({"workflow_id": ids["workflow_id"], "agent_id": ids["agent_id"], "export": str(path.relative_to(ROOT))}))
+    finish(trace, spec, chk)
+
+
+def finish(trace, spec, chk):
+    """The run's verdict. INCOMPLETE when a rule of the materials is not carried or a local scenario still fails:
+    the agent exists and is exported, but the run is not reported as a success (exit status 3)."""
+    from builder import spec_model
+    gaps = spec_model.critical(spec) + [f"local scenario fails: {n}" for n in chk.get("failed", [])]
+    if gaps:
+        trace.note("RESULT: INCOMPLETE -- the agent does not meet these:" + "".join("\n  - " + g for g in gaps))
+        trace.end()
+        sys.exit(3)
+    trace.note("RESULT: COMPLETE -- every rule carried, every local scenario passes")
     trace.end()
 
 

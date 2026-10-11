@@ -96,7 +96,18 @@ class Products(Loose):
     amount_field: Optional[str] = None       # the engine defaults to past_due / days_late; extract.validate checks
     days_field: Optional[str] = None         # the field actually used against the tool API's account record
     floor_field: Dict[str, str] = {}
-    floor_pct: Optional[Union[int, float]] = Field(default=None, ge=0, le=100)
+    floor_pct: Optional[Union[int, float, Dict[str, Union[int, float]]]] = None
+    floor_min: Optional[Union[int, float, Dict[str, Union[int, float]]]] = None
+    floor_round: Optional[str] = Field(default=None, pattern=r"^(up_unit|nearest_unit|(up|nearest|down):[0-9]*\.?[0-9]+)$")
+    step_round: Optional[str] = Field(default=None, pattern=r"^(up_unit|nearest_unit|(up|nearest|down):[0-9]*\.?[0-9]+)$")
+
+    @field_validator("floor_pct")
+    @classmethod
+    def _pct(cls, v):
+        for x in (v.values() if isinstance(v, dict) else [v] if v is not None else []):
+            if not 0 <= x <= 100:
+                raise ValueError(f"floor_pct {x} is not a percentage")
+        return v
     floor_names: Dict[str, str] = {}
     amount_scale: Union[int, float] = Field(default=1, gt=0)
     promise_scale: Optional[Union[int, float]] = Field(default=None, gt=0)   # create_promise unit, if not amount_scale's
@@ -251,8 +262,37 @@ def unsupported(spec):
             out.append("a ladder step uses the last business day of this week and the brief does not say what happens "
                        "when today is that day: read literally (today; a step equal to an earlier proposal is skipped), "
                        "not moved to next week")
+        for r in spec.get("unsupported_rules") or []:
+            out.append("rule the spec cannot carry, not applied: " + str(r))
         if not (spec.get("callback") or {}).get("days", ["x"]):
             out.append("no callback day is allowed: every callback request closes as no_callback")
     except Exception as e:
         out.append(f"could not check engine support: {type(e).__name__}")
+    return out
+
+
+def assumed(spec):
+    """Defaults the engine uses where the brief says nothing; written to the trace as assumptions."""
+    out = []
+    try:
+        steps = list(spec.get("ladder") or []) + [x for b in spec.get("bands") or [] for x in (b.get("ladder") or [])]
+        if len(steps) > 1 and (spec.get("rules") or {}).get("skipped_repeat_counts") is None:
+            out.append("the brief does not say whether a ladder step skipped as a repeat of an earlier proposal uses one "
+                       "of the band's proposals: it does")
+        if (spec.get("rules") or {}).get("promise_retries") is None:
+            out.append("the brief does not say whether a failed create_promise is retried: once")
+    except Exception as e:
+        out.append(f"could not list the defaults: {type(e).__name__}")
+    return out
+
+
+def critical(spec):
+    """Rules from the materials the built agent does not carry out. Any of these makes the build INCOMPLETE: the
+    agent is still deployed and exported (an entry needs one), but the run never reports success."""
+    out = ["not carried: " + str(r) for r in spec.get("unsupported_rules") or []]
+    P_ = spec.get("products") or {}
+    if P_.get("promise_integer") and float(P_.get("promise_scale") or P_.get("amount_scale") or 1) == 1 \
+            and P_.get("promise_round") not in ("up", "down", "nearest"):
+        out.append("create_promise takes whole units and the materials give no rounding rule: amounts with a "
+                   "fraction are not recorded")
     return out

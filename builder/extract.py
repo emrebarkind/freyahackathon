@@ -49,7 +49,7 @@ SLOTS = {"verify_identity": {"q_field", "q_answer"}, "get_account": set(),
          "close_call": {"c_outcome", "c_reason"}}
 
 
-ALL_SLOTS = set().union(*SLOTS.values()) | {"cb_datetime"}
+ALL_SLOTS = set().union(*SLOTS.values()) | {"cb_datetime", "customer_id"}   # customer_id: the call variable
 PLACEHOLDERS = {"title", "first_name", "last_name", "name", "amount", "date", "days", "time", "deadline", "floor", "full"}
 STATEMENT_LINES = {"robot", "scam", "tp_no_info", "not_talk_once", "id_wrong", "id_why", "id_explain", "no_info",
                    "below_floor_again", "paid_line", "dispute_line", "recorded", "sms_line", "record_failed"}
@@ -100,6 +100,8 @@ def validate(spec, openapi):
             errs.append(f"events.{k} missing")
     tb = spec["tool_bodies"]
     for tool, slots in SLOTS.items():
+        if "/" + tool not in (openapi.get("paths") or {}):
+            continue                          # the API does not offer this tool: nothing to map (apply_defaults)
         if tool not in tb:
             errs.append(f"tool_bodies.{tool} missing")
             continue
@@ -199,8 +201,9 @@ def validate(spec, openapi):
                           ("identity.date_order", ("dmy", "mdy")),
                           ("rules.first_ask", ("today", "deadline")),
                           ("rules.too_much_floor", ("attempt_1", "asked_date")),
-                          ("products.floor_round", ("up_unit", "nearest_unit")),
                           ("rules.week_end_today", ("next_week", "today")),
+                          ("rules.skipped_repeat_counts", (True, False)),
+                          ("rules.promise_retries", (0, 1, 2, 3)),
                           ("products.promise_round", ("up", "down", "nearest"))):
         v = get(spec, path)
         if v is not None and v not in allowed:
@@ -292,7 +295,9 @@ differently from what your spec's own events say they should:
 Some failures can come from the synthetic test itself (it uses generic data). Re-read the materials. If a failure shows a
 real mistake in the spec (a wrong code, field, window, limit, missing line or rule), fix it. Never remove or loosen a
 value the materials state (a length, a format, a limit, a code, a window) just to make a test pass: if the materials
-decide it, keep it. Output the complete spec JSON in a ```json block."""
+decide it, keep it. If a failure comes from a rule this spec format has no field for, do not bend other values to
+imitate it: add the rule, quoted, to `unsupported_rules` and leave the rest as the materials say. Output the complete
+spec JSON in a ```json block."""
 
 REPAIR = """Your spec has these problems:
 {errs}
@@ -304,7 +309,8 @@ fields one by one against the documents: {fields}.
 For each field: find the sentence(s) in the bank materials or the tool API file that decide it (a later memo or
 dated change beats the rule it changes), quote them, and say whether the spec value carries out exactly what they
 say. Then list every rule in the materials that the spec does not carry at all (a holiday, a band, a code, a
-limit, a format, an exception).
+limit, a format, an exception). A rule that no spec field can carry goes, quoted, into "unsupported_rules" (a list);
+never approximate it with a nearby value.
 
 <spec>
 {spec}
@@ -406,6 +412,38 @@ def prune_hint(spec, openapi):
         r.pop("hint")
 
 
+COVERAGE_KEYS = ("calendar", "callback", "identity", "products", "bands", "bands_outside", "ladder", "rules", "events",
+                 "notes", "multi", "date_rules", "confirm")
+
+
+def coverage(spec):
+    """Paths of the policy values a spec states. A repair may change values; it may not drop one."""
+    out = set()
+
+    def walk(x, path):
+        if isinstance(x, dict):
+            for k, v in x.items():
+                walk(v, path + "." + str(k))
+        elif isinstance(x, list):
+            if not x:
+                return
+            for i, v in enumerate(x):
+                walk(v, path + "." + str(i))
+        elif x not in (None, "", False):
+            out.add(path)
+    for k in COVERAGE_KEYS:
+        walk(spec.get(k), k)
+    return out
+
+
+def progress(old, new, old_errs, new_errs):
+    """A repair counts only if it fixes problems, adds none, keeps every stated value and moves no rule out of the
+    agent's behaviour (a new unsupported_rules entry is a rule not carried, never an improvement)."""
+    lost = coverage(old) - coverage(new)
+    more_unsupported = len(new.get("unsupported_rules") or []) > len(old.get("unsupported_rules") or [])
+    return len(new_errs) < len(old_errs) and set(new_errs) <= set(old_errs) and not lost and not more_unsupported, lost
+
+
 def validate_loop(spec, base, openapi, trace, budget):
     for attempt in range(10):                 # bounded by the shared repair budget
         spec_model.normalise(spec)
@@ -423,8 +461,14 @@ def validate_loop(spec, base, openapi, trace, budget):
         except Exception as e:
             trace.note(f"repair answer did not parse ({e}); keeping the previous spec")
             continue
-        if len(validate(fixed, openapi)) <= len(errs):
+        spec_model.normalise(fixed)
+        ok, lost = progress(spec, fixed, errs, validate(fixed, openapi))
+        if ok:
             spec = fixed
+        else:                                 # no progress: another round would only spend time
+            trace.note("validation repair rejected (no progress" + (f"; it dropped stated values: {sorted(lost)[:6]}" if lost else "")
+                       + "); no further validation repairs")
+            break
     return spec
 
 
