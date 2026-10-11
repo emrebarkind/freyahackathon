@@ -1,0 +1,5 @@
+PASS PUB-13 hard   Multi-product  | verify > verify > get_account > promise > promise > close_call
+
+slowest agent turn per call: median 9 s, worst 9 s. Failed calls where the customer hung up: 0.
+
+1 / 1 passed (bank records and conversation checks). Last simulation 9a2c49a3-2e10-482c-8552-a2421e36e37f, status completed, 86 s.
