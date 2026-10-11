@@ -1,0 +1,10 @@
+{
+  "team": "Emre",
+  "members": ["Emre"],
+  "repo": "https://github.com/emrebarkind/freyahackathon",
+  "commit": "<commit that holds the builder used and the committed export + trace>",
+  "run_command": "python3 builder/build.py {case_folder} {mock_url}",
+  "workflow": "submission/<slot>.workflow.json",
+  "trace": "traces/<slot>.log",
+  "mock_url": "<https://<worker>.<account>.workers.dev>"
+}

@@ -160,6 +160,88 @@ def repair_loop(spec, chk, openapi, docs, trace, budget):
     return spec, chk
 
 
+COLLECTIONS_TOOLS = ("verify_identity", "get_account", "create_promise", "close_call")   # the specialised engine's tools
+
+
+def agent_main(a, docs, openapi, api_path, mock_url, unread, mnotes):
+    """General mode (builder/agent_mode.py): the materials do not describe the collections call the engine knows."""
+    from builder import agent_mode, claude
+    slot = a.slot or pathlib.Path(a.files[0]).stem
+    trace = Trace(str(ROOT / "traces" / f"{slot}.trace.log"))
+    trace.note(f"inputs={a.files} tool_api={api_path} slot={slot}")
+    trace.note("mode: general (no tool API with the collections engine's tools: " + ", ".join(COLLECTIONS_TOOLS) + ")")
+    for n in mnotes:
+        trace.note("WARNING " + n)
+    for u in unread:
+        trace.note("UNREAD " + u)
+    trace.note("materials read: " + ", ".join(f"{n} ({len(t)} chars)" for n, t in docs))
+    base = mock_url or str(((openapi or {}).get("servers") or [{}])[0].get("url") or "")
+    if not base:
+        trace.note("STOP: no bank base URL (give the mock URL on the command line)")
+        trace.end()
+        sys.exit("no bank base URL: build.py <case folder> <mock_url>")
+    trace.note(f"bank base URL: {base}")
+    trace.step("1. agent design from the materials")
+    if a.spec:
+        d = json.load(open(a.spec))
+        trace.note(f"design loaded from {a.spec} (no model call)")
+    else:
+        d = agent_mode.design(docs, openapi, trace, claude.ask_json)
+    out_dir = ROOT / "submission"
+    out_dir.mkdir(exist_ok=True)
+    (out_dir / f"{slot}.design.json").write_text(json.dumps(d, indent=1, ensure_ascii=False))
+    trace.note(f"language: {d['language']}; tools: " + ", ".join(f"{t['method']} {t['path']} ({t['name']})" for t in d["tools"]) +
+               "; endings: " + ", ".join(e["name"] for e in d["endings"]))
+    for x in d["decisions"]:
+        trace.note(f"DECISION {x['topic']}: {x['decision']} [sources: {x['sources']}]" + (f" CONFLICT: {x['conflict']}" if x["conflict"].strip() else ""))
+    trace.step("2. compile workflow")
+    wf = agent_mode.compile_agent(d, base)
+    problems = agent_mode.checks(d, wf, base) + [f"case file not read: {u}" for u in unread]
+    for p in problems:
+        trace.note("PROBLEM " + p)
+    n_tools = sum(len(n.get("tools") or []) for n in wf["nodes"].values())
+    trace.note(f"workflow: {len(wf['nodes'])} nodes, {n_tools} tools, {len(json.dumps(wf))} bytes")
+    (out_dir / f"{slot}.compiled.json").write_text(json.dumps(wf, indent=1, ensure_ascii=False))
+    if a.no_deploy:
+        return agent_finish(trace, problems)
+    os.environ.setdefault("FREYA_RETRIES", "6")
+    import freya
+    trace.step("3. validate, save, publish")
+    try:
+        freya.validate_workflow(slot, wf)
+        trace.test("platform dry-run validation", True)
+        ids = freya.save_workflow(slot, wf, state_file=str(ROOT / ".freya-agents.json"))
+    except Exception as e:
+        trace.note(f"DEPLOY FAILED (platform): {str(e)[:300]}. Resume without a new reading: "
+                   f"python3 builder/build.py {' '.join(a.files)} --slot {slot} --spec submission/{slot}.design.json")
+        trace.end()
+        sys.exit(4)
+    trace.note(f"FREYA workflow_id={ids['workflow_id']} agent_id={ids['agent_id']} version={ids.get('version', 1)}")
+    trace.step("4. export")
+    path = out_dir / f"{slot}.workflow.json"
+    try:
+        freya.export_workflow(ids["workflow_id"], str(path))
+    except Exception as e:
+        trace.note(f"EXPORT FAILED (platform): {str(e)[:300]}. The agent is published (workflow_id={ids['workflow_id']})")
+        trace.end()
+        sys.exit(4)
+    trace.note(f"exported {path.relative_to(ROOT)}")
+    print(json.dumps({"workflow_id": ids["workflow_id"], "agent_id": ids["agent_id"], "export": str(path.relative_to(ROOT))}))
+    return agent_finish(trace, problems)
+
+
+def agent_finish(trace, problems):
+    if problems:
+        trace.note("RESULT: INCOMPLETE -- " + "; ".join(problems))
+        trace.end()
+        sys.exit(3)
+    trace.note("RESULT: COMPLETE (general mode)")
+    trace.end()
+
+
+UNREAD = []          # case files that could not be read: the run cannot end COMPLETE
+
+
 def split_inputs(files):
     """The tool API is the JSON file that is an OpenAPI document (it has 'paths'); every other file, a JSON code list
     or table included, is bank material and is read whole. With one JSON file only, that file is the tool API."""
@@ -185,25 +267,26 @@ def main():
     a = ap.parse_args()
     if not a.no_deploy and not os.environ.get("FREYA_API_KEY"):
         sys.exit("FREYA_API_KEY is not set: nothing would be deployed (source env.sh first, or use --no-deploy)")
-    tool_api, briefs = split_inputs(a.files)
-    if len(tool_api) != 1 or not briefs:
-        sys.exit("usage: build.py <brief files...> <tool_api.json> (exactly one OpenAPI file: a JSON with 'paths'; "
-                 f"found {len(tool_api)}: {tool_api})")
-    slot = a.slot or "+".join(pathlib.Path(b).stem for b in briefs)
+    from builder import materials
+    openapi, api_path, docs, mock_url, unread, mnotes = materials.gather(a.files)
+    if not docs:
+        sys.exit("usage: build.py <case folder | case.zip | files...> [mock_url]: no readable document" + (f"; {mnotes}" if mnotes else ""))
+    paths = " ".join((openapi or {}).get("paths", {}).keys())
+    if openapi is None or not all(t in paths for t in COLLECTIONS_TOOLS):
+        return agent_main(a, docs, openapi, api_path, mock_url, unread, mnotes)
+    slot = a.slot or pathlib.Path(a.files[0]).stem
     trace = Trace(str(ROOT / "traces" / f"{slot}.trace.log"))
-    trace.note(f"briefs={briefs} tool_api={tool_api[0]} slot={slot}")
-    openapi = json.load(open(tool_api[0]))
-    docs = []
-    for b in briefs:
-        raw = pathlib.Path(b).read_bytes()
-        text = raw.decode("utf-8", errors="replace")
-        bad = text.count("\ufffd")
-        if bad:                                  # never dropped silently: the reader sees the marks, the trace says so
-            trace.note(f"WARNING {b}: {bad} byte(s) are not UTF-8 and are shown as \ufffd")
-        if b"\x00" in raw[:4096] or raw[:5] == b"%PDF-":
-            trace.note(f"WARNING {b}: looks like a binary file (PDF or other); only its text bytes reach the reading")
-        docs.append((pathlib.Path(b).name, text))
-    trace.note("materials read: " + ", ".join(f"{n} ({len(t)} chars)" for n, t in docs) + f"; tool API {tool_api[0]}")
+    trace.note(f"inputs={a.files} tool_api={api_path} slot={slot}")
+    for n in mnotes:
+        trace.note("WARNING " + n)
+    for u in unread:
+        trace.note("UNREAD " + u)
+    UNREAD[:] = unread
+    if mock_url:
+        old = (openapi.get("servers") or [{}])[0].get("url")
+        openapi["servers"] = [{"url": mock_url}]
+        trace.note(f"bank base URL: {mock_url} (from the command line; the tool API file said {old})")
+    trace.note("materials read: " + ", ".join(f"{n} ({len(t)} chars)" for n, t in docs) + f"; tool API {api_path}")
     DOCS_TEXT[0] = "\n".join(text for _, text in docs) + "\n" + json.dumps(openapi, ensure_ascii=False)
 
     # One budget for the whole pipeline: every repair round anywhere (validation repairs during extraction,
@@ -262,6 +345,9 @@ def main():
         trace.note(f"STOP: the workflow could not be compiled ({type(e).__name__}: {e}); nothing deployed")
         trace.end()
         sys.exit(f"workflow compile failed: {e}")
+    COMPILED[0], BANK_BASE[0] = wf, str((openapi.get("servers") or [{}])[0].get("url") or "").rstrip("/") or None
+    for g in bank_url_gaps(spec):
+        trace.note("WARNING " + g)
     n_tools = sum(len(n.get("pre_actions", [])) for n in wf["nodes"].values())
     trace.note(f"workflow: {len(wf['nodes'])} nodes, {n_tools} engine-run calls, {len(json.dumps(wf))} bytes")
     (out_dir / f"{slot}.compiled.json").write_text(json.dumps(wf, indent=1))
@@ -302,11 +388,32 @@ def main():
     finish(trace, spec, chk)
 
 
+BANK_BASE = [None]
+
+
+def bank_url_gaps(spec):
+    """Every bank call of the compiled workflow (chained copies included) must go to the bank base URL in use."""
+    base, wf = BANK_BASE[0], COMPILED[0]
+    if not base or not wf:
+        return []
+    bad = []
+    for n in (wf.get("nodes") or {}).values() if isinstance(wf.get("nodes"), dict) else wf.get("nodes") or []:
+        for act in n.get("pre_actions") or []:
+            url = (((act.get("function") or {}).get("parameters") or {}).get("properties") or {}).get("url", {}).get("default")
+            if url and not str(url).startswith(base):
+                bad.append(f"{n.get('name')} calls {url}, not the bank base URL {base}")
+    return bad
+
+
+COMPILED = [None]
+
+
 def finish(trace, spec, chk):
     """The run's verdict. INCOMPLETE when a rule of the materials is not carried or a local scenario still fails:
     the agent exists and is exported, but the run is not reported as a success (exit status 3)."""
     from builder import spec_model
-    gaps = spec_model.critical(spec) + [f"local scenario fails: {n}" for n in chk.get("failed", [])] + \
+    gaps = [f"case file not read: {u}" for u in UNREAD] + bank_url_gaps(spec) + \
+        spec_model.critical(spec) + [f"local scenario fails: {n}" for n in chk.get("failed", [])] + \
         [f"spec problem left after the repairs: {e}" for e in chk.get("api", [])]
     for d in (spec.get("oracle_report") or {}).get("disagreements") or []:
         trace.note("UNCERTAIN (the independent reading disagrees; the materials were not decided either way): " + d)
