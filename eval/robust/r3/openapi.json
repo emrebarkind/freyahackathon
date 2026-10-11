@@ -1,0 +1,468 @@
+{
+ "openapi": "3.0.3",
+ "info": {
+  "title": "Varnholt Bank collections tools",
+  "version": "1.0-eval",
+  "description": "Mock of Varnholt Bank's systems. Every call is written to the ledger the scorer reads. The service does not enforce the brief: it records a promise on a holiday, below the floor or past the deadline without complaint. Following the brief is the agent's job. All money fields are integer cents."
+ },
+ "servers": [
+  {
+   "url": "https://varnholt-mock.example.invalid/v1"
+  }
+ ],
+ "components": {},
+ "paths": {
+  "/verify_identity": {
+   "post": {
+    "summary": "Check one security answer. Three wrong answers in total end the check.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "client_ref": {
+          "type": "string"
+         },
+         "question": {
+          "type": "string",
+          "enum": [
+           "birth_date",
+           "postcode"
+          ]
+         },
+         "answer": {
+          "type": "string",
+          "description": "For birth_date: YYYY-MM-DD. For postcode: capitals, no spaces. An unreadable value is rejected with ok=false and is not counted as a wrong answer."
+         }
+        },
+        "required": [
+         "client_ref",
+         "question",
+         "answer"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          },
+          "passed": {
+           "type": "boolean"
+          },
+          "wrong_left": {
+           "type": "integer"
+          },
+          "identity_complete": {
+           "type": "boolean"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. Nothing was recorded. The call may be repeated."
+     }
+    }
+   }
+  },
+  "/get_account": {
+   "post": {
+    "summary": "The late accounts, one to three, in the order the agent must use. Refused until both questions are passed.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "client_ref": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "client_ref"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          },
+          "accounts": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "account_ref": {
+              "type": "string"
+             },
+             "kind": {
+              "type": "string",
+              "enum": [
+               "credit_card",
+               "cash_loan",
+               "vehicle_loan"
+              ]
+             },
+             "card_end": {
+              "type": "string",
+              "description": "credit cards only: last four digits"
+             },
+             "overdue_cents": {
+              "type": "integer",
+              "description": "overdue amount in cents"
+             },
+             "days_overdue": {
+              "type": "integer"
+             },
+             "min_due_cents": {
+              "type": "integer",
+              "description": "credit cards only"
+             },
+             "instalment_cents": {
+              "type": "integer",
+              "description": "loans only"
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. Nothing was recorded. The call may be repeated."
+     }
+    }
+   }
+  },
+  "/create_promise": {
+   "post": {
+    "summary": "Record a payment promise. One per account.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "client_ref": {
+          "type": "string"
+         },
+         "account_ref": {
+          "type": "string"
+         },
+         "amount_cents": {
+          "type": "integer",
+          "description": "amount in cents, e.g. 210.50 euros is 21050"
+         },
+         "pay_on": {
+          "type": "string",
+          "format": "date"
+         }
+        },
+        "required": [
+         "client_ref",
+         "account_ref",
+         "amount_cents",
+         "pay_on"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          },
+          "promise_ref": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. Nothing was recorded. The call may be repeated."
+     }
+    }
+   }
+  },
+  "/add_note": {
+   "post": {
+    "summary": "Record why an account ended without a recorded promise.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "client_ref": {
+          "type": "string"
+         },
+         "account_ref": {
+          "type": "string"
+         },
+         "code": {
+          "type": "string",
+          "enum": [
+           "declined",
+           "hardship",
+           "disputed",
+           "already_paid",
+           "system_issue"
+          ]
+         },
+         "comment": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "client_ref",
+         "account_ref",
+         "code"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. Nothing was recorded. The call may be repeated."
+     }
+    }
+   }
+  },
+  "/schedule_callback": {
+   "post": {
+    "summary": "Book a callback.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "client_ref": {
+          "type": "string"
+         },
+         "on_date": {
+          "type": "string",
+          "format": "date"
+         },
+         "at_time": {
+          "type": "string",
+          "description": "HH:MM"
+         }
+        },
+        "required": [
+         "client_ref",
+         "on_date",
+         "at_time"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. Nothing was recorded. The call may be repeated."
+     }
+    }
+   }
+  },
+  "/transfer_to_agent": {
+   "post": {
+    "summary": "Hand the call to a person.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "client_ref": {
+          "type": "string"
+         },
+         "team": {
+          "type": "string",
+          "enum": [
+           "restructuring",
+           "general",
+           "support"
+          ]
+         }
+        },
+        "required": [
+         "client_ref",
+         "team"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. Nothing was recorded. The call may be repeated."
+     }
+    }
+   }
+  },
+  "/close_call": {
+   "post": {
+    "summary": "End the call. Always the last tool call. Nothing is accepted after it.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "client_ref": {
+          "type": "string"
+         },
+         "result": {
+          "type": "string",
+          "enum": [
+           "promised",
+           "settled",
+           "handed_over",
+           "no_commitment",
+           "unverified",
+           "no_contact"
+          ]
+         },
+         "cause": {
+          "type": "string",
+          "description": "Required for every result except promised and settled. See the table in the brief."
+         }
+        },
+        "required": [
+         "client_ref",
+         "result"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. Nothing was recorded. The call may be repeated."
+     }
+    }
+   }
+  }
+ }
+}
