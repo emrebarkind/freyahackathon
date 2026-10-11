@@ -1,0 +1,20 @@
+{
+ "builder_commit": "d36d1c77d57d518dfc15a1d4743f2a0fcdf379cc",
+ "exit_status": 1,
+ "inputs": {
+  "inputs/brief.md": "9788471c4fd6b7f017d3024c7aead29ff645f46f744b0aa0113926ef95952fcd",
+  "inputs/openapi.json": "d2bc41699b3ee8ae67b002df0a086c3d8038b1da41a23d59679c9cfb96d28866"
+ },
+ "outputs": {
+  "m12-f1.log": "a60578eac63b53ef530decc5ebf3e9ac58305ad2e3434ebbd620ae7b93ed60d9",
+  "m12-f1.spec.json": "97e10f8fd29f8c5b2661c90e402cc083b4c16fad54e1c641bb38327f66f38fd7",
+  "m12-f1.trace.log": "f934d3fe92e0b83f5e324f2fe3caec3253ba9d87efe62adfa7b4876ec4a1d04a"
+ },
+ "seconds": null,
+ "model_calls": null,
+ "cost_usd": null,
+ "result": null,
+ "reasons": [],
+ "workflow_id": "392e3d6f-601c-4ae3-8c7e-41a1f08ce9f4",
+ "agent_id": "95c0e7aa-5a52-4913-9a84-ff68e7c0117f"
+}

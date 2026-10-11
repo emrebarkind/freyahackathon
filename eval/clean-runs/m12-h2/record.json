@@ -1,0 +1,20 @@
+{
+ "builder_commit": "d36d1c77d57d518dfc15a1d4743f2a0fcdf379cc",
+ "exit_status": 1,
+ "inputs": {
+  "inputs/brief.md": "96d70b0ddc690cdfb467e73b94c96a2857d96c5e1076371b8c7021162210044b",
+  "inputs/openapi.json": "1a6b623220416e938d056334f1e7619cddaabb8b5cb3fc5eefa6fac01cc2ee2a"
+ },
+ "outputs": {
+  "m12-h2.log": "53f1e32b646ffc5d905999e91f53853d81f9223ed7e77397163256a67a485839",
+  "m12-h2.spec.json": "5642fc71576f970bd352528aa45f11003346a69f6b97d753d8d3e9f85e47165f",
+  "m12-h2.trace.log": "9bb6f2c9c2367c3d16bd3c7e5d645d9c69388f290ef47eb842e3a9efa648647a"
+ },
+ "seconds": null,
+ "model_calls": null,
+ "cost_usd": null,
+ "result": null,
+ "reasons": [],
+ "workflow_id": null,
+ "agent_id": null
+}

@@ -71,3 +71,5 @@ Keys stay in `env.sh` (git-ignored). Every trace is scrubbed of `fak_…` and `s
 5. 5xx answers are retried: `kit/build-the-builder/freya.py` now waits 10 s and tries up to 3 times.
 6. No tool call for any customer and a 0 s agent turn is an outage, not our agent: `run_cases.py` reports
    "OUTAGE", waits 5 minutes and repeats the run once. Never "fix" the workflow after such a run.
+7. If the build stops with "DEPLOY FAILED (platform)", the extraction is already saved. Rerun the command the trace
+   prints (`--spec submission/<slot>.spec.json`): it compiles and deploys the same spec without new model calls.

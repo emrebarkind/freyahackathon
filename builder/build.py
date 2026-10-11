@@ -244,11 +244,18 @@ def main():
     if a.no_deploy:
         finish(trace, spec, chk)
         return
+    os.environ.setdefault("FREYA_RETRIES", "6")   # deploy calls: 6 tries 10 s apart before giving up (platform 5xx)
     import freya
     trace.step("4. validate, save, publish")
-    freya.validate_workflow(slot, wf)
-    trace.test("platform dry-run validation", True)
-    ids = freya.save_workflow(slot, wf, state_file=str(ROOT / ".freya-agents.json"))
+    try:
+        freya.validate_workflow(slot, wf)
+        trace.test("platform dry-run validation", True)
+        ids = freya.save_workflow(slot, wf, state_file=str(ROOT / ".freya-agents.json"))
+    except Exception as e:                    # the platform, not the spec: keep the extraction, say how to resume
+        trace.note(f"DEPLOY FAILED (platform): {str(e)[:300]}. The spec is saved; resume without a new extraction: "
+                   f"python3 builder/build.py {' '.join(a.files)} --slot {slot} --spec submission/{slot}.spec.json")
+        trace.end()
+        sys.exit(4)
     trace.note(f"FREYA workflow_id={ids['workflow_id']} agent_id={ids['agent_id']} version={ids.get('version', 1)}")
 
     if not a.no_chat:
@@ -258,7 +265,13 @@ def main():
 
     trace.step("6. export")
     path = out_dir / f"{slot}.workflow.json"
-    freya.export_workflow(ids["workflow_id"], str(path))
+    try:
+        freya.export_workflow(ids["workflow_id"], str(path))
+    except Exception as e:
+        trace.note(f"EXPORT FAILED (platform): {str(e)[:300]}. The agent is published (workflow_id={ids['workflow_id']}); "
+                   f"export it again with freya.export_workflow before submitting")
+        trace.end()
+        sys.exit(4)
     trace.note(f"exported {path.relative_to(ROOT)}")
     print(json.dumps({"workflow_id": ids["workflow_id"], "agent_id": ids["agent_id"], "export": str(path.relative_to(ROOT))}))
     finish(trace, spec, chk)
