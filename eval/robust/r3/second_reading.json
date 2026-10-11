@@ -1,0 +1,355 @@
+{
+ "checks": [
+  {
+   "id": "C1",
+   "expect": "2026-11-26",
+   "source": "Rule 6: soft band, 'the 10th business day after today'",
+   "confidence": "high",
+   "note": "Holiday 11-13 skipped"
+  },
+  {
+   "id": "C2",
+   "expect": "2026-12-28",
+   "source": "Rule 6: firm band, 'the 6th business day after today'",
+   "confidence": "high",
+   "note": "12-24/25 holidays skipped"
+  },
+  {
+   "id": "C3",
+   "expect": "2026-11-27",
+   "source": "Rule 6: final band, 'the 3rd business day after today'",
+   "confidence": "high",
+   "note": "11-25 holiday skipped"
+  },
+  {
+   "id": "C4",
+   "expect": 72.0,
+   "source": "Rule 6: firm floor 'min_due_cents (card)'",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C5",
+   "expect": 312.75,
+   "source": "Rule 6: final floor 'overdue_cents'",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C6",
+   "expect": [
+    [
+     631.5,
+     "2026-11-20"
+    ],
+    [
+     210.5,
+     "2026-11-23"
+    ]
+   ],
+   "source": "Rule 11: P1 overdue on week close; P2 floor on deadline",
+   "confidence": "high",
+   "note": "Today Thu 11-12 is week close (Fri 11-13 holiday) so next week's close 11-20"
+  },
+  {
+   "id": "C7",
+   "expect": [
+    [
+     914.8,
+     "2026-11-05"
+    ]
+   ],
+   "source": "Rule 11: 'Skip any proposal with the same amount and date as one the customer already refused'",
+   "confidence": "high",
+   "note": "Final floor=overdue, week close=deadline so P2 duplicates P1"
+  },
+  {
+   "id": "C8",
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-2204",
+      21050,
+      "2026-11-23"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Rules 11, 14, 21-23",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C9",
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1101",
+      15000,
+      "2026-12-08"
+     ]
+    ],
+    "notes": [
+     [
+      "VB-2290",
+      "declined"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Rule 12 'A valid value is agreed at once'; rule 14 soft has 1 proposal",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C10",
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1101",
+      7200,
+      "2026-12-02"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Rule 12 date after deadline -> offer deadline; rule 13 refusal after counter-offer is flat refusal",
+   "confidence": "high",
+   "note": "Counter 486@12-02 refused -> P2 72@12-02"
+  },
+  {
+   "id": "C11",
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1101",
+      48600,
+      "2026-12-18"
+     ]
+    ],
+    "notes": [
+     [
+      "VB-2290",
+      "declined"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Rules 12, 13, 14",
+   "confidence": "high",
+   "note": "Counter 384@12-30 refused, soft has no proposals left"
+  },
+  {
+   "id": "C12",
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-2204",
+      21050,
+      "2026-11-18"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Rule 12: amount below floor -> floor on customer's date",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C13",
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1150",
+      23990,
+      "2026-12-04"
+     ],
+     [
+      "VB-3307",
+      91480,
+      "2026-11-27"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Rule 16: 'For an account whose deadline is earlier, use that account's deadline and say so in the read-back'",
+   "confidence": "high",
+   "note": "Missing amount = overdue (offer on table before any proposal)"
+  },
+  {
+   "id": "C14",
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1101",
+      48600,
+      "2026-12-04"
+     ],
+     [
+      "VB-3350",
+      30000,
+      "2026-12-07"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Rule 15 switching accounts; repeat is not a new proposal",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C15",
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1101",
+      48600,
+      "2026-12-18"
+     ],
+     [
+      "VB-2204",
+      63150,
+      "2026-12-22"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Rule 22 changes at read-back",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C16",
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-2204",
+      63150,
+      "2026-12-28"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Rule 12 holiday -> next business day; rule 22",
+   "confidence": "high",
+   "note": "Week close 12-23 (today Fri is week close)"
+  },
+  {
+   "id": "C17",
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-2204",
+      30000,
+      "2026-11-12"
+     ]
+    ],
+    "notes": [
+     [
+      "VB-1101",
+      "system_issue"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Rule 24 failed write; close 'promised' even if another write failed",
+   "confidence": "high",
+   "note": "Both faults consumed by VB-1101 (first+retry)"
+  },
+  {
+   "id": "C18",
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-2204",
+      63150,
+      "2026-11-06"
+     ]
+    ],
+    "notes": [
+     [
+      "VB-1150",
+      "disputed"
+     ],
+     [
+      "VB-3307",
+      "declined"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Rules 12 (final too much), 13, 11 skip duplicate, 17",
+   "confidence": "high",
+   "note": "3307 P2 floor@deadline = 914.8@11-05 duplicates refused, so declined"
+  },
+  {
+   "id": "C19",
+   "expect": {
+    "outcome": "no_commitment",
+    "reason": "declined",
+    "promises": [],
+    "notes": [
+     [
+      "VB-2290",
+      "already_paid"
+     ],
+     [
+      "VB-1150",
+      "declined"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Close table: cause is note code of first account whose note is not already_paid",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C20",
+   "expect": {
+    "outcome": "no_commitment",
+    "reason": "system_issue",
+    "promises": [],
+    "notes": [
+     [
+      "VB-3307",
+      "system_issue"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Rule 24; close table no_commitment/system_issue",
+   "confidence": "high",
+   "note": ""
+  }
+ ]
+}
