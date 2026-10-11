@@ -78,7 +78,7 @@ def repair_loop(spec, chk, openapi, docs, trace, budget):
             cand = finalize(extract.repair_behaviour(copy.deepcopy(spec), "\n".join(problems), docs, openapi, trace), openapi)
         except Exception as e:
             trace.note(f"repair failed ({type(e).__name__}: {e}); keeping the current spec")
-            continue
+            break
         c2 = local_checks(cand, openapi)
         report_checks(trace, c2, "candidate")
         touched = extract.diff(spec, cand)
@@ -91,7 +91,13 @@ def repair_loop(spec, chk, openapi, docs, trace, budget):
             spec, chk = cand, c2
             trace.note("repaired spec accepted")
         else:
-            trace.note("repaired spec not better; rejected")
+            new_unsup = [r for r in cand.get("unsupported_rules") or [] if r not in (spec.get("unsupported_rules") or [])]
+            if new_unsup:                     # the failure is a rule the format cannot carry: report it, change nothing else
+                spec["unsupported_rules"] = list(spec.get("unsupported_rules") or []) + new_unsup
+                trace.note(f"repair named {len(new_unsup)} rule(s) the spec cannot carry; reported, the spec is unchanged")
+            trace.note("repaired spec not better; rejected. No further repair rounds: a failure a repair does not improve "
+                       "is not a reading mistake (an engine limit or the synthetic test)")
+            break
     return spec, chk
 
 

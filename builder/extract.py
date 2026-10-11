@@ -294,7 +294,9 @@ differently from what your spec's own events say they should:
 Some failures can come from the synthetic test itself (it uses generic data). Re-read the materials. If a failure shows a
 real mistake in the spec (a wrong code, field, window, limit, missing line or rule), fix it. Never remove or loosen a
 value the materials state (a length, a format, a limit, a code, a window) just to make a test pass: if the materials
-decide it, keep it. Output the complete spec JSON in a ```json block."""
+decide it, keep it. If a failure comes from a rule this spec format has no field for, do not bend other values to
+imitate it: add the rule, quoted, to `unsupported_rules` and leave the rest as the materials say. Output the complete
+spec JSON in a ```json block."""
 
 REPAIR = """Your spec has these problems:
 {errs}
@@ -306,7 +308,8 @@ fields one by one against the documents: {fields}.
 For each field: find the sentence(s) in the bank materials or the tool API file that decide it (a later memo or
 dated change beats the rule it changes), quote them, and say whether the spec value carries out exactly what they
 say. Then list every rule in the materials that the spec does not carry at all (a holiday, a band, a code, a
-limit, a format, an exception).
+limit, a format, an exception). A rule that no spec field can carry goes, quoted, into "unsupported_rules" (a list);
+never approximate it with a nearby value.
 
 <spec>
 {spec}
@@ -425,8 +428,11 @@ def validate_loop(spec, base, openapi, trace, budget):
         except Exception as e:
             trace.note(f"repair answer did not parse ({e}); keeping the previous spec")
             continue
-        if len(validate(fixed, openapi)) <= len(errs):
+        if len(validate(fixed, openapi)) < len(errs):
             spec = fixed
+        else:                                 # no progress: another round would only spend time
+            trace.note("repair did not reduce the problems; no further validation repairs")
+            break
     return spec
 
 

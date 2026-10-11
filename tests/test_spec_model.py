@@ -176,7 +176,7 @@ def test_repair_budget_is_shared_and_bounded():
         spec, chk2 = B.repair_loop(copy.deepcopy(bad), chk, O, [], trace, budget)
     finally:
         extract.repair_behaviour = orig
-    assert len(calls) == 2 and budget.used == 3                    # only what was left of the shared budget
+    assert len(calls) == 1 and budget.used == 2                    # a round without progress ends the repairs
     assert chk2["structural"]                                      # never accepted: still malformed, so no deploy
 
 
