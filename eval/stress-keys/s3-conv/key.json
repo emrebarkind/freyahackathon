@@ -1,0 +1,504 @@
+{
+ "package": "s3-conv",
+ "rules": {
+  "DEADLINE": "Early (1-30) 7th business day after today; late (31-90) 3rd business day after today.",
+  "FLOOR": "Card minimum_payment, loan instalment_amount, overdraft 25% rounded up to whole dollar, min $25 (whole debt below $25).",
+  "LADDER": "After a refused opening ask: step 1 full on deadline, step 2 floor on deadline; 2 attempts per band; then NO_PAY note.",
+  "IDENTITY": "date_of_birth then phone_last4.",
+  "CODES": "DISPUTED / CLAIMS_PAID / NO_PAY / SYS_FAIL notes; hardship transfers straight to support.",
+  "CONV": "Products in order overdraft, card, loan (larger past_due first within a type); partial proposals take the missing part from the table; below-floor counter-offer at the floor on the customer's date; late date countered with the deadline; one date for all clamps to each deadline; read-back corrections re-checked and re-read; record only after an explicit yes; close ranking by first non-paid product."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-22T10:00",
+    "product": {
+     "product_id": "ng_cc_501",
+     "type": "credit_card",
+     "card_last4": "6604",
+     "past_due": 310.0,
+     "days_late": 41,
+     "minimum_payment": 48.0
+    }
+   },
+   "expect": "2026-12-29",
+   "source": "| late | 31 to 90 | the 3rd business day after today | 2 | / Business days are Monday to Friday, except bank holidays 2026-11-11, 2026-11-26, 2026-11-27, 2026-12-24, 2026-12-25, 2026-12-31 and 2027-01-01. \"The Nth business day after today\" never counts today itself."
+  },
+  {
+   "id": "C2",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-28T10:00",
+    "product": {
+     "product_id": "ng_pl_502",
+     "type": "personal_loan",
+     "past_due": 720.0,
+     "days_late": 14,
+     "instalment_amount": 240.0
+    }
+   },
+   "expect": "2027-01-08",
+   "source": "| early | 1 to 30 | the 7th business day after today | 2 | / Business days are Monday to Friday, except bank holidays 2026-11-11, 2026-11-26, 2026-11-27, 2026-12-24, 2026-12-25, 2026-12-31 and 2027-01-01. \"The Nth business day after today\" never counts today itself."
+  },
+  {
+   "id": "C3",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-12T10:00",
+    "product": {
+     "product_id": "ng_od_503",
+     "type": "overdraft",
+     "past_due": 212.4,
+     "days_late": 18
+    }
+   },
+   "expect": 54.0,
+   "source": "Overdraft: 25% of the `past_due`, rounded up to the next whole dollar (a whole-dollar result stays as it is), with a minimum of $25; if the past-due amount is below $25, the floor is the whole past-due amount."
+  },
+  {
+   "id": "C4",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-12T10:00",
+    "product": {
+     "product_id": "ng_od_504",
+     "type": "overdraft",
+     "past_due": 96.04,
+     "days_late": 18
+    }
+   },
+   "expect": 25.0,
+   "source": "Overdraft: 25% of the `past_due`, rounded up to the next whole dollar (a whole-dollar result stays as it is), with a minimum of $25; if the past-due amount is below $25, the floor is the whole past-due amount."
+  },
+  {
+   "id": "C5",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-12T10:00",
+    "product": {
+     "product_id": "ng_od_505",
+     "type": "overdraft",
+     "past_due": 1003.0,
+     "days_late": 40
+    }
+   },
+   "expect": 251.0,
+   "source": "Overdraft: 25% of the `past_due`, rounded up to the next whole dollar (a whole-dollar result stays as it is), with a minimum of $25; if the past-due amount is below $25, the floor is the whole past-due amount."
+  },
+  {
+   "id": "C6",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-12T10:00",
+    "product": {
+     "product_id": "ng_od_506",
+     "type": "overdraft",
+     "past_due": 212.4,
+     "days_late": 18
+    }
+   },
+   "expect": [
+    [
+     212.4,
+     "2026-11-23"
+    ],
+    [
+     54.0,
+     "2026-11-23"
+    ]
+   ],
+   "source": "Step 1: the full past-due amount on the deadline. / Step 2: the floor on the deadline. / Each flat refusal (a no with no amount and no date) uses one attempt. When the attempts are used up, the product ends without a promise and gets the note `NO_PAY`; go on to the next product. / | early | 1 to 30 | the 7th business day after today | 2 | / Overdraft: 25% of the `past_due`, rounded up to the next whole dollar (a whole-dollar result stays as it is), with a minimum of $25; if the past-due amount is below $25, the floor is the whole past-due amount. / Business days are Monday to Friday, except bank holidays 2026-11-11, 2026-11-26, 2026-11-27, 2026-12-24, 2026-12-25, 2026-12-31 and 2027-01-01. \"The Nth business day after today\" never counts today itself."
+  },
+  {
+   "id": "C7",
+   "rule": "LADDER",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-12T10:00",
+    "product": {
+     "product_id": "ng_cc_507",
+     "type": "credit_card",
+     "card_last4": "1180",
+     "past_due": 365.2,
+     "days_late": 40,
+     "minimum_payment": 55.0
+    }
+   },
+   "expect": 2,
+   "source": "| late | 31 to 90 | the 3rd business day after today | 2 | / This opening question is not a persuasion attempt. / Step 1: the full past-due amount on the deadline. / Step 2: the floor on the deadline. / Each flat refusal (a no with no amount and no date) uses one attempt. When the attempts are used up, the product ends without a promise and gets the note `NO_PAY`; go on to the next product."
+  },
+  {
+   "id": "C8",
+   "rule": "IDENTITY",
+   "type": "identity_fields",
+   "input": {},
+   "expect": [
+    "date_of_birth",
+    "phone_last4"
+   ],
+   "source": "Ask for the date of birth first (`date_of_birth`, sent as `YYYY-MM-DD`), then the last four digits of the phone number on file (`phone_last4`)."
+  },
+  {
+   "id": "C9",
+   "rule": "CODES",
+   "type": "note",
+   "input": {
+    "situation": "dispute"
+   },
+   "expect": "DISPUTED",
+   "source": "\"This is not mine\" or \"that was closed years ago\" is a dispute: do not argue, note that product `DISPUTED`, and go on with the next product."
+  },
+  {
+   "id": "C10",
+   "rule": "CODES",
+   "type": "transfer",
+   "input": {
+    "situation": "hardship"
+   },
+   "expect": "support",
+   "source": "If the customer mentions job loss, illness or a death in the family, say one sentence of sympathy and transfer straight to the `support` queue, without asking first. Close as `transferred` / `support`."
+  },
+  {
+   "id": "C11",
+   "rule": "CONV",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-12T10:00",
+    "products": [
+     {
+      "product_id": "pl_301",
+      "type": "personal_loan",
+      "past_due": 840.0,
+      "days_late": 12,
+      "instalment_amount": 280.0
+     },
+     {
+      "product_id": "cc_302",
+      "type": "credit_card",
+      "card_last4": "4410",
+      "past_due": 365.2,
+      "days_late": 40,
+      "minimum_payment": 55.0
+     },
+     {
+      "product_id": "od_303",
+      "type": "overdraft",
+      "past_due": 212.4,
+      "days_late": 18
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "proposes",
+      "date": "2026-11-16",
+      "product": "credit_card"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "proposes",
+      "amount": 200.0,
+      "product": "credit_card"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promise",
+    "reason": "",
+    "promises": [
+     [
+      "cc_302",
+      200.0,
+      "2026-11-16"
+     ],
+     [
+      "od_303",
+      54.0,
+      "2026-11-23"
+     ]
+    ],
+    "notes": [
+     [
+      "pl_301",
+      "NO_PAY"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Always handle the overdraft(s) first, then the credit card(s), then the personal loan(s). If a customer has two products of the same type, the one with the larger `past_due` goes first. / Step 1: the full past-due amount on the deadline. / Step 2: the floor on the deadline. / Each flat refusal (a no with no amount and no date) uses one attempt. When the attempts are used up, the product ends without a promise and gets the note `NO_PAY`; go on to the next product. / A part the customer leaves out is taken from the proposal on the table for that product. / If the customer changes the amount or the date of a promise at the read-back, check the new value under rule 10 (a part left out is kept from the promise being changed), then read the whole list back again and ask again. / When every product has been handled, read all agreed promises back together (product, amount, date) and ask \"Do you confirm all of these?\". Record nothing before an explicit yes to that question. / Overdraft: 25% of the `past_due`, rounded up to the next whole dollar (a whole-dollar result stays as it is), with a minimum of $25; if the past-due amount is below $25, the floor is the whole past-due amount. / | early | 1 to 30 | the 7th business day after today | 2 | / | late | 31 to 90 | the 3rd business day after today | 2 |"
+  },
+  {
+   "id": "C12",
+   "rule": "CONV",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-12T10:00",
+    "products": [
+     {
+      "product_id": "cc_311",
+      "type": "credit_card",
+      "card_last4": "9021",
+      "past_due": 480.0,
+      "days_late": 9,
+      "minimum_payment": 60.0
+     },
+     {
+      "product_id": "pl_312",
+      "type": "personal_loan",
+      "past_due": 600.0,
+      "days_late": 35,
+      "instalment_amount": 200.0
+     },
+     {
+      "product_id": "od_313",
+      "type": "overdraft",
+      "past_due": 90.0,
+      "days_late": 50
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "dispute",
+      "product": "overdraft"
+     },
+     {
+      "k": "proposes",
+      "amount": 40.0,
+      "date": "2026-11-20",
+      "product": "credit_card"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "proposes",
+      "date": "2026-11-30",
+      "product": "personal_loan"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promise",
+    "reason": "",
+    "promises": [
+     [
+      "cc_311",
+      60.0,
+      "2026-11-20"
+     ],
+     [
+      "pl_312",
+      600.0,
+      "2026-11-17"
+     ]
+    ],
+    "notes": [
+     [
+      "od_313",
+      "DISPUTED"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Always handle the overdraft(s) first, then the credit card(s), then the personal loan(s). If a customer has two products of the same type, the one with the larger `past_due` goes first. / amount below the floor: say it cannot be accepted and offer the floor on the customer's date; / date after the deadline: say the latest possible date is the deadline and offer the deadline, with the amount the customer named (or the amount on the table). / A part the customer leaves out is taken from the proposal on the table for that product. / \"This is not mine\" or \"that was closed years ago\" is a dispute: do not argue, note that product `DISPUTED`, and go on with the next product. / For products still to come, the opening question counts as already refused. / When every product has been handled, read all agreed promises back together (product, amount, date) and ask \"Do you confirm all of these?\". Record nothing before an explicit yes to that question. / | early | 1 to 30 | the 7th business day after today | 2 | / | late | 31 to 90 | the 3rd business day after today | 2 |"
+  },
+  {
+   "id": "C13",
+   "rule": "CONV",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-12T10:00",
+    "products": [
+     {
+      "product_id": "pl_321",
+      "type": "personal_loan",
+      "past_due": 510.0,
+      "days_late": 20,
+      "instalment_amount": 170.0
+     },
+     {
+      "product_id": "od_322",
+      "type": "overdraft",
+      "past_due": 300.0,
+      "days_late": 45
+     },
+     {
+      "product_id": "od_323",
+      "type": "overdraft",
+      "past_due": 450.0,
+      "days_late": 5
+     }
+    ],
+    "script": [
+     {
+      "k": "proposes",
+      "date": "2026-11-20",
+      "product": "all"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promise",
+    "reason": "",
+    "promises": [
+     [
+      "od_322",
+      300.0,
+      "2026-11-17"
+     ],
+     [
+      "od_323",
+      450.0,
+      "2026-11-20"
+     ],
+     [
+      "pl_321",
+      510.0,
+      "2026-11-20"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "If, in answer to the opening question, the customer names one date for all products, every product is agreed for its full past-due amount on that date, except that a product whose deadline is earlier takes its own deadline. / When every product has been handled, read all agreed promises back together (product, amount, date) and ask \"Do you confirm all of these?\". Record nothing before an explicit yes to that question. / | early | 1 to 30 | the 7th business day after today | 2 | / | late | 31 to 90 | the 3rd business day after today | 2 | / Business days are Monday to Friday, except bank holidays 2026-11-11, 2026-11-26, 2026-11-27, 2026-12-24, 2026-12-25, 2026-12-31 and 2027-01-01. \"The Nth business day after today\" never counts today itself."
+  },
+  {
+   "id": "C14",
+   "rule": "CONV",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-12T10:00",
+    "products": [
+     {
+      "product_id": "od_331",
+      "type": "overdraft",
+      "past_due": 150.0,
+      "days_late": 10
+     },
+     {
+      "product_id": "cc_332",
+      "type": "credit_card",
+      "card_last4": "7735",
+      "past_due": 220.0,
+      "days_late": 15,
+      "minimum_payment": 40.0
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "hardship"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "transferred",
+    "reason": "support",
+    "promises": [],
+    "notes": [],
+    "transfers": [
+     "support"
+    ]
+   },
+   "source": "If the customer mentions job loss, illness or a death in the family, say one sentence of sympathy and transfer straight to the `support` queue, without asking first. Close as `transferred` / `support`. Promises agreed but not yet confirmed are dropped. / No notes are written when a call ends in a transfer."
+  },
+  {
+   "id": "C15",
+   "rule": "CONV",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-12T10:00",
+    "products": [
+     {
+      "product_id": "pl_342",
+      "type": "personal_loan",
+      "past_due": 700.0,
+      "days_late": 33,
+      "instalment_amount": 230.0
+     },
+     {
+      "product_id": "cc_341",
+      "type": "credit_card",
+      "card_last4": "5058",
+      "past_due": 300.0,
+      "days_late": 22,
+      "minimum_payment": 45.0
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "already_paid",
+      "product": "credit_card"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "no"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "refused",
+    "promises": [],
+    "notes": [
+     [
+      "cc_341",
+      "CLAIMS_PAID"
+     ],
+     [
+      "pl_342",
+      "NO_PAY"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Always handle the overdraft(s) first, then the credit card(s), then the personal loan(s). If a customer has two products of the same type, the one with the larger `past_due` goes first. / \"I already paid this\": say payments can take a business day to appear, note the product `CLAIMS_PAID`, and go on. Neither ends the call. / Step 1: the full past-due amount on the deadline. / Step 2: the floor on the deadline. / Each flat refusal (a no with no amount and no date) uses one attempt. When the attempts are used up, the product ends without a promise and gets the note `NO_PAY`; go on to the next product. / At least one promise recorded: `promise` (no reason). Every product noted `CLAIMS_PAID`: `paid` (no reason). Otherwise `no_promise` with the reason of the first product, in handling order, that did not end paid: `refused` (note `NO_PAY`), `dispute` (note `DISPUTED`) or `service_error` (note `SYS_FAIL`)."
+  }
+ ]
+}

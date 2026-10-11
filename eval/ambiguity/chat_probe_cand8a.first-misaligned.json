@@ -1,0 +1,153 @@
+{
+ "confirm-ambiguity": {
+  "call_id": "47853c97-4c31-42be-8cd9-4f73ab0c8990",
+  "turns": [
+   {
+    "user": "Yes, this is Daniel Reyes.",
+    "agent": "Please provide the sentence you would like me to repeat.",
+    "s": 2.5
+   },
+   {
+    "user": "14 March 1988.",
+    "agent": "Before we continue, I need to ask you two security questions. What is your date of birth?",
+    "s": 4.3
+   },
+   {
+    "user": "4471.",
+    "agent": "Yes, please go on.",
+    "s": 6.0
+   },
+   {
+    "user": "I can pay the full amount today.",
+    "agent": "What is your date of birth?",
+    "s": 3.8
+   },
+   {
+    "user": "uh...",
+    "agent": "Sorry, please go on.",
+    "s": 3.0
+   },
+   {
+    "user": "I was thinking...",
+    "agent": "Sorry, please go on.",
+    "s": 2.8
+   },
+   {
+    "user": "Yes, I confirm.",
+    "agent": "Could you please say that again? What is your date of birth?",
+    "s": 3.3
+   },
+   {
+    "user": "No, that's all.",
+    "agent": "I can only continue once I have checked your identity, because these questions protect your account. What is your date of birth?",
+    "s": 3.8
+   }
+  ],
+  "extracted": [],
+  "ledger": []
+ },
+ "correction-and-noise": {
+  "call_id": "aa8b78a5-d6fb-4ee2-8e87-ffc7346c3f5e",
+  "turns": [
+   {
+    "user": "Yes, this is Daniel Reyes.",
+    "agent": "Please provide the sentence you would like me to repeat.",
+    "s": 7.8
+   },
+   {
+    "user": "14 March 1988.",
+    "agent": "Before we continue, I need to ask you two security questions. What is your date of birth?",
+    "s": 3.6
+   },
+   {
+    "user": "4471.",
+    "agent": "Yes, please go on.",
+    "s": 3.8
+   },
+   {
+    "user": "Yes... no, Friday does not work.",
+    "agent": "What is your date of birth?",
+    "s": 3.9
+   },
+   {
+    "user": "hmm...",
+    "agent": "Sorry, please go on.",
+    "s": 2.8
+   },
+   {
+    "user": "thought\nThe user is asking for the payment date",
+    "agent": "Sorry, please go on.",
+    "s": 6.2
+   },
+   {
+    "user": "Traffic was awful today. I can pay the full amount on the 20th.",
+    "agent": "Could you please say that again? What is your date of birth?",
+    "s": 4.5
+   },
+   {
+    "user": "Yes, I confirm.",
+    "agent": "Could you please say that again? What is your date of birth?",
+    "s": 3.0
+   },
+   {
+    "user": "No, thank you.",
+    "agent": "I can only continue once I have checked your identity, because these questions protect your account. What is your date of birth?",
+    "s": 3.9
+   }
+  ],
+  "extracted": [],
+  "ledger": []
+ },
+ "fragmented-amount": {
+  "call_id": "a99180e6-879b-464a-a283-993226ddd37c",
+  "turns": [
+   {
+    "user": "Yes, this is Daniel Reyes.",
+    "agent": "Please provide the sentence you would like me to repeat.",
+    "s": 10.6
+   },
+   {
+    "user": "14 March 1988.",
+    "agent": "Before we continue, I need to ask you two security questions. What is your date of birth?",
+    "s": 4.7
+   },
+   {
+    "user": "4471.",
+    "agent": "Yes, please go on.",
+    "s": 3.1
+   },
+   {
+    "user": "I cannot pay today. My salary...",
+    "agent": "Sorry, please go on.",
+    "s": 4.4
+   },
+   {
+    "user": "I can pay three hundred and",
+    "agent": "Sorry, please go on.",
+    "s": 4.4
+   },
+   {
+    "user": "fifty dollars on Friday.",
+    "agent": "Could you please say that again? What is your date of birth?",
+    "s": 10.3
+   },
+   {
+    "user": "aaa...",
+    "agent": "Sorry, please go on.",
+    "s": 3.5
+   },
+   {
+    "user": "Yes, I confirm.",
+    "agent": "Could you please say that again? What is your date of birth?",
+    "s": 6.0
+   },
+   {
+    "user": "No.",
+    "agent": "I can only continue once I have checked your identity, because these questions protect your account. What is your date of birth?",
+    "s": 3.7
+   }
+  ],
+  "extracted": [],
+  "ledger": []
+ }
+}

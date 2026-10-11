@@ -1,0 +1,5 @@
+# s3-conv notes
+- Stresses conversation state with 2-3 products per customer: fixed handling order (overdraft, card, loan; larger past_due first within a type) applied to scrambled get_account order; 5 conversation checks in the CHECKS/score.py script format (turn kinds yes/no/proposes/dispute/already_paid/hardship).
+- Covered: flat refusals exhausting attempts (C11, C15), incomplete answers = proposals with a date only or amount only (C11, C12), a below-floor counter-offer and a past-deadline date (C12), a read-back correction followed by explicit confirmation (C11), one date for all with deadline clamp across two overdrafts (C13), hardship dropping unconfirmed promises (C14), close ranking by first non-paid product in handling order (C15).
+- The conversation format has no turn kind for an unclear/garbled answer or a "no" at the read-back, so those were not tested; "incomplete" is approximated by partial proposals.
+- Borderline: C11 step 7 (amount-only correction at read-back keeps the date 2026-11-16 of the promise being changed). C12 relies on the rule that the opening refusal carries to later products after a dispute.

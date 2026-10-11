@@ -1,0 +1,116 @@
+[    0.0s] START 2026-10-11T14:59:52+0000
+[    0.0s] NOTE briefs=['eval/longinput/long-brief.md'] tool_api=kit/build-the-builder/tools/openapi.json slot=stress-long
+[    0.0s] STEP 1. spec extraction
+[    1.0s] NOTE extraction mode B
+[  224.4s] MODEL CALL #1 model=claude-opus-5-5 seconds=223.4 cost_usd=1.159 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  224.4s] MODEL CALL #2 model=claude-opus-5-5 seconds=223.4 cost_usd=0.956 purpose: independent reading: behaviour checks from the materials only (oracle)
+[  224.4s] NOTE oracle: 22 independent checks
+[  272.5s] MODEL CALL #3 model=claude-opus-5-5 seconds=48.2 cost_usd=1.061 purpose: audit the high-risk fields and the critical policies of the reading against the source documents
+[  272.5s] NOTE audit: **Field audit**
+[  272.5s] 
+[  272.5s] - **calendar**: supported. CM-01 says "Friday 23 October 2026 is a bank holiday for collections. It is not a business day for any rule in the playbook." The playbook says "Business days are Monday to Friday, except Freya Bank holidays: 2026-10-26, 2026-11-11, 2026-11-26, 2026-12-25, 2027-01-01." The spec has workdays 0–4 and all six dates.
+[  272.5s] - **date_rules**: supported. Rule 22 says "'Next <weekday>' means that weekday in the following calendar week." That is following_week.
+[  272.5s] - **confirm**: supported. Rule 3 says "Ask once more. If it is still unclear after the second ask, close as `not_reached` / `unclear`." That is max_asks 2.
+[  272.5s] - **callback**: supported.
+[  272.5s]   - Rule 6 says "A callback is for today or the next business day, from 10:00 to 19:00, both included, and later than `now`." This matches days, window and after_now.
+[  272.5s]   - Rule 7 says "ask once for another time. If that is also outside it, do not schedule." That is max_asks 2.
+[  272.5s] - **identity.questions**: supported.
+[  272.5s]   - Rule 11 says "first the date of birth, then the last four digits of the phone number on file… Send a date of birth as `YYYY-MM-DD`."
+[  272.5s]   - The API enum is date_of_birth / phone_last4, and the API says "For phone_last4: four digits."
+[  272.5s] - **identity.max_wrong**: supported. Rule 12 says "Three wrong answers in total end the check, whichever question they were on." That is 3 in total, with no per-question limit.
+[  272.5s] - **identity.date_order**: supported. Rule 11 says "Read a date given only as numbers as day, then month, then year." That is dmy.
+[  272.5s] - **identity.hints**: supported. Rule 13 says "`hint: \"day_month_swapped\"`. Ask them to say the month as a word."
+[  272.5s] - **identity (purpose_is_decline, response)**: supported.
+[  272.5s]   - Rule 15 says "Asking what the call is about instead of answering counts as declining."
+[  272.5s]   - The response field names match the API.
+[  272.5s] - **products.amount_field**: supported. Rule 17 says "State the past-due amount", and the API field is past_due.
+[  272.5s] - **products.floor_field**: supported.
+[  272.5s]   - Rule 25 says "`instalment_amount` for a personal loan or a car loan."
+[  272.5s]   - CM-02 replaces the credit card floor, so credit_card is rightly left out.
+[  272.5s] - **products.floor_pct / floor_min / floor_round**: supported. CM-02 says "40% of the past-due amount, rounded up to the next whole dollar, and never less than 50 dollars." The order is compute, round up, then clamp to 50. The engine caps the floor at the debt.
+[  272.5s] - **products (names, scale)**: supported. Rule 17 says "'credit card ending 4821', 'personal loan' or 'car loan'". Both get_account and create_promise use numbers in dollars.
+[  272.5s] - **bands**: supported. The table gives "1 to 7 | early | the 12th business day after today | 1" and "8 to 45 | late | the 7th business day after today | 2".
+[  272.5s] - **ladder**: supported.
+[  272.5s]   - Rule 30 says "Attempt 1 is for the full past-due amount, or for the floor if the customer already said the full amount is too much. Attempt 1: propose the last business day of this week… Attempt 2, late band only: propose the floor amount on the deadline."
+[  272.5s]   - This is full_or_floor on the last business day of this week, then floor on the deadline.
+[  272.5s] - **rules**: supported. See the policy rows below.
+[  272.5s] - **notes**: supported. The brief says "Brief A never uses `add_note`." Notes are disabled and every note code is empty.
+[  272.5s] - **events**: supported. The closing table matches every code: promise, paid, transferred with restructuring/human/support, no_promise with refused/hardship/dispute/service_error, not_verified with failed/declined, and not_reached with callback/no_callback/wrong_number/deceased/unclear. The queues come from rules 32, 41 and 42: support, restructuring and general.
+[  272.5s] - **event_changes**: supported. CM-03 says "From Monday 2 November 2026, close a refused call with outcome `no_promise` and reason `declined_offer` instead of `refused`."
+[  272.5s] - **tool_bodies**: supported. Every required request field in the API is mapped, and customer_id is filled automatically.
+[  272.5s] - **multi**: supported (defaults). Brief A cove
+[  272.5s] NOTE audit changed: nothing
+[  272.5s] NOTE policy verdicts: changes=supported, event_changes=supported, multi.order=not_decided, multi.outcome_priority=not_decided, products.floor_full_below=supported, products.floor_min=supported, products.floor_pct=supported, products.floor_round=supported, products.promise_round=not_decided, products.promise_scale=supported, products.step_round=not_decided, rules.deadline_adjust=not_decided, rules.first_ask=supported, rules.hardship_transfer=supported, rules.ladder_repeat_last=supported, rules.non_answer_counts=supported, rules.notes_before_transfer=supported, rules.opening_blocks_repeat=not_decided, rules.opening_is_attempt=supported, rules.promise_retries=supported, rules.refuse_deadline_is_refusal=supported, rules.skipped_repeat_counts=not_decided, rules.too_much_floor=supported, rules.too_much_skips_full=not_decided, rules.week_end_today=supported
+[  272.6s] NOTE critical policies:
+[  272.6s]   - rules.opening_is_attempt: derived: false
+[  272.6s]   - rules.opening_blocks_repeat: unspecified: false
+[  272.6s]   - rules.skipped_repeat_counts: unspecified: true (engine default)
+[  272.6s]   - rules.too_much_skips_full: unspecified: false
+[  272.6s]   - rules.too_much_floor: derived: "attempt_1"
+[  272.6s]   - rules.ladder_repeat_last: explicit: false
+[  272.6s]   - rules.non_answer_counts: explicit: true
+[  272.6s]   - rules.refuse_deadline_is_refusal: explicit: true
+[  272.6s]   - rules.promise_retries: explicit: 1
+[  272.6s]   - rules.hardship_transfer: explicit: "ask_first" (engine default)
+[  272.6s]   - rules.notes_before_transfer: explicit: false
+[  272.6s]   - rules.deadline_adjust: unspecified: "previous_business_day"
+[  272.6s]   - rules.first_ask: derived: "today"
+[  272.6s]   - rules.week_end_today: explicit: "next_week"
+[  272.6s]   - products.floor_pct: explicit: {"credit_card": 40}
+[  272.6s]   - products.floor_min: explicit: {"credit_card": 50}
+[  272.6s]   - products.floor_round: explicit: {"credit_card": "up_unit"}
+[  272.6s]   - products.floor_full_below: unspecified: null (engine default)
+[  272.6s]   - products.step_round: unspecified: "cents" (engine default)
+[  272.6s]   - products.promise_scale: unspecified: 1.0 (engine default)
+[  272.6s]   - products.promise_round: unspecified: null (engine default)
+[  272.6s]   - multi.outcome_priority: unspecified: [] (engine default)
+[  272.6s]   - multi.order: unspecified: [] (engine default)
+[  272.6s]   - event_changes: explicit: [{"event": "refused", "from": "2026-11-02", "set": {"outcome": "no_promise", "reason": "declined_offer"}}]
+[  272.6s]   - changes: unspecified: [] (engine default)
+[  272.6s] NOTE validation round 1: 0 problem(s)
+[  272.6s] NOTE oracle: 22 agree, 0 disagree, 0 unusable
+[  272.6s] NOTE assumption: The facilities handbook pages are not collections rules and were ignored.
+[  272.6s] NOTE assumption: Memo CM-01 (undated) adds Friday 23 October 2026 as a non-business day; it is in the base holiday list together with the playbook holidays.
+[  272.6s] NOTE assumption: Memo CM-02 replaces the credit card floor: 40% of past_due, rounded up to the next whole dollar, then at least 50 dollars, and never more than the debt (a debt below 50 has the whole debt as floor). Because of this, credit_card is left out of floor_field; personal and car loans keep instalment_amount.
+[  272.6s] NOTE assumption: If 40% of past_due is already a whole dollar amount, it is not rounded further (up_unit).
+[  272.6s] NOTE assumption: Memo CM-03 is a dated change of the reason code: refused calls on or after 2026-11-02 close as no_promise / declined_offer. This also covers rule 45 (not wanting to talk after verification), which uses the refused event.
+[  272.6s] NOTE assumption: too_much_floor is attempt_1: the single floor offer of rule 26 takes the place of attempt 1, and attempt 2 (late band) names the floor again on the deadline.
+[  272.6s] NOTE assumption: max_unclear is omitted because the brief does not say how often an unclear answer to a payment question is asked again.
+[  272.6s] NOTE assumption: after_promise.ask_anything_else is left at the default true; the brief is silent.
+[  272.6s] NOTE assumption: Brief A never uses add_note, so notes are disabled and every note code is empty.
+[  272.6s] NOTE assumption: Callbacks for 'today' are not restricted to business days; only 'the next business day' is.
+[  272.6s] NOTE assumption: A date given only as numbers is read day-month-year (date_order dmy) and sent as YYYY-MM-DD.
+[  272.6s] NOTE assumption: The credit card floor is called 'minimum amount' in speech, because it is no longer the minimum_payment field.
+[  272.6s] STEP 2. local checks: structure, tool API, engine self-test on synthetic customers
+[  273.5s] TEST PASS local happy path, pays in full today
+[  273.5s] TEST PASS local someone else answers, books a callback
+[  273.5s] TEST PASS local wrong number
+[  273.5s] TEST PASS local identity fails
+[  273.5s] TEST PASS local identity answered the way people speak
+[  273.5s] TEST PASS local already paid
+[  273.5s] TEST PASS local dispute
+[  273.5s] TEST PASS local hardship, accepts support
+[  273.5s] TEST PASS local restructuring request
+[  273.5s] TEST PASS local flat refusals
+[  273.5s] TEST PASS local the bank fails to record the promise twice
+[  273.5s] TEST PASS local the callback booking fails once, then works
+[  273.5s] TEST PASS local several products, all paid today
+[  273.5s] TEST PASS local every band and product type gives a deadline and a floor
+[  273.5s] NOTE local checks: structural 0, tool API 0, self-test 14/14
+[  273.5s] NOTE assumption (engine default, the brief is silent): the brief does not say whether a ladder step skipped as a repeat of an earlier proposal uses one of the band's proposals: it does
+[  273.5s] NOTE assumption (recorded as unspecified by the materials): rules.opening_blocks_repeat: The brief does not say the opening ask counts as a repeat; default false.
+[  273.5s] NOTE assumption (recorded as unspecified by the materials): rules.skipped_repeat_counts: The brief only says not to repeat a refused offer; the engine default applies.
+[  273.5s] NOTE assumption (recorded as unspecified by the materials): rules.too_much_skips_full: Not stated; default false.
+[  273.5s] NOTE assumption (recorded as unspecified by the materials): rules.deadline_adjust: Deadlines are the n-th business day after today, so they are always business days; the default previous_business_day applies to any other computed date.
+[  273.5s] NOTE assumption (recorded as unspecified by the materials): products.floor_full_below: No such rule; a debt below the 50-dollar credit card minimum has the whole debt as floor (built-in).
+[  273.5s] NOTE assumption (recorded as unspecified by the materials): products.step_round: No percentage ladder steps.
+[  273.5s] NOTE assumption (recorded as unspecified by the materials): products.promise_scale: create_promise takes the same units as get_account (dollars).
+[  273.5s] NOTE assumption (recorded as unspecified by the materials): products.promise_round: No rounding rule for promises.
+[  273.5s] NOTE assumption (recorded as unspecified by the materials): multi.outcome_priority: Brief A covers one product; default.
+[  273.5s] NOTE assumption (recorded as unspecified by the materials): multi.order: Brief A covers one product; account order.
+[  273.5s] NOTE assumption (recorded as unspecified by the materials): changes: No dated value change; the CM-01 holiday (2026-10-23) is undated and is in the base calendar.
+[  273.5s] NOTE repair budget used: 0/3
+[  273.5s] STEP 3. compile workflow
+[  273.5s] NOTE workflow: 25 nodes, 16 engine-run calls, 195897 bytes
+[  273.6s] NOTE RESULT: COMPLETE -- every rule carried, every local scenario passes
+[  273.6s] END 2026-10-11T15:04:25+0000 total_seconds=273.6 model_calls=3 model_cost_usd=3.18

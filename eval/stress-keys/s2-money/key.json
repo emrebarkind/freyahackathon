@@ -1,0 +1,302 @@
+{
+ "package": "s2-money",
+ "rules": {
+  "UNITS": "get_account amounts are integer cents; the brief, floors and checks are in dollars; create_promise takes integer cents (amount_cents).",
+  "DEADLINE": "Band 1 (1-30): CARD 7th / AUTO 3rd business day after today. Band 2 (31-75): CARD last business day of the month (next month's if today is that day), AUTO 2nd business day after today.",
+  "FLOOR": "CARD 12% of overdue rounded up to whole dollar, min $35, whole debt if below $35. AUTO band 1 monthly payment; AUTO band 2 whole overdue.",
+  "LADDER": "Step 1 full on deadline; step 2 (band 2) floor on deadline; a repeated step is skipped and not counted. Attempts: band 1 one, band 2 two.",
+  "IDENTITY": "zip_code (5 digits, leading zero kept) then ssn_last4; three wrong answers.",
+  "CODES": "Renamed result codes and destinations."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-05T10:00",
+    "product": {
+     "acct_ref": "PB-C-5501",
+     "kind": "CARD",
+     "card_suffix": "8812",
+     "overdue_cents": 41250,
+     "days_past_due": 14
+    }
+   },
+   "expect": "2026-11-17",
+   "source": "| 1 | 1 to 30 | the 7th business day after today | the 3rd business day after today | 1 | / Business days are Monday to Friday, except bank holidays 2026-11-11, 2026-11-26, 2026-12-25 and 2027-01-01. \"The Nth business day after today\" never counts today itself."
+  },
+  {
+   "id": "C2",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-24T15:30",
+    "product": {
+     "acct_ref": "PB-A-7702",
+     "kind": "AUTO",
+     "overdue_cents": 77810,
+     "days_past_due": 22,
+     "monthly_payment_cents": 38900
+    }
+   },
+   "expect": "2026-11-30",
+   "source": "| 1 | 1 to 30 | the 7th business day after today | the 3rd business day after today | 1 | / Business days are Monday to Friday, except bank holidays 2026-11-11, 2026-11-26, 2026-12-25 and 2027-01-01. \"The Nth business day after today\" never counts today itself."
+  },
+  {
+   "id": "C3",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-31T09:15",
+    "product": {
+     "acct_ref": "PB-C-5503",
+     "kind": "CARD",
+     "card_suffix": "0457",
+     "overdue_cents": 41250,
+     "days_past_due": 44
+    }
+   },
+   "expect": "2027-01-29",
+   "source": "| 2 | 31 to 75 | the last business day of the current month | the 2nd business day after today | 2 | / CARD in band 2: if today is the last business day of the month, the deadline is the last business day of the next month. / Business days are Monday to Friday, except bank holidays 2026-11-11, 2026-11-26, 2026-12-25 and 2027-01-01. \"The Nth business day after today\" never counts today itself."
+  },
+  {
+   "id": "C4",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-23T11:00",
+    "product": {
+     "acct_ref": "PB-A-7704",
+     "kind": "AUTO",
+     "overdue_cents": 112045,
+     "days_past_due": 48,
+     "monthly_payment_cents": 41500
+    }
+   },
+   "expect": "2026-12-28",
+   "source": "| 2 | 31 to 75 | the last business day of the current month | the 2nd business day after today | 2 | / Business days are Monday to Friday, except bank holidays 2026-11-11, 2026-11-26, 2026-12-25 and 2027-01-01. \"The Nth business day after today\" never counts today itself."
+  },
+  {
+   "id": "C5",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-28T10:00",
+    "product": {
+     "acct_ref": "PB-C-5505",
+     "kind": "CARD",
+     "card_suffix": "3391",
+     "overdue_cents": 41250,
+     "days_past_due": 44
+    }
+   },
+   "expect": 50.0,
+   "source": "**CARD, both bands:** 12% of the overdue amount in dollars, rounded **up** to the next whole dollar (an amount that is already a whole number of dollars stays as it is), with a minimum of $35. If the overdue amount is below $35, the floor is the whole overdue amount. / The tool API works in **integer cents**: `get_account` returns `overdue_cents` and `monthly_payment_cents`, and `create_promise` takes `amount_cents`."
+  },
+  {
+   "id": "C6",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-05T10:00",
+    "product": {
+     "acct_ref": "PB-C-5506",
+     "kind": "CARD",
+     "card_suffix": "2208",
+     "overdue_cents": 29167,
+     "days_past_due": 12
+    }
+   },
+   "expect": 36.0,
+   "source": "**CARD, both bands:** 12% of the overdue amount in dollars, rounded **up** to the next whole dollar (an amount that is already a whole number of dollars stays as it is), with a minimum of $35. If the overdue amount is below $35, the floor is the whole overdue amount. / The tool API works in **integer cents**: `get_account` returns `overdue_cents` and `monthly_payment_cents`, and `create_promise` takes `amount_cents`."
+  },
+  {
+   "id": "C7",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-05T10:00",
+    "product": {
+     "acct_ref": "PB-C-5507",
+     "kind": "CARD",
+     "card_suffix": "6630",
+     "overdue_cents": 50000,
+     "days_past_due": 12
+    }
+   },
+   "expect": 60.0,
+   "source": "**CARD, both bands:** 12% of the overdue amount in dollars, rounded **up** to the next whole dollar (an amount that is already a whole number of dollars stays as it is), with a minimum of $35. If the overdue amount is below $35, the floor is the whole overdue amount. / The tool API works in **integer cents**: `get_account` returns `overdue_cents` and `monthly_payment_cents`, and `create_promise` takes `amount_cents`."
+  },
+  {
+   "id": "C8",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-05T10:00",
+    "product": {
+     "acct_ref": "PB-C-5508",
+     "kind": "CARD",
+     "card_suffix": "1174",
+     "overdue_cents": 2875,
+     "days_past_due": 9
+    }
+   },
+   "expect": 28.75,
+   "source": "**CARD, both bands:** 12% of the overdue amount in dollars, rounded **up** to the next whole dollar (an amount that is already a whole number of dollars stays as it is), with a minimum of $35. If the overdue amount is below $35, the floor is the whole overdue amount. / The tool API works in **integer cents**: `get_account` returns `overdue_cents` and `monthly_payment_cents`, and `create_promise` takes `amount_cents`."
+  },
+  {
+   "id": "C9",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-24T15:30",
+    "product": {
+     "acct_ref": "PB-A-7709",
+     "kind": "AUTO",
+     "overdue_cents": 77810,
+     "days_past_due": 22,
+     "monthly_payment_cents": 38900
+    }
+   },
+   "expect": 389.0,
+   "source": "**AUTO, band 1:** the monthly payment (`monthly_payment_cents`, in dollars). / The tool API works in **integer cents**: `get_account` returns `overdue_cents` and `monthly_payment_cents`, and `create_promise` takes `amount_cents`."
+  },
+  {
+   "id": "C10",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-23T11:00",
+    "product": {
+     "acct_ref": "PB-A-7710",
+     "kind": "AUTO",
+     "overdue_cents": 112045,
+     "days_past_due": 48,
+     "monthly_payment_cents": 41500
+    }
+   },
+   "expect": 1120.45,
+   "source": "**AUTO, band 2:** the whole overdue amount. No partial payment is accepted. / The tool API works in **integer cents**: `get_account` returns `overdue_cents` and `monthly_payment_cents`, and `create_promise` takes `amount_cents`."
+  },
+  {
+   "id": "C11",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-28T10:00",
+    "product": {
+     "acct_ref": "PB-C-5511",
+     "kind": "CARD",
+     "card_suffix": "3391",
+     "overdue_cents": 41250,
+     "days_past_due": 44
+    }
+   },
+   "expect": [
+    [
+     412.5,
+     "2026-12-31"
+    ],
+    [
+     50.0,
+     "2026-12-31"
+    ]
+   ],
+   "source": "Step 1: the full overdue amount on the deadline. / Step 2 (band 2 only): the floor on the deadline. / | 2 | 31 to 75 | the last business day of the current month | the 2nd business day after today | 2 | / **CARD, both bands:** 12% of the overdue amount in dollars, rounded **up** to the next whole dollar (an amount that is already a whole number of dollars stays as it is), with a minimum of $35. If the overdue amount is below $35, the floor is the whole overdue amount."
+  },
+  {
+   "id": "C12",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-23T11:00",
+    "product": {
+     "acct_ref": "PB-A-7712",
+     "kind": "AUTO",
+     "overdue_cents": 112045,
+     "days_past_due": 48,
+     "monthly_payment_cents": 41500
+    }
+   },
+   "expect": [
+    [
+     1120.45,
+     "2026-12-28"
+    ]
+   ],
+   "source": "Step 1: the full overdue amount on the deadline. / Step 2 (band 2 only): the floor on the deadline. / A step that would repeat a proposal already made for that account (same amount, same date) is skipped. A skipped step is not a proposal and does not count as an attempt. / **AUTO, band 2:** the whole overdue amount. No partial payment is accepted."
+  },
+  {
+   "id": "C13",
+   "rule": "LADDER",
+   "type": "attempts",
+   "input": {
+    "now": "2026-12-23T11:00",
+    "product": {
+     "acct_ref": "PB-A-7713",
+     "kind": "AUTO",
+     "overdue_cents": 112045,
+     "days_past_due": 48,
+     "monthly_payment_cents": 41500
+    }
+   },
+   "expect": 1,
+   "source": "| 2 | 31 to 75 | the last business day of the current month | the 2nd business day after today | 2 | / Step 1: the full overdue amount on the deadline. / Step 2 (band 2 only): the floor on the deadline. / A step that would repeat a proposal already made for that account (same amount, same date) is skipped. A skipped step is not a proposal and does not count as an attempt."
+  },
+  {
+   "id": "C14",
+   "rule": "UNITS",
+   "type": "promise_amount",
+   "input": {
+    "amount": 194.83
+   },
+   "expect": 19483,
+   "source": "A promise of $194.83 is sent as `amount_cents: 19483`. / Promised amount in whole cents. $194.83 is sent as 19483. Decimal values are rejected."
+  },
+  {
+   "id": "C15",
+   "rule": "UNITS",
+   "type": "promise_amount",
+   "input": {
+    "amount": 1234.57
+   },
+   "expect": 123457,
+   "source": "A promise of $194.83 is sent as `amount_cents: 19483`. / Convert between dollars and cents exactly ($1 = 100 cents); never send a dollar value to the API and never read a cents value to the customer."
+  },
+  {
+   "id": "C16",
+   "rule": "IDENTITY",
+   "type": "id_answer",
+   "input": {
+    "field": "zip_code",
+    "value": "02139"
+   },
+   "expect": "02139",
+   "source": "Send the ZIP code as exactly five digits, keeping any leading zero."
+  },
+  {
+   "id": "C17",
+   "rule": "CODES",
+   "type": "transfer",
+   "input": {
+    "situation": "transfer_restructuring"
+   },
+   "expect": "LOAN_MODS",
+   "source": "A request for a payment plan, a lower payment or a loan modification: transfer to `LOAN_MODS`; close as `XFER` / `loan_mod`."
+  },
+  {
+   "id": "C18",
+   "rule": "CODES",
+   "type": "close",
+   "input": {
+    "situation": "service_error"
+   },
+   "expect": {
+    "outcome": "NO_PTP",
+    "reason": "system"
+   },
+   "source": "If it fails again, note the account `SYSTEM` and close as `NO_PTP` / `system` unless another promise was recorded."
+  }
+ ]
+}
