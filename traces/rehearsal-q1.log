@@ -1,0 +1,71 @@
+[    0.0s] START 2026-10-11T05:11:42+0000
+[    0.0s] NOTE briefs=['eval/holdout/q1/brief.md'] tool_api=eval/holdout/q1/openapi.json slot=rehearsal-q1
+[    0.0s] STEP 1. spec extraction
+[    0.8s] NOTE extraction mode B
+[   99.5s] MODEL CALL #1 model=claude-opus-5-5 seconds=98.7 cost_usd=0.235 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  133.7s] MODEL CALL #2 model=claude-opus-5-5 seconds=34.2 cost_usd=0.254 purpose: audit the high-risk fields of the reading against the source documents
+[  133.7s] NOTE audit: calendar: OK -- "Business days are Monday to Friday, except two Marrow & Pike holidays: 2026-11-27 and 2026-12-21." -- The workdays are 0–4 and both holidays are listed.
+[  133.7s] date_rules: OK -- the brief says nothing about "next <weekday>" -- The spec uses the default "following_week" and records it in assumptions.
+[  133.7s] confirm: OK -- the brief gives the question "Is this {title} {last_name}?" but no limit on how often to ask -- The spec uses the default max_asks 2 and records it in assumptions.
+[  133.7s] callback: OK -- "This brief never uses `add_note` or `schedule_callback`." -- Setting every weekday window to null means no callback can be booked. That matches the brief. max_asks 1 is not the format's default of 2, but the materials don't decide it and it has no effect when no window is open, so it is left as is.
+[  133.7s] identity.questions: OK -- "Ask two questions, one at a time: date of birth (`birth_date`, sent as `YYYY-MM-DD`), then the postcode on file (`postcode`, sent in capitals without spaces)" -- The order is right, birth_date is a date with format %Y-%m-%d, and postcode is upper with no space format. No length is set because UK postcodes vary in length.
+[  133.7s] identity.max_wrong: OK -- "Two wrong answers in total end the check" (the API says the same: "Two wrong answers in total end the check.") -- The spec has 2, counted in total, and max_wrong_per_question is null.
+[  133.7s] identity.hints: OK -- the verify_identity response has no hint field -- The spec has {}.
+[  133.7s] identity: OK -- the response fields ok, verified, wrong_answers_left and all_verified match the API. "An unreadable value is rejected with ok=false and is not counted as a wrong answer" is covered by the ok flag, so reject_values is empty. purpose_is_decline uses the default.
+[  133.7s] products.amount_field: OK -- "the arrears amount"; API "arrears: pounds overdue" -- The spec has "arrears".
+[  133.7s] products.floor_field: OK -- "The floor is the record's `min_due` for a store card and its `monthly_repayment` for a personal loan or a motor loan." -- The mapping matches for all three product types.
+[  133.7s] products.floor_pct: OK -- the floor is an account field, not a percentage -- The spec has null.
+[  133.7s] products: OK -- the names match "store card ending 1234", "personal loan" and "motor loan". Amounts are in pounds on both get_account and create_promise ("£84.50 is sent as `84.5`"), so amount_scale is 1 and promise_scale is null. The brief gives no rounding rule, so promise_round is null. list_field, id_field and type_field match the API.
+[  133.7s] bands: OK -- the table gives "1 to 10 | A | the 12th business day after today | 1", "11 to 30 | B | 9th | 2", "31 to 60 | C | 7th | 3" and "61 to 90 | D | 5th | 4". The bounds, the business_days_after n values and the totals all match. The totals are copied as given, which is correct because opening_is_attempt is true.
+[  133.7s] ladder: OK -- "That question is itself a proposal. It is the first of the proposals the band allows" plus "Step 1: the full arrears on the last business day of the current week. Step 2: the full arre
+[  133.7s] NOTE audit changed: nothing
+[  133.7s] NOTE validation round 1: 0 problem(s)
+[  133.7s] NOTE assumption: Currency is pounds (brief section 1: all amounts are in pounds; the API says arrears, min_due and monthly_repayment are in pounds). get_account and create_promise both use pounds as plain numbers (84.5 for £84.50), so amount_scale=1 and promise_scale=null. The brief gives no rounding rule, so promise_round=null.
+[  133.7s] NOTE assumption: Calendar: Monday to Friday are business days. The two holidays are 2026-11-27, which is a Friday, and 2026-12-21. So in the week of 2026-11-23 the last business day is Thursday 2026-11-26.
+[  133.7s] NOTE assumption: Bands: A is 1-10 days late, deadline the 12th business day after today, 1 proposal. B is 11-30, 9th business day, 2 proposals. C is 31-60, 7th business day, 3 proposals. D is 61-90, 5th business day, 4 proposals. 'Nth business day after today' never counts today. Worked example: today 2026-11-10 in band A gives 2026-11-26.
+[  133.7s] NOTE assumption: Rule 10 says the opening question 'Can you pay the full £{arrears} today?' is itself proposal 1 and counts toward the band total, so opening_is_attempt=true. Ladder step 1 is that opening ask (full arrears today). Steps 2-4 are the brief's Step 1 (full arrears on the last business day of the current week), Step 2 (full arrears on the deadline) and Step 3 (floor on the deadline). The band attempts are the brief's totals as given (A=1, B=2, C=3, D=4), so a band A customer who says no to the opening question has no proposals left.
+[  133.7s] NOTE assumption: Rule 12 says never make the same proposal twice; a step whose amount and date both match an earlier proposal is skipped, not said and not counted. Two cases: (a) if today is the last business day of the current week, the brief's Step 1 equals the opening ask and is skipped; (b) if the floor equals or exceeds the arrears, the floor-on-deadline step equals full-on-deadline and is skipped. The brief does not say to use next week's date when today is the week's last business day, so week_end_today=null and the duplicate is skipped instead.
+[  133.7s] NOTE assumption: Rule 13: when the band total is reached or the ladder runs out, stop proposing and close as no_agreement / refused. ladder_repeat_last=false.
+[  133.7s] NOTE assumption: Rule 7: the floor is min_due for store cards and monthly_repayment for personal and motor loans. The brief gives no clamp beyond 'never record less than the floor and never more than arrears', so a promise must satisfy floor <= amount <= arrears. If the floor is above the arrears, the arrears is the most that can be recorded.
+[  133.7s] NOTE assumption: Rule 6: a promise date must be a business day, not before today and not after the band's deadline. Deadlines computed as business days after today are always business days. previous_business_day is used for any other computed date that is not a business day, for example a Friday that is a holiday.
+[  133.7s] NOTE assumption: The brief does not say what to do when the customer says the full amount is too much. The default too_much_floor=attempt_1 is kept, and any floor proposal still counts against the band total (rule 11), with no new terms (rule 14).
+[  133.7s] NOTE assumption: Identity: birth_date first (sent YYYY-MM-DD), then postcode (sent in capitals with no spaces, so no space_before_last format). No fixed length is set because UK postcodes vary in length. Two wrong answers in total end the check, so max_wrong=2, closing as id_not_passed / failed. The API has no hint field, so hints={}. Unreadable answers come back ok=false and are not counted.
+[  133.7s] NOTE assumption: Opening: the brief says to tell the caller the call is recorded; this is said in active voice as 'We record this call.' The confirmation question is the brief's exact wording, 'Is this {title} {last_name}?'.
+[  133.7s] NOTE assumption: The brief never uses schedule_callback. Every weekday is set to null in callback.windows so no callback can be booked. When someone else answers on the customer's number, the agent closes without booking one.
+[  133.7s] NOTE assumption: The outcome table lists only wrong_number as a reason for not_contacted, so callback, no_callback, deceased and unclear (customer not reached or not confirmed) also close as not_contacted / wrong_number. id_declined (refusing the security questions) closes as id_not_passed / failed.
+[  133.7s] NOTE assumption: The brief never uses add_note, so notes.enabled=false and every note value is empty.
+[  133.7s] NOTE assumption: Transfers: hardship accepted goes to queue vulnerable_care, closing handed_over / care; hardship declined closes no_agreement / hardship. A payment plan request goes to repayment_plans, closing handed_over / plan. A request for a person goes to advisor, closing handed_over / advisor. Rule 19 says to transfer on request, so human.ask_first=false.
+[  133.7s] NOTE assumption: If create_promise fails twice, the call closes as no_agreement / system_error. The confirmation question is the brief's exact 'Is that right?'. The brief requires no SMS sentence, so sms_line is empty.
+[  133.7s] NOTE assumption: The brief is silent on the following, so defaults are used: date_rules next_weekday=following_week, confirm.max_asks=2, max_not_talk=2, purpose_is_decline=true, after_promise.ask_anything_else=true. Changing a recorded promise is also not covered, so the agent says it cannot be done on this call.
+[  133.7s] NOTE assumption: Floor spoken names ('minimum due', 'monthly repayment') come from the account field names; the brief calls both 'the floor'.
+[  133.7s] NOTE assumption: The brief does not say what happens to a days_late value outside 1-90, so bands_outside=null.
+[  133.7s] STEP 2. local checks: structure, tool API, engine self-test on synthetic customers
+[  134.4s] TEST PASS local happy path, pays in full today
+[  134.4s] TEST PASS local someone else answers, books a callback
+[  134.4s] TEST PASS local wrong number
+[  134.4s] TEST PASS local identity fails
+[  134.4s] TEST PASS local identity answered the way people speak
+[  134.4s] TEST PASS local already paid
+[  134.4s] TEST PASS local dispute
+[  134.4s] TEST PASS local hardship, accepts support
+[  134.4s] TEST PASS local restructuring request
+[  134.4s] TEST PASS local flat refusals
+[  134.4s] TEST PASS local the bank fails to record the promise twice
+[  134.4s] TEST PASS local several products, all paid today
+[  134.4s] NOTE local checks: structural 0, tool API 0, self-test 12/12
+[  134.4s] NOTE UNSUPPORTED by the engine (policy kept as the brief states it): a ladder step uses the last business day of this week and the brief does not say what happens when today is that day: read literally (today; a step equal to an earlier proposal is skipped), not moved to next week
+[  134.4s] NOTE UNSUPPORTED by the engine (policy kept as the brief states it): no callback day is allowed: every callback request closes as no_callback
+[  134.4s] NOTE repair budget used: 0/3
+[  134.4s] STEP 3. compile workflow
+[  134.5s] NOTE workflow: 25 nodes, 16 engine-run calls, 191171 bytes
+[  134.5s] STEP 4. validate, save, publish
+[  135.4s] TEST PASS platform dry-run validation
+[  139.5s] NOTE FREYA workflow_id=935e69c5-1311-4bbe-b70a-30665085d96a agent_id=680f80f0-4255-4dac-b1a9-5914984c9e13 version=2
+[  139.5s] STEP 5. chat smoke test on Freya
+[  148.2s] TEST PASS chat the engine runs on the platform (asks the first security question) -- Hello? / Before we go on, I need to ask you two security questions. What is your date of birth?
+[  148.2s] TEST PASS chat no unfilled placeholder spoken
+[  148.2s] TEST PASS chat nothing about the debt before verification
+[  148.2s] STEP 6. export
+[  148.6s] NOTE exported submission/rehearsal-q1.workflow.json
+{"workflow_id": "935e69c5-1311-4bbe-b70a-30665085d96a", "agent_id": "680f80f0-4255-4dac-b1a9-5914984c9e13", "export": "submission/rehearsal-q1.workflow.json"}
+[  148.6s] END 2026-10-11T05:14:10+0000 total_seconds=148.6 model_calls=2 model_cost_usd=0.49
