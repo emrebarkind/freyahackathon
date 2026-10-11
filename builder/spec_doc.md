@@ -262,9 +262,12 @@ customer insists on an amount below the floor after it was offered: "I'm sorry, 
 Built-in behaviour (always carried out; never list these under unsupported_rules):
 - an amount is never recorded below the floor (the floor is offered instead) or above the amount owed; a floor above
   the amount owed is the amount owed; a percentage ladder step is never below the floor;
-- a proposal the customer refused is never proposed again, the opening ask included; dates move off non-business
+- a proposal the customer refused is never proposed again (the opening ask too when `opening_blocks_repeat` or
+  `opening_is_attempt` says so); dates move off non-business
   days as `deadline_adjust` says and never past the product's deadline;
 - identity: the first "why do you ask" is answered once; a second refusal closes as id_declined;
+- "I don't want to talk" `max_not_talk` times: before identity is verified the call closes with the id_declined
+  event, after it every open product ends refused (the refused event); the first time gets one `not_talk_once` line;
 - `callback.days: []`: someone else answering is told nothing and the call closes with the no_callback event, no
   time is asked; a tool the API does not offer is never called.
 
