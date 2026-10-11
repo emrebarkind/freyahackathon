@@ -1,0 +1,91 @@
+===== Example 9 customer 93635512 call 52d7692b-7448-48bc-8d62-0b80779602be
+  [user] Yıldız Platinum kartımın borcunu öğrenmek istiyorum.
+     TOOL cards.list {"aiFlow": "CardOps", "customerNo": "93635512"}
+       -> {"status": "success", "data": {"data": {"cards": [{"cardNumber": "540000******7201", "cardNumberLast4": "7201", "productName": "Yıldız Miles", "status": "A", "isMainCard": true}, {
+     TOOL cards.balance {"cardNumber": "540000******7203"}
+       -> {"status": "success", "data": {"data": {"cardNumber": "5400********7203", "cardNumberLast4": "7203", "productName": "Yıldız Platinum", "statementDate": "05.10.2026", "lastPayDate":
+  [assi] Bilgilerinizi kontrol ediyorum. Sonu yedi iki sıfır üç ile biten Yıldız Platinum kartınıza ait 5 Ekim 2026 tarihinde kesilen ekstre Türk Lirası borcunuz on beş bin sekiz yüz Türk Lirası, ödenmesi gereken minimum tutar altı bin üç yüz yirmi Türk Lirası, kalan toplam borcunuz on iki bin üç yüz Türk Lirası, kalan minimum ödeme tutarınız iki bin sekiz yüz yirmi Türk Lirası'dır. Dolar, Euro ve İngiliz Sterlini borcunuz bulunmamaktadır. Borçlarınız için son ödeme tarihiniz 15 Ekim 2026'dır.
+ Başka bir kartınızın borcunu öğrenmek ister misiniz?
+  [user] Ekstremi e-postama gönderin.
+     node end_out_of_scope_main_menu
+  [assi] Sizi ana menüye aktarıyorum.
+  [user] Evet.
+  [assi] Hangi kartınızın borcunu öğrenmek istersiniz? Örneğin, Miles Platinum veya Gold kart diyebilirsiniz.
+===== Example 10 customer 92335586 call 1981b3eb-ee55-45ce-b1d3-eda889bc639e
+  [user] Borcumu öğrenmek istiyorum.
+     TOOL cards.list {"aiFlow": "CardOps", "customerNo": "92335586"}
+       -> {"status": "success", "data": {"data": {"cards": [{"cardNumber": "540000******8501", "cardNumberLast4": "8501", "productName": "Yıldız Pratik", "status": "A", "isMainCard": true}],
+     TOOL cards.balance {"cardNumber": "540000******8501"}
+       -> {"status": "success", "data": {"data": {"cardNumber": "5400********8501", "cardNumberLast4": "8501", "productName": "Yıldız Pratik", "statementDate": "05.10.2026", "lastPayDate": "
+  [assi] Sonu sekiz beş sıfır bir ile biten Yıldız Pratik kartınıza ait 5 Ekim 2026 tarihinde kesilen ekstre Türk Lirası borcunuz on sekiz bin beş yüz Türk Lirası, ödenmesi gereken minimum tutar yedi bin dört yüz Türk Lirası'dır. Dolar borcunuz altı yüz elli Dolar, kalan toplam borcunuz altı yüz elli Dolar, ödenmesi gereken minimum tutar iki yüz altmış Dolar'dır. Euro borcunuz üç yüz seksen Euro, kalan toplam borcunuz üç yüz seksen Euro, ödenmesi gereken minimum tutar yüz elli iki Euro'dur. İngiliz Sterlini borcunuz bulunmamaktadır. Borçlarınız için son ödeme tarihiniz 15 Ekim 2026'dır.
+  [user] Teşekkürler.
+     node end_completed_main_menu
+  [assi] Sizi ana menüye yönlendiriyorum.
+===== Example 11 customer 95004361 call 4a04330b-d73d-458d-9413-2bc24caea056
+  [user] Hi, I would like to know my credit card debt.
+  [assi] Merhaba, size yardımcı olabilirim.
+     TOOL cards.list {"aiFlow": "CardOps", "customerNo": "95004361"}
+       -> {"status": "success", "data": {"data": {"cards": [{"cardNumber": "540000******2000", "cardNumberLast4": "2000", "productName": "Yıldız Premium", "status": "A", "isMainCard": true}]
+  [assi] Bilgilerinizi kontrol ediyorum.
+     TOOL cards.balance {"cardNumber": "540000******2000"}
+       -> {"status": "success", "data": {"data": {"cardNumber": "5400********2000", "cardNumberLast4": "2000", "productName": "Yıldız Premium", "statementDate": "05.10.2026", "lastPayDate": 
+  [assi] Sonu iki sıfır sıfır sıfır ile biten Yıldız Premium kartınıza ait 5 Ekim 2026 tarihinde kesilen ekstre Türk Lirası borcunuz on iki bin Türk Lirası, ödenmesi gereken minimum tutar dört bin sekiz yüz Türk Lirası, kalan toplam borcunuz dokuz bin beş yüz Türk Lirası, kalan minimum ödeme tutarınız iki bin Türk Lirası'dır. Euro borcunuz seksen beş Euro yirmi sent, kalan toplam borcunuz seksen beş Euro yirmi sent, ödenmesi gereken minimum tutar otuz dört Euro on bir sent'tir. Dolar ve İngiliz Sterlini borcunuz bulunmamaktadır. Borçlarınız için son ödeme tarihiniz 15 Ekim 2026'dır.
+===== Example 12 customer 95004361 call dc926e05-b6ec-458d-be4b-5070ca369cbb
+  [user] Borcumu öğrenmek istiyorum.
+     TOOL cards.list {"aiFlow": "CardOps", "customerNo": "95004361"}
+       -> {"status": "success", "data": {"data": {"cards": [{"cardNumber": "540000******2000", "cardNumberLast4": "2000", "productName": "Yıldız Premium", "status": "A", "isMainCard": true}]
+     TOOL cards.balance {"cardNumber": "540000******2000"}
+       -> {"status": "success", "data": {"data": {"cardNumber": "5400********2000", "cardNumberLast4": "2000", "productName": "Yıldız Premium", "statementDate": "05.10.2026", "lastPayDate": 
+  [assi] Sonu iki sıfır sıfır sıfır ile biten Yıldız Premium kartınıza ait 5 Ekim 2026 tarihinde kesilen ekstre Türk Lirası borcunuz on iki bin Türk Lirası, ödenmesi gereken minimum tutar dört bin sekiz yüz Türk Lirası, kalan toplam borcunuz dokuz bin beş yüz Türk Lirası, kalan minimum ödeme tutarınız iki bin Türk Lirası'dır. Euro borcunuz seksen beş Euro yirmi sent, kalan toplam borcunuz seksen beş Euro yirmi sent, ödenmesi gereken minimum tutar otuz dört Euro on bir sent'dir. Dolar ve İngiliz Sterlini borcunuz bulunmamaktadır. Borçlarınız için son ödeme tarihiniz 15 Ekim 2026'dır.
+  [user] Bu borcu nasıl ödeyebilirim?
+     node end_transferred_payment
+  [assi] Borç ödeme işleminiz için sizi müşteri temsilcimize aktarıyorum.
+===== Example 13 customer 96158684 call 0e3826b9-b575-4393-84ef-7ba8ad7ea6a7
+  [user] Borcumu öğrenmek istiyorum.
+     TOOL cards.list {"aiFlow": "CardOps", "customerNo": "96158684"}
+       -> {"status": "success", "data": {"data": {"cards": [{"cardNumber": "540000******1110", "cardNumberLast4": "1110", "productName": "Yıldız Miles", "status": "A", "isMainCard": true}], 
+     TOOL cards.balance {"cardNumber": "540000******1110"}
+       -> {"status": "success", "data": {"data": {"cardNumber": "5400********1110", "cardNumberLast4": "1110", "productName": "Yıldız Miles", "statementDate": "09.10.2026", "lastPayDate": "1
+  [assi] Bilgilerinizi kontrol ediyorum. Sonu bir bir bir sıfır ile biten Yıldız Miles kartınıza ait 9 Ekim 2026 tarihinde kesilen ekstre Türk Lirası borcunuz on bin Türk Lirası, kalan toplam borcunuz beş bin Türk Lirası'dır. Minimum ödemenizi yaptığınız için teşekkür ederiz. Borçlarınız için son ödeme tarihiniz 19 Ekim 2026'dır.
+  [user] Bu borç yanlış, ben ödeme yapmıştım.
+     node end_transferred_dispute
+  [assi] Bu konuda size müşteri temsilcimiz yardımcı olacak, sizi aktarıyorum.
+===== Example 14 customer 97116902 call cd3831e5-5f73-4e35-8494-a1ca67d73b7d
+  [user] Kartımın faiz oranı ne kadar?
+  [assi] Merhaba, size yardımcı olmak için buradayım. Size bu konuda yardımcı olamıyorum. Sizi ana menüye aktarmamı ister misiniz?
+  [user] Hayır, borcumu öğrenmek istiyorum.
+     TOOL cards.list {"aiFlow": "CardOps", "customerNo": "97116902"}
+       -> {"status": "success", "data": {"data": {"cards": [{"cardNumber": "540000******1601", "cardNumberLast4": "1601", "productName": "Yıldız Pratik", "status": "A", "isMainCard": true}, 
+  [assi] Hangi kartınızın borcunu öğrenmek istersiniz? Örneğin, Yıldız Pratik veya Yıldız Fly diyebilirsiniz.
+  [user] Yıldız Fly.
+     TOOL cards.list {"aiFlow": "CardOps", "customerNo": "97116902"}
+       -> {"status": "success", "data": {"data": {"cards": [{"cardNumber": "540000******1601", "cardNumberLast4": "1601", "productName": "Yıldız Pratik", "status": "A", "isMainCard": true}, 
+     TOOL cards.balance {"cardNumber": "540000******1602"}
+       -> {"status": "success", "data": {"data": {"cardNumber": "5400********1602", "cardNumberLast4": "1602", "productName": "Yıldız Fly", "statementDate": "05.10.2026", "lastPayDate": "15.
+  [assi] Bilgilerinizi kontrol ediyorum.
+ Sonu bir altı sıfır iki ile biten Yıldız Fly kartınıza ait 5 Ekim 2026 tarihinde kesilen ekstre Türk Lirası borcunuz beş bin altı yüz Türk Lirası, kalan toplam borcunuz üç bin üç yüz altmış Türk Lirası'dır. Minimum ödemenizi yaptığınız için teşekkür ederiz. Euro borcunuz doksan altı Euro kırk sent, kalan toplam borcunuz doksan altı Euro kırk sent, ödenmesi gereken minimum tutar otuz sekiz Euro elli altı sent'tir. Dolar ve İngiliz Sterlini borcunuz bulunmamaktadır. Borçlarınız için son ödeme tarihiniz 15 Ekim 2026'dır.
+ Başka bir kartınızın borcunu öğrenmek ister misiniz?
+  [user] Teşekkürler.
+     node end_completed_main_menu
+  [assi] Sizi ana menüye yönlendiriyorum.
+===== Example 15 customer 95960044 call ca574f3c-d152-4378-91d0-2dd60aec0273
+  [user] Yıldız Pratik kartımın borcunu öğrenmek istiyorum.
+     TOOL cards.list {"aiFlow": "CardOps", "customerNo": "95960044"}
+       -> {"status": "success", "data": {"data": {"cards": [{"cardNumber": "540000******3101", "cardNumberLast4": "3101", "productName": "Yıldız Pratik", "status": "A", "isMainCard": true}, 
+     TOOL cards.balance {"cardNumber": "540000******3101"}
+       -> {"status": "success", "data": {"data": {"cardNumber": "5400********3101", "cardNumberLast4": "3101", "productName": "Yıldız Pratik", "statementDate": "16.10.2026", "lastPayDate": "
+  [assi] Bilgilerinizi kontrol ediyorum. Sonu üç bir sıfır bir ile biten Yıldız Pratik kartınızın hesap kesim tarihi bugün, ekstreniz saat sıfır sıfır nokta sıfır sıfır itibarıyla kesilecek. Türk Lirası toplam borcunuz on altı bin sekiz yüz Türk Lirası, Dolar toplam borcunuz beş yüz kırk Dolar, Euro toplam borcunuz üç yüz on Euro'dur. İngiliz Sterlini borcunuz bulunmamaktadır.
+ Başka bir kartınızın borcunu öğrenmek ister misiniz?
+  [user] Teşekkürler.
+     node end_completed_main_menu
+  [assi] Sizi ana menüye yönlendiriyorum.
+===== Example 16 customer 95004361 call cac00af2-9f7f-478c-9bb7-dde72bba35a6
+  [user] Borcumu öğrenmek istiyorum.
+     TOOL cards.list {"aiFlow": "CardOps", "customerNo": "95004361"}
+       -> {"status": "success", "data": {"data": {"cards": [{"cardNumber": "540000******2000", "cardNumberLast4": "2000", "productName": "Yıldız Premium", "status": "A", "isMainCard": true}]
+     TOOL cards.balance {"cardNumber": "540000******2000"}
+       -> {"status": "success", "data": {"data": {"cardNumber": "5400********2000", "cardNumberLast4": "2000", "productName": "Yıldız Premium", "statementDate": "05.10.2026", "lastPayDate": 
+  [assi] Bilgilerinizi kontrol ediyorum. Sonu iki sıfır sıfır sıfır ile biten Yıldız Premium kartınızın 15 Ekim 2026 olan son ödeme tarihi geçmiştir. Türk Lirası toplam borcunuz dokuz bin beş yüz Türk Lirası, Euro toplam borcunuz seksen beş Euro yirmi sent. Dolar ve İngiliz Sterlini borcunuz bulunmamaktadır.
+  [user] Teşekkürler.
+     node end_completed_main_menu
+  [assi] Sizi ana menüye yönlendiriyorum.
