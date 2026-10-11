@@ -106,6 +106,8 @@ def compile_agent(d, base):
                 spec["default"] = "{{" + f["fill"][4:] + "}}"
             elif f["fill"].startswith("const:"):
                 spec["default"] = f["fill"][6:]
+            else:   # the agent fills it: a {{name}} with no value when the node is entered is a parameter the model fills
+                spec["default"] = "{{" + _param(f["name"], known) + "}}"
             if f["in"] == "body":
                 put_nested(body, f["name"].split("."), spec, f["fill"] == "agent")
             elif f["in"] == "query":
@@ -138,6 +140,12 @@ def compile_agent(d, base):
                                  "parameters": {"type": "object", "properties": {"message_mode": {"type": "string", "default": "none"}}}}}}
     return {"initial_node": "assist", "system_prompt": d["system_prompt"],
             "test_variables": {v["name"]: v["example"] for v in d["variables"]}, "global_nodes": {}, "nodes": nodes}
+
+
+def _param(field, known):
+    """The model-filled parameter's name: the field's last segment, never a call variable's name (that would be baked)."""
+    name = re.sub(r"[^A-Za-z0-9_]", "_", field.split(".")[-1]) or "value"
+    return name if name not in known else name + "_value"
 
 
 def put_nested(node, parts, spec, required):
