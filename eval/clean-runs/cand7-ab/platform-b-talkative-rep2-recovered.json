@@ -1,0 +1,56 @@
+{
+ "simulation_id": "574a77dc-e3b9-4453-aeff-5c393c9e1c4e",
+ "recovered": true,
+ "rows": [
+  {
+   "id": "PUB-13",
+   "family": "Multi-product",
+   "pass_": false,
+   "failed": [
+    "outcome (None, None), expected ('promise', None)",
+    "promises [], expected [('p1', 300.0, '2026-10-30'), ('p2', 900.0, '2026-10-23')]",
+    "the call was not closed with close_call",
+    "conversation: The call failed for two main reasons: first, the call ended on a timeout (exceeded-max-duration) rather than a proper conclusion, which is a grounds for failure. Second, although the assistant performed a read-back of the dates in [Message 8], the user never confirmed these dates. The conversation then devolved into a repetitive loop from [Message 9] through [Message 65], and no system events indi"
+   ],
+   "call_id": "f0f86ff2-b10d-423f-8ff1-05f02394c2f3",
+   "customer_id": "c_67115be1-e41",
+   "attempts": 0,
+   "tools": [
+    "verify_identity",
+    "verify_identity",
+    "get_account"
+   ]
+  },
+  {
+   "id": "PUB-12",
+   "family": "Multi-product",
+   "pass_": false,
+   "failed": [
+    "ledger not found (no customer id)",
+    "conversation: The conversation was cut short immediately after the identification phase. As a result, none of the specific success criteria were met: the phone question was not asked, no promise was recorded for the credit card, no refusal notes were made for other products, and no loan collection attempts (personal or car) occurred."
+   ],
+   "call_id": "7a800a8d-301b-44f3-ba7a-103c95c65561",
+   "customer_id": null,
+   "attempts": 0,
+   "tools": []
+  },
+  {
+   "id": "PUB-11",
+   "family": "Multi-product",
+   "pass_": true,
+   "failed": [],
+   "call_id": "1494477d-ff26-4698-8bf6-747ff37ad4f7",
+   "customer_id": "c_2d4e435f-5c4",
+   "attempts": 0,
+   "tools": [
+    "verify_identity",
+    "verify_identity",
+    "get_account",
+    "create_promise",
+    "create_promise",
+    "create_promise",
+    "close_call"
+   ]
+  }
+ ]
+}

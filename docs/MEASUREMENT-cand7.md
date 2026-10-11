@@ -40,7 +40,8 @@ Official rule: a run passes only if the ledger is right **and** the judge passes
 | B default rep 2 | `0e827e31` | **2/3: PUB-12 FAIL** | Persona/judge (harness) mismatch, see below |
 | B default rep 3 | `ac4f7173` | 3/3 | Recovered from the platform, not re-run |
 | B talkative rep 1 | `614f8dec` | **1/3** | PUB-12: bank API infrastructure error. PUB-13: persona output truncation |
-| B talkative rep 2 | `574a77dc` | pending | Recovered with `scripts/recover_sim.py` when it ends |
+| B talkative rep 2 | `574a77dc` | **1/3** (recovered, not re-run) | PUB-12: platform stall. PUB-13: persona truncation, then max call duration |
+| A default reps 1–3 | journaled in `results/sim-journal.jsonl` (label `cand7-3d62e44-A-default`) | running | Agent `33a1c6db` |
 
 ### Rep 1: unresolved inconsistency
 * run_cases printed PASS for all three when the run ended (1727 s, with 502s on the simulation GET).
@@ -93,6 +94,23 @@ Official rule: a run passes only if the ledger is right **and** the judge passes
     re-ask, then count a non-answer) is bounded.
   * **No change made** to keep candidate 7 fixed. A possible mitigation, untested: re-ask the pending question instead
     of "please go on", so the persona does not have to reason about its own cut message.
+
+### Talkative rep 2
+* **PUB-12: platform stall.**
+  * The call has the greeting and the customer's first answer.
+  * After that there is no node event, no extraction and no agent turn for 60 s, and then the customer hung up.
+  * Same signature as an outage. Counted as FAIL.
+* **PUB-13: persona truncation again.**
+  * The customer's first nego answer came through almost whole ("I cannot pay today, but I want to pay both on the
+    30th of Octobe…").
+  * The agent read back the right plan: card 300 on 30 October, loan 900 on 23 October.
+  * Every answer after that was a cut preamble, sometimes the same words repeated ("My cousin's wedding is", "I have
+    been dealing with so many emails this").
+  * After three unanswered read-backs the engine counted a non-answer and went back to the offer ladder.
+  * The call hit the platform's maximum duration (430 s, exceeded-max-duration) with nothing recorded.
+* **Persona truncation** is now seen in:
+  * 3 of 6 talkative B calls on candidate 7;
+  * 0 of 9 default B calls.
 
 ## Latency (where an agent turn's time goes)
 * Source: `scripts/latency.py` on 4 candidate-7 simulations, output in `eval/clean-runs/cand7-ab/latency-4sims.txt`.
