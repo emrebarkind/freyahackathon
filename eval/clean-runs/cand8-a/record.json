@@ -1,0 +1,21 @@
+{
+ "builder_commit": "9cb2300d9ada3449fbf88a5968fcd8df9cb8d6d8",
+ "exit_status": 0,
+ "inputs": {
+  "inputs/brief-a.md": "d57c049c89aec4615f5b939c5a96ee9bd194142d17045bc4036615cfbdf0f1c7",
+  "inputs/openapi.json": "9a8410b12e5c82b6c6a30e9ed7030574d6f919cafdb1e035cef7bd876b0badb8"
+ },
+ "outputs": {
+  "cand8-a.log": "cfa562e98a86e8c2363435294ef27af8910963e5a2ab6dc4607ef9d88da0b8d2",
+  "cand8-a.spec.json": "dd6d40cdc0484abad3323bf53266b1361233ba974e48da0a286414e3dd9c49ea",
+  "cand8-a.trace.log": "d24b4965871db98fe4475c7a3629894461a6f0928b3d6fd910862309237a2964",
+  "cand8-a.workflow.json": "fc33755b371debd361479aa81dcd63d179cd92e46a26cc2b5634f740c29b8c79"
+ },
+ "seconds": 170.4,
+ "model_calls": 3,
+ "cost_usd": 1.0,
+ "result": "COMPLETE",
+ "reasons": [],
+ "workflow_id": "d7c2b95f-cc78-478a-b8aa-d521e5a2df44",
+ "agent_id": "0a63e696-de73-4f10-ac0a-c63c3afa29ce"
+}
