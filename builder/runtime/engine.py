@@ -1112,7 +1112,8 @@ def make_offer(V, s, p, step_idx, pre=""):
         d = dl
     offer = [round(amt, 2), iso(d)]
     repeat_ok = step_idx > len(ladder) and S.get("rules", dict()).get("ladder_repeat_last")   # the brief says so
-    if offer in p["refused_offers"] and not repeat_ok:
+    full_barred = p["too_much"] and S.get("rules", dict()).get("too_much_skips_full") and round(amt, 2) >= round(p["full"], 2)
+    if (offer in p["refused_offers"] and not repeat_ok) or full_barred:
         if S.get("rules", dict()).get("skipped_repeat_counts") is not False:
             p["made"] = p.get("made", 0) + 1     # a skipped step uses one of the band's proposals unless the brief says not
         if step_idx < len(ladder) and p.get("made", 0) < p["attempts"]:

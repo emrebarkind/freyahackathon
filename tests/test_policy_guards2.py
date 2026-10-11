@@ -239,3 +239,29 @@ def test_policy_values_name_a_sentence_that_is_really_in_the_materials():
     assert len(bad) == 1 and "promise_retries" in bad[0]
     spec["rules"]["week_end_today"] = "today"
     assert "rules.week_end_today" in extract.provenance(spec, docs)[1]
+
+
+def test_too_much_skips_later_full_steps_only_when_the_brief_says_so():
+    import builder.runtime.engine as eng
+    spec = copy.deepcopy(E.A)
+    spec["rules"].pop("week_end_today", None)
+    spec["ladder"] = [dict(amount="floor", date="deadline"), dict(amount="full", date="deadline")]
+    s = comp.apply_defaults(copy.deepcopy(spec), O)
+    eng.S = s
+    cal.P = dict(workdays=s["calendar"]["workdays"], holidays=s["calendar"]["holidays"])
+    p = dict(full=300.0, floor=90.0, too_much=True, floor_offered=True, refused_offers=[], used=1, made=1, attempts=3,
+             deadline="2026-10-20", ladder=s["ladder"], status="open", name="card", offer=None, type="credit_card")
+    calls = []
+    saved = eng.say, eng.talk, eng.advance, eng.focus
+    eng.say = lambda *a: None; eng.talk = lambda *a: None; eng.focus = lambda *a: None
+    eng.advance = lambda V_, s_, pre="": calls.append("advance")
+    try:
+        V = {"now": "2026-10-14T11:00"}
+        s["rules"]["too_much_skips_full"] = True                    # r2 rule 19
+        eng.make_offer(V, {"products": [p]}, p, 2)
+        assert p["offer"] is None and p["status"] == "refused"
+        p.update(status="open", offer=None); s["rules"].pop("too_much_skips_full")
+        eng.make_offer(V, {"products": [p]}, p, 2)
+        assert p["offer"] == [300.0, "2026-10-20"]                  # brief silent: the step is offered
+    finally:
+        eng.say, eng.talk, eng.advance, eng.focus = saved

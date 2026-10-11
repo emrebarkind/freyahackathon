@@ -215,6 +215,7 @@ def validate(spec, openapi):
                           ("rules.promise_retries", (0, 1, 2, 3)),
                           ("rules.hardship_transfer", ("direct",)),
                           ("rules.opening_blocks_repeat", (True, False)),
+                          ("rules.too_much_skips_full", (True, False)),
                           ("products.promise_round", ("up", "down", "nearest"))):
         v = get(spec, path)
         if v is not None and v not in allowed:
@@ -461,7 +462,7 @@ def progress(old, new, old_errs, new_errs):
 
 RULE_DEFAULTS = {"refuse_deadline_is_refusal": True, "deadline_adjust": "previous_business_day", "first_ask": "today",
                  "too_much_floor": "attempt_1", "ladder_repeat_last": False, "opening_is_attempt": False,
-                 "opening_blocks_repeat": False}
+                 "opening_blocks_repeat": False, "too_much_skips_full": False}
 SOURCE_PATHS = ("products.floor_pct", "products.floor_min", "products.floor_round", "products.step_round",
                 "products.promise_scale", "products.promise_round", "identity.max_wrong")
 

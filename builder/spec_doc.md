@@ -125,6 +125,9 @@ use the default shown and record it in `assumptions`.
            "opening_blocks_repeat": false,        // true only if the brief says a ladder step equal to the opening ask counts as
                                                    // a repeat and is skipped ("the opening included"); false if the opening ask is
                                                    // "not a proposal" (then a step may name the same amount and date)
+           "too_much_skips_full": false,          // true only if the brief says that once the customer calls the full amount too
+                                                   // much, later ladder steps naming the full amount are skipped (each skip then
+                                                   // counts as skipped_repeat_counts says)
            "opening_is_attempt": false},           // true only if the brief counts the opening ask ("can you pay the full amount
                                                    // today?") as persuasion attempt 1: its refusal then uses an attempt and the
                                                    // ladder's step 1 is that ask; the attempts of each band include it
