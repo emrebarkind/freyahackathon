@@ -2195,6 +2195,55 @@ def handle_result(V, s, aw):
         return
 
 
+NUM_RUN = r"(?:(?:%s|\d+(?:\.\d+)?)[\s,-]*)+" % "|".join(sorted(list(NUM_WORDS) + ["hundred", "thousand"], key=len, reverse=True))
+NEG_DATE = re.compile(r"(do(es)?\s*n[o']?t\s+work|won'?t\s+work|no\s+good|not\s+good|can'?t\s+(do|make)|cannot\s+(do|make)|is\s*n'?t\s+(good|possible)|not\s+(on\s+)?(that|this|monday|tuesday|wednesday|thursday|friday|saturday|sunday))", re.I)
+CORRECTION = re.compile(r"^\W*(no\b|nope|sorry|i mean|actually|wait|not\b|make that|rather)", re.I)
+
+
+def amount_pieces(V, s, stage, k, t, dtxt, a):
+    """An amount said in two messages. The extraction reads only the latest message, so the engine keeps the first
+    piece and decides from the shape of the two pieces (the field asked is an amount here; identity digits are
+    joined in the identity stage):
+      'three hundred and' + 'fifty'  -> one number, joined (350);
+      '463...' + '51'                -> cents, more digits or a new amount: ask once what the full amount is;
+      '463...' + 'no, 500' / 'sorry, I mean 500' -> a correction: the new amount.
+    The last piece never silently replaces the first, and the pieces are never joined blindly.
+    Returns the amount to use, or "asked" when a clarifying question was put."""
+    frag = s.pop("num_frag", None)
+    tl = str(t or "").lower().strip()
+    if frag is not None and tl:
+        lead = re.match(r"\s*(" + NUM_RUN + ")", tl)
+        rest = words_to_number(lead.group(1)) if lead else None
+        if rest is not None and not CORRECTION.search(tl) and (a is None or abs(float(a) - rest) < 0.005):
+            if frag["kind"] == "hundreds" and rest < 100:
+                return frag["v"] + rest
+            if rest < 100 and s.get("amount_asked", 0) < 2:
+                s["amount_asked"] = s.get("amount_asked", 0) + 1
+                s.pop("held", None)                      # neither piece is taken on its own
+                s["reask"] = True
+                say(V, L("amount_clarify") or "Sorry, I want to be sure I have the amount right. How much can you pay in total?")
+                talk(V, stage, s)
+                return "asked"
+            if rest < 100:
+                s.pop("held", None)
+                return None                              # still unclear: no amount rather than the wrong one
+    cut = V.get("_cut") == "yes" or bool(re.search(r"(\.\.\.|\u2026|-|\u2014)\s*$", tl))
+    if cut and tl:
+        tail = re.search(r"(" + NUM_RUN + r")(?:\s+and)?\W*$", tl)
+        v = words_to_number(tail.group(1)) if tail else None
+        if v:
+            kind = "hundreds" if re.search(r"(hundred|thousand)(\s+and)?\W*$", tl) else "number"
+            s["num_frag"] = dict(v=v, kind=kind)
+            if a is None and k in ("proposes", "vague", "gives_amount", "unclear", "none") and not dtxt \
+                    and s.get("go_on_total", 0) < GO_ON_MAX:
+                s["go_on_total"] = s.get("go_on_total", 0) + 1
+                s["reask"] = True
+                say(V, L("go_on") or "Sorry, please go on.")
+                talk(V, stage, s)
+                return "asked"
+    return a
+
+
 GO_ON_MAX = 4          # content-free "please go on" lines in one call; after that a cut-off message gets the question again
 STALL_MAX = 12         # customer turns in a row with nothing in them (negotiation / read-back) before the call is ended
 
@@ -2226,26 +2275,27 @@ def run_turn(V, s, stage):
         V["_cut"] = "yes"                              # text backup: the message ends on an unfinished phrase
     if stage in ("nego", "confirm"):                  # turns that bring nothing (fragments, small talk), over the call
         empty = k in ("unclear", "none") and not dtxt and a is None
-        s["stall"] = s.get("stall", 0) + 1 if empty else 0
+        asked = k in ("question", "asks_amount", "robot", "scam", "asks_why") and not dtxt and a is None
+        s["stall"] = s.get("stall", 0) + 1 if (empty or asked) else 0   # a question back is answered but brings no progress
         if empty and s["stall"] >= STALL_MAX and (S.get("rules") or dict()).get("non_answer_counts"):
             return stalled_out(V, s)
-    if stage in ("nego", "confirm", "hardship"):        # an amount split over two messages ("three hundred and" / "fifty")
-        frag = s.pop("num_frag", None)
-        if frag is not None and t:
-            lead = re.match(r"\s*((?:(?:%s|\d+)[\s-]*)+)" % "|".join(sorted(NUM_WORDS, key=len, reverse=True)), t.lower())
-            rest = words_to_number(lead.group(1)) if lead else None
-            if rest is not None and rest < 100 and (a is None or abs(float(a) - rest) < 0.005):
-                a = frag + rest                          # extraction read only the second piece
-        if V.get("_cut") == "yes" and t and a is None:
-            tail = re.search(r"((?:(?:%s|\d+)[\s-]+)*(?:hundred|thousand))(?:\s+and)?\s*$" % "|".join(NUM_WORDS), t.lower())
-            if tail and words_to_number(tail.group(1)):
-                s["num_frag"] = words_to_number(tail.group(1))
-                if k in ("proposes", "vague", "gives_amount", "unclear", "none") and not dtxt \
-                        and s.get("go_on_total", 0) < GO_ON_MAX:
-                    s["go_on_total"] = s.get("go_on_total", 0) + 1
-                    s["reask"] = True
-                    say(V, L("go_on") or "Sorry, please go on.")
-                    return talk(V, stage, s)
+    if s.pop("day_asked", False) and k in ("yes", "agrees") and not dtxt and a is None:
+        k = "unclear"                                  # "yes" to "which day?" names no day: nothing is accepted
+    if stage in ("nego", "confirm") and k in ("no", "refuses", "cannot") and dtxt and a is None and NEG_DATE.search(t or ""):
+        # "Yes... no, Friday does not work": the day named is rejected, not proposed (never read back as the plan)
+        pv = cur(s) if stage == "nego" and s.get("products") else None
+        dd = parse_spoken_date(dtxt, today_of(V), S.get("date_rules"))
+        dtxt = ""
+        if stage == "nego" and not (pv and pv.get("offer") and dd and pv["offer"][1] == iso(dd)):
+            s["day_asked"] = True                      # no other day given: ask for one (no attempt is used)
+            s["reask"] = True
+            say(V, L("ask_other_day") or "Which day would work for you instead?")
+            return talk(V, stage, s)
+    if stage in ("nego", "confirm", "hardship"):
+        r = amount_pieces(V, s, stage, k, t, dtxt, a)
+        if r == "asked":
+            return
+        a = r
     if V.get("_cut") == "yes" and stage in ("open", "tp", "id", "nego", "confirm", "hardship") and not dtxt and a is None \
             and k in ("unclear", "none", "too_much", "cannot") \
             and s.get("cut_waits", 0) < 2 and s.get("go_on_total", 0) < GO_ON_MAX \
@@ -2279,7 +2329,8 @@ def run_turn(V, s, stage):
         s["cut_value_waited"] = False
     s["cut_waits"] = 0
     if s.get("same", 0) >= 2 and stage == "nego" and not dtxt and a is None \
-            and (k in ("question", "asks_amount", "proposes", "details", "robot", "scam") or (k in ("unclear", "none") and counts_as_non_answer(V))):
+            and (k in ("proposes", "details") or (k in ("unclear", "none") and counts_as_non_answer(V))):
+        # a question asked again is answered again: it is never turned into a refusal (no attempt is used)
         k, scope = "no", "none"     # the same line three times and still nothing new: stop looping, count a non-answer
     prev = V.get("say", "")
     dispatch(V, s, stage, k, t, dtxt, a, scope)
