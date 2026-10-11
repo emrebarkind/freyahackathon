@@ -1,4 +1,39 @@
-# Final readiness (prepared 2026-10-11, 14:58–15:45 UTC)
+# Final readiness (prepared 2026-10-11, 14:58–15:45 UTC; candidate 9 added 16:05 UTC)
+
+## Update 16:05 UTC: candidate 9 selected (`cbe10e8ed1801ff4509276c1de9a3f9db4bb4a5a`), candidate 8 (`9cb2300`) is the rollback
+* **Fixed customer sentences.** Each was first seen breaking candidate 8.
+
+  | Customer sentence | Candidate 8 | Candidate 9 |
+  |---|---|---|
+  | "three hundred and" / "fifty dollars" | read as 50, lost | joined to 350 |
+  | "700..." / "50" | took the last piece | asks once for the full amount; neither piece taken alone |
+  | "...700" / "No, sorry, 800" | 800 | 800 (correction kept) |
+  | "Yes... no, Friday does not work." | read back Friday; a plain "Yes." recorded Friday | the day is rejected (whatever the intent label); asks "which day"; "Yes." accepts nothing |
+  | Same question asked again | third time counted as a refusal (an attempt used) | answered again; no attempt used |
+  | Questions alternating with fragments | reset the non-progress count (unbounded) | counted as non-progress; close only by the brief's non-answer rule |
+
+* **Identity digits in two pieces** ("44..." + "71") were already joined, and still are.
+* **build.py:** the tool API is found by content (`paths`); a second JSON file (a code list) is read as material.
+  Non-UTF-8 and binary input are reported in the trace.
+* **Local evidence:**
+  * 225 tests pass;
+  * 6 new tests fail on candidate 8 and pass on candidate 9, while 5 normal and real-correction tests pass on both;
+  * 26 stored specs score the same on p1–p3 and h2;
+  * the stress set stays 50/50;
+  * engine code 85,478 bytes (+2,001).
+* **Platform evidence (chat route, real extraction and real practice bank)** for each changed path:
+  * `32d8fc9`: "300..." + "50 on Friday" → clarifying question → 300.50 written once after the yes; "three hundred
+    and" + "fifty" → 350.
+  * `cbe10e8`: rejected day → "Which day would work for you instead?" → "Yes." accepts nothing → 20 Oct written after
+    the yes.
+  * `cbe10e8`: "Which account is this about?" ×3 (labelled `details`) → answered three times, no attempt used →
+    promise.
+* **Not run on candidate 9:** A and B default simulations. The candidate-8 platform results are not carried over.
+* **Correction to section 2.** "Two hidden briefs" comes from the published page. Your newer message says the final
+  is one brand-new case that may contain several files; the final e-mail decides the exact file layout. When the
+  files arrive, check which file is the OpenAPI and which are material (a code list or table must not be summarised
+  by hand). The builder now separates them by content.
+
 
 ## 1. Selected candidate and rollback
 * **Selected: candidate 8**, builder commit **`9cb2300d9ada3449fbf88a5968fcd8df9cb8d6d8`**.
