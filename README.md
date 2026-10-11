@@ -139,5 +139,6 @@ a type and amounts in pence, no transfers, notes only for some outcomes, one dat
 * Extraction accuracy was measured on three frozen packages with 2 runs per mode (docs/EXPERIMENTS.md): a small
   sample. The one rule both extractors missed (a brief counting the opening ask as attempt 1) is now a spec option
   (`rules.opening_is_attempt`); on a separate small package (eval/holdout/q1) both runs set it and scored 15/16.
-* The ladder date "last business day of this week" moves to next week when today is that day (brief A's rule); a
-  brief that instead skips that step is not expressible yet (q1, check C5).
+* A policy the brief does not state is never taken from brief A: "last business day of this week" when today is that
+  day moves to next week only if the brief says so; otherwise it is read literally and the trace says so. An amount
+  the tool API cannot take (whole units, no rounding rule) is never sent or changed; that product is not recorded.
