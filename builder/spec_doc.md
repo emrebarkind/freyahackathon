@@ -243,6 +243,15 @@ restructuring_no_transfer / support_no_transfer (optional, the same for those si
 {name}), below_floor_final (said when the
 customer insists on an amount below the floor after it was offered: "I'm sorry, I can't record less than {amount}.").
 
+Built-in behaviour (always carried out; never list these under unsupported_rules):
+- an amount is never recorded below the floor (the floor is offered instead) or above the amount owed; a floor above
+  the amount owed is the amount owed; a percentage ladder step is never below the floor;
+- a proposal the customer refused is never proposed again, the opening ask included; dates move off non-business
+  days as `deadline_adjust` says and never past the product's deadline;
+- identity: the first "why do you ask" is answered once; a second refusal closes as id_declined;
+- `callback.days: []`: someone else answering is told nothing and the call closes with the no_callback event, no
+  time is asked; a tool the API does not offer is never called.
+
 `unsupported_rules`: a list of rules from the materials (quoted, one string each) that no field of this spec can
 carry: a rounding, minimum, date rule, exception or condition the format has no place for. Never approximate such
 a rule with a nearby field value; list it here instead. The build reports every item.

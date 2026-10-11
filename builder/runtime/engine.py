@@ -558,6 +558,8 @@ def stage_open(V, s, k, t):
     if k == "confirmed":
         return start_identity(V, s)
     if k == "third_party":
+        if not S.get("callback", dict()).get("days", ["today"]):   # the brief allows no callback: no time is asked
+            return close(V, s, "no_callback", L("tp_no_info"))
         s["stage"] = "tp"
         s["tp_tries"] = 0
         say(V, L("tp_ask"))
