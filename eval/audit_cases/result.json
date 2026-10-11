@@ -1,0 +1,61 @@
+{
+ "seconds": 83,
+ "cost_usd": 1.486,
+ "rows": [
+  {
+   "case": "case_default_contradicts",
+   "path": "rules.skipped_repeat_counts",
+   "expected": [
+    "contradicted"
+   ],
+   "verdict": "contradicted",
+   "value_after": false,
+   "expected_value": false,
+   "unresolved": [],
+   "ok": true,
+   "line": "- **rules.skipped_repeat_counts**: contradicted. \"If an attempt would repeat an earlier proposal exactly, skip it: it is not a proposal and the customer is not asked again.\" The format says this means false. The analyst wrote false in the assumptions but left the field unset, so the engine default (true) would apply."
+  },
+  {
+   "case": "case_quote_does_not_support",
+   "path": "rules.promise_retries",
+   "expected": [
+    "contradicted",
+    "quote_does_not_support"
+   ],
+   "verdict": "contradicted",
+   "value_after": 1,
+   "expected_value": null,
+   "unresolved": [],
+   "ok": true,
+   "line": "Three things need changing: `promise_retries` is wrong (3 instead of 1), `code_tables` is missing, and `responses` lists \"true\" as a string where the API's `ok` is a boolean."
+  },
+  {
+   "case": "case_derived",
+   "path": "rules.opening_blocks_repeat",
+   "expected": [
+    "supported"
+   ],
+   "verdict": "supported",
+   "value_after": true,
+   "expected_value": true,
+   "unresolved": [],
+   "ok": true,
+   "line": "- **rules.opening_blocks_repeat**: supported. \"Before proposing a step, compare it with every proposal already made in this call, the opening question included.\""
+  },
+  {
+   "case": "case_memo_override",
+   "path": "rules.hardship_transfer",
+   "expected": [
+    "contradicted"
+   ],
+   "verdict": "contradicted",
+   "value_after": "direct",
+   "expected_value": "direct",
+   "unresolved": [],
+   "ok": true,
+   "line": "- **rules**: one contradicted value, `hardship_transfer`; the rest are supported (see the policy rows below)."
+  }
+ ],
+ "passed": 4,
+ "total": 4
+}
