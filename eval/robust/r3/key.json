@@ -1,0 +1,886 @@
+{
+ "package": "r3",
+ "rules": {
+  "R1": "Deadline per account: soft (1-10 days) 10th, firm (11-30) 6th, final (31-60) 3rd business day after today; today not counted; bank holidays skipped.",
+  "R2": "Floor: min_due_cents (card) / instalment_cents (loan) in soft and firm bands; the full overdue amount in the final band. floor/offers amounts are in euros; conversation amounts are cents as sent to create_promise.",
+  "R3": "Proposals after the opening 'all in full today' no: P1 overdue on the week close (capped at the deadline), P2 (firm/final) floor on the deadline; a proposal identical to a refused offer is skipped.",
+  "R4": "A no to a counter-offer is a flat refusal: it uses the next unused proposal or ends the account as declined; the customer's own invalid value is never recorded.",
+  "R5": "Customer values are checked: after the deadline -> deadline offered; weekend/holiday -> next business day; below floor -> floor offered; valid values agreed at once.",
+  "R6": "Switching: a value named for another account is handled for that account, then the open question is repeated.",
+  "R7": "One date for all accounts: an account with an earlier deadline is recorded on its own deadline.",
+  "R8": "Read-back: changes are re-checked and the whole list is read back again; only a yes to an unchanged read-back records.",
+  "R9": "create_promise in get_account order; a second failure on one account -> note system_issue, others continue; promised if at least one promise recorded, else no_commitment/system_issue.",
+  "R10": "Dispute / already paid on one account is noted and the call continues; closing cause is the first non-already_paid note."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "R1",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-10T10:00",
+    "product": {
+     "account_ref": "VB-1150",
+     "kind": "credit_card",
+     "card_end": "2019",
+     "overdue_cents": 23990,
+     "days_overdue": 6,
+     "min_due_cents": 4500
+    }
+   },
+   "expect": "2026-11-26",
+   "source": "| 1 to 10 | soft | the 10th business day after today | `min_due_cents` (card) or `instalment_cents` (loan) | 1 | ... Business days are Monday to Friday, except Varnholt Bank holidays: 2026-11-13, 2026-11-25, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01. ... Today is never counted."
+  },
+  {
+   "id": "C2",
+   "rule": "R1",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-16T15:30",
+    "product": {
+     "account_ref": "VB-3350",
+     "kind": "vehicle_loan",
+     "overdue_cents": 54020,
+     "days_overdue": 11,
+     "instalment_cents": 27010
+    }
+   },
+   "expect": "2026-12-28",
+   "source": "| 11 to 30 | firm | the 6th business day after today | `min_due_cents` (card) or `instalment_cents` (loan) | 2 | ... Business days are Monday to Friday, except Varnholt Bank holidays: 2026-11-13, 2026-11-25, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01."
+  },
+  {
+   "id": "C3",
+   "rule": "R1",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-23T09:15",
+    "product": {
+     "account_ref": "VB-3307",
+     "kind": "vehicle_loan",
+     "overdue_cents": 91480,
+     "days_overdue": 38,
+     "instalment_cents": 45740
+    }
+   },
+   "expect": "2026-11-27",
+   "source": "| 31 to 60 | final | the 3rd business day after today | `overdue_cents` | 2 | ... Business days are Monday to Friday, except Varnholt Bank holidays: 2026-11-13, 2026-11-25, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01."
+  },
+  {
+   "id": "C4",
+   "rule": "R2",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-01T10:00",
+    "product": {
+     "account_ref": "VB-1101",
+     "kind": "credit_card",
+     "card_end": "7734",
+     "overdue_cents": 48600,
+     "days_overdue": 17,
+     "min_due_cents": 7200
+    }
+   },
+   "expect": 72.0,
+   "source": "| 11 to 30 | firm | the 6th business day after today | `min_due_cents` (card) or `instalment_cents` (loan) | 2 | ... The API gives every amount in integer cents. Say euros; send cents."
+  },
+  {
+   "id": "C5",
+   "rule": "R2",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-01T10:00",
+    "product": {
+     "account_ref": "VB-1188",
+     "kind": "credit_card",
+     "card_end": "5502",
+     "overdue_cents": 31275,
+     "days_overdue": 31,
+     "min_due_cents": 5000
+    }
+   },
+   "expect": 312.75,
+   "source": "| 31 to 60 | final | the 3rd business day after today | `overdue_cents` | 2 | ... An amount must be from the floor to the overdue amount, both included. ... The API gives every amount in integer cents. Say euros; send cents."
+  },
+  {
+   "id": "C6",
+   "rule": "R3",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-12T11:00",
+    "product": {
+     "account_ref": "VB-2204",
+     "kind": "cash_loan",
+     "overdue_cents": 63150,
+     "days_overdue": 22,
+     "instalment_cents": 21050
+    }
+   },
+   "expect": [
+    [
+     631.5,
+     "2026-11-20"
+    ],
+    [
+     210.5,
+     "2026-11-23"
+    ]
+   ],
+   "source": "The **week close** is the last business day of the current Monday-to-Sunday week. If today is that day, it is the last business day of next week. If the week close is after an account's deadline, use that account's deadline instead. ... Business days are Monday to Friday, except Varnholt Bank holidays: 2026-11-13, 2026-11-25, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01. ... Proposal 1: the overdue amount on the week close ... Proposal 2, firm and final bands only: the floor on the deadline."
+  },
+  {
+   "id": "C7",
+   "rule": "R3",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-02T10:00",
+    "product": {
+     "account_ref": "VB-3307",
+     "kind": "vehicle_loan",
+     "overdue_cents": 91480,
+     "days_overdue": 38,
+     "instalment_cents": 45740
+    }
+   },
+   "expect": [
+    [
+     914.8,
+     "2026-11-05"
+    ]
+   ],
+   "source": "The **week close** is the last business day of the current Monday-to-Sunday week. If today is that day, it is the last business day of next week. If the week close is after an account's deadline, use that account's deadline instead. ... Proposal 1: the overdue amount on the week close ... Proposal 2, firm and final bands only: the floor on the deadline. ... | 31 to 60 | final | the 3rd business day after today | `overdue_cents` | 2 | ... Skip any proposal with the same amount and date as one the customer already refused on that account."
+  },
+  {
+   "id": "C8",
+   "rule": "R4",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-12T11:00",
+    "products": [
+     {
+      "account_ref": "VB-2204",
+      "kind": "cash_loan",
+      "overdue_cents": 63150,
+      "days_overdue": 22,
+      "instalment_cents": 21050
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-2204",
+      21050,
+      "2026-11-23"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Proposal 1: the overdue amount on the week close ... Proposal 2, firm and final bands only: the floor on the deadline. ... A flat refusal (a no with no date and no amount) moves the account to its next unused proposal. If none is left, the account ends without a promise: note it `declined` and go to the next account. ... The **week close** is the last business day of the current Monday-to-Sunday week. If today is that day, it is the last business day of next week. If the week close is after an account's deadline, use that account's deadline instead."
+  },
+  {
+   "id": "C9",
+   "rule": "R5",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-01T10:00",
+    "products": [
+     {
+      "account_ref": "VB-1101",
+      "kind": "credit_card",
+      "card_end": "7734",
+      "overdue_cents": 48600,
+      "days_overdue": 17,
+      "min_due_cents": 7200
+     },
+     {
+      "account_ref": "VB-2290",
+      "kind": "cash_loan",
+      "overdue_cents": 38400,
+      "days_overdue": 10,
+      "instalment_cents": 12800
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "proposes",
+      "date": "2026-12-08",
+      "amount": 150.0,
+      "product": "credit_card"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1101",
+      15000,
+      "2026-12-08"
+     ]
+    ],
+    "notes": [
+     [
+      "VB-2290",
+      "declined"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "These are counter-offers; a yes makes one the agreed terms. A valid value is agreed at once. ... A flat refusal (a no with no date and no amount) moves the account to its next unused proposal. If none is left, the account ends without a promise: note it `declined` and go to the next account. ... | 1 to 10 | soft | the 10th business day after today | `min_due_cents` (card) or `instalment_cents` (loan) | 1 |"
+  },
+  {
+   "id": "C10",
+   "rule": "R4",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-23T09:15",
+    "products": [
+     {
+      "account_ref": "VB-1101",
+      "kind": "credit_card",
+      "card_end": "7734",
+      "overdue_cents": 48600,
+      "days_overdue": 17,
+      "min_due_cents": 7200
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "proposes",
+      "date": "2026-12-07",
+      "product": "credit_card"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1101",
+      7200,
+      "2026-12-02"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "A date after the deadline: say the latest date you can record is the deadline and offer the deadline. Never record the later date. ... **A refusal after a counter-offer is a flat refusal** (rule 14). It does not bring back the value the customer named. ... A flat refusal (a no with no date and no amount) moves the account to its next unused proposal. If none is left, the account ends without a promise: note it `declined` and go to the next account. ... Proposal 2, firm and final bands only: the floor on the deadline."
+  },
+  {
+   "id": "C11",
+   "rule": "R4",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-14T14:00",
+    "products": [
+     {
+      "account_ref": "VB-2290",
+      "kind": "cash_loan",
+      "overdue_cents": 38400,
+      "days_overdue": 10,
+      "instalment_cents": 12800
+     },
+     {
+      "account_ref": "VB-1101",
+      "kind": "credit_card",
+      "card_end": "7734",
+      "overdue_cents": 48600,
+      "days_overdue": 17,
+      "min_due_cents": 7200
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "proposes",
+      "date": "2027-01-04",
+      "product": "cash_loan"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1101",
+      48600,
+      "2026-12-18"
+     ]
+    ],
+    "notes": [
+     [
+      "VB-2290",
+      "declined"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "A date after the deadline: say the latest date you can record is the deadline and offer the deadline. Never record the later date. ... **A refusal after a counter-offer is a flat refusal** (rule 14). It does not bring back the value the customer named. ... A flat refusal (a no with no date and no amount) moves the account to its next unused proposal. If none is left, the account ends without a promise: note it `declined` and go to the next account. ... | 1 to 10 | soft | the 10th business day after today | `min_due_cents` (card) or `instalment_cents` (loan) | 1 |"
+  },
+  {
+   "id": "C12",
+   "rule": "R5",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-10T10:00",
+    "products": [
+     {
+      "account_ref": "VB-2204",
+      "kind": "cash_loan",
+      "overdue_cents": 63150,
+      "days_overdue": 22,
+      "instalment_cents": 21050
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "proposes",
+      "date": "2026-11-18",
+      "amount": 150.0,
+      "product": "cash_loan"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-2204",
+      21050,
+      "2026-11-18"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "An amount below the floor: say it cannot be recorded and offer the floor on the customer's date. Never record the lower amount. ... These are counter-offers; a yes makes one the agreed terms. A valid value is agreed at once."
+  },
+  {
+   "id": "C13",
+   "rule": "R7",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-23T09:15",
+    "products": [
+     {
+      "account_ref": "VB-1150",
+      "kind": "credit_card",
+      "card_end": "2019",
+      "overdue_cents": 23990,
+      "days_overdue": 6,
+      "min_due_cents": 4500
+     },
+     {
+      "account_ref": "VB-3307",
+      "kind": "vehicle_loan",
+      "overdue_cents": 91480,
+      "days_overdue": 38,
+      "instalment_cents": 45740
+     }
+    ],
+    "script": [
+     {
+      "k": "proposes",
+      "date": "2026-12-04",
+      "product": "all"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1150",
+      23990,
+      "2026-12-04"
+     ],
+     [
+      "VB-3307",
+      91480,
+      "2026-11-27"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "If the customer names one date for all accounts, it applies to every account still open. For an account whose deadline is earlier, use that account's deadline and say so in the read-back. ... A part the customer leaves out is taken from the offer on the table for that account ... | 31 to 60 | final | the 3rd business day after today | `overdue_cents` | 2 |"
+  },
+  {
+   "id": "C14",
+   "rule": "R6",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-01T10:00",
+    "products": [
+     {
+      "account_ref": "VB-1101",
+      "kind": "credit_card",
+      "card_end": "7734",
+      "overdue_cents": 48600,
+      "days_overdue": 17,
+      "min_due_cents": 7200
+     },
+     {
+      "account_ref": "VB-3350",
+      "kind": "vehicle_loan",
+      "overdue_cents": 54020,
+      "days_overdue": 11,
+      "instalment_cents": 27010
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "proposes",
+      "date": "2026-12-07",
+      "amount": 300.0,
+      "product": "vehicle_loan"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1101",
+      48600,
+      "2026-12-04"
+     ],
+     [
+      "VB-3350",
+      30000,
+      "2026-12-07"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "If the customer, while one account is open, names a date or an amount for another account, handle it for that other account under rule 12. Then return to the open account and ask its open question again; that repeat is not a new proposal. ... These are counter-offers; a yes makes one the agreed terms. A valid value is agreed at once."
+  },
+  {
+   "id": "C15",
+   "rule": "R8",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-16T15:30",
+    "products": [
+     {
+      "account_ref": "VB-1101",
+      "kind": "credit_card",
+      "card_end": "7734",
+      "overdue_cents": 48600,
+      "days_overdue": 17,
+      "min_due_cents": 7200
+     },
+     {
+      "account_ref": "VB-2204",
+      "kind": "cash_loan",
+      "overdue_cents": 63150,
+      "days_overdue": 22,
+      "instalment_cents": 21050
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "proposes",
+      "date": "2026-12-22",
+      "product": "cash_loan"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-1101",
+      48600,
+      "2026-12-18"
+     ],
+     [
+      "VB-2204",
+      63150,
+      "2026-12-22"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "If the customer changes the date or the amount of any account, check the new value under rule 12 (with a counter-offer where it applies), then read the whole list back again and ask again. Record nothing until the customer says yes to a read-back with no change. ... The **week close** is the last business day of the current Monday-to-Sunday week. If today is that day, it is the last business day of next week. If the week close is after an account's deadline, use that account's deadline instead."
+  },
+  {
+   "id": "C16",
+   "rule": "R8",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-18T09:00",
+    "products": [
+     {
+      "account_ref": "VB-2204",
+      "kind": "cash_loan",
+      "overdue_cents": 63150,
+      "days_overdue": 22,
+      "instalment_cents": 21050
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "proposes",
+      "date": "2026-12-24",
+      "product": "cash_loan"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-2204",
+      63150,
+      "2026-12-28"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "If the customer changes the date or the amount of any account, check the new value under rule 12 (with a counter-offer where it applies), then read the whole list back again and ask again. Record nothing until the customer says yes to a read-back with no change. ... A weekend day or holiday not after the deadline: offer the next business day. ... The **week close** is the last business day of the current Monday-to-Sunday week. If today is that day, it is the last business day of next week. If the week close is after an account's deadline, use that account's deadline instead. ... Business days are Monday to Friday, except Varnholt Bank holidays: 2026-11-13, 2026-11-25, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01."
+  },
+  {
+   "id": "C17",
+   "rule": "R9",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-10T10:00",
+    "products": [
+     {
+      "account_ref": "VB-1101",
+      "kind": "credit_card",
+      "card_end": "7734",
+      "overdue_cents": 48600,
+      "days_overdue": 17,
+      "min_due_cents": 7200
+     },
+     {
+      "account_ref": "VB-2204",
+      "kind": "cash_loan",
+      "overdue_cents": 63150,
+      "days_overdue": 22,
+      "instalment_cents": 21050
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "proposes",
+      "amount": 300.0,
+      "product": "cash_loan"
+     },
+     {
+      "k": "yes"
+     }
+    ],
+    "faults": {
+     "create_promise": 2
+    }
+   },
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-2204",
+      30000,
+      "2026-11-12"
+     ]
+    ],
+    "notes": [
+     [
+      "VB-1101",
+      "system_issue"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "After the yes, call `create_promise` once per agreed account, in `get_account` order. ... If `create_promise` fails (`ok: false` or a server error), call it once more for the same account. If that also fails, tell the customer this promise could not be recorded, note that account `system_issue` and carry on with the remaining accounts, whose promises stand. ... | `promised` | none | at least one promise recorded, even if another write failed | ... A part the customer leaves out is taken from the offer on the table for that account"
+  },
+  {
+   "id": "C18",
+   "rule": "R10",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-02T10:00",
+    "products": [
+     {
+      "account_ref": "VB-1150",
+      "kind": "credit_card",
+      "card_end": "2019",
+      "overdue_cents": 23990,
+      "days_overdue": 6,
+      "min_due_cents": 4500
+     },
+     {
+      "account_ref": "VB-3307",
+      "kind": "vehicle_loan",
+      "overdue_cents": 91480,
+      "days_overdue": 38,
+      "instalment_cents": 45740
+     },
+     {
+      "account_ref": "VB-2204",
+      "kind": "cash_loan",
+      "overdue_cents": 63150,
+      "days_overdue": 22,
+      "instalment_cents": 21050
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "dispute",
+      "product": "credit_card"
+     },
+     {
+      "k": "too_much"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promised",
+    "reason": "",
+    "promises": [
+     [
+      "VB-2204",
+      63150,
+      "2026-11-06"
+     ]
+    ],
+    "notes": [
+     [
+      "VB-1150",
+      "disputed"
+     ],
+     [
+      "VB-3307",
+      "declined"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "\"This is not mine\" or \"it was closed years ago\" is a dispute: do not argue, note that account `disputed` and continue with the next account. \"I already paid\" this amount: say payments can take a business day to appear, note it `already_paid` and continue. Neither ends the call. ... In the final band, say the overdue amount is the lowest you can record and offer it. ... **A refusal after a counter-offer is a flat refusal** (rule 14). It does not bring back the value the customer named. ... Skip any proposal with the same amount and date as one the customer already refused on that account. ... A flat refusal (a no with no date and no amount) moves the account to its next unused proposal. If none is left, the account ends without a promise: note it `declined` and go to the next account. ... | `promised` | none | at least one promise recorded, even if another write failed |"
+  },
+  {
+   "id": "C19",
+   "rule": "R10",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-17T11:00",
+    "products": [
+     {
+      "account_ref": "VB-2290",
+      "kind": "cash_loan",
+      "overdue_cents": 38400,
+      "days_overdue": 10,
+      "instalment_cents": 12800
+     },
+     {
+      "account_ref": "VB-1150",
+      "kind": "credit_card",
+      "card_end": "2019",
+      "overdue_cents": 23990,
+      "days_overdue": 6,
+      "min_due_cents": 4500
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "already_paid",
+      "product": "cash_loan"
+     },
+     {
+      "k": "no"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "no_commitment",
+    "reason": "declined",
+    "promises": [],
+    "notes": [
+     [
+      "VB-2290",
+      "already_paid"
+     ],
+     [
+      "VB-1150",
+      "declined"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "\"This is not mine\" or \"it was closed years ago\" is a dispute: do not argue, note that account `disputed` and continue with the next account. \"I already paid\" this amount: say payments can take a business day to appear, note it `already_paid` and continue. Neither ends the call. ... A flat refusal (a no with no date and no amount) moves the account to its next unused proposal. If none is left, the account ends without a promise: note it `declined` and go to the next account. ... | `no_commitment` | `declined`, `hardship`, `disputed`, `system_issue` | no promise recorded; the cause is the note code of the first account, in `get_account` order, whose note is not `already_paid` |"
+  },
+  {
+   "id": "C20",
+   "rule": "R9",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-11T16:00",
+    "products": [
+     {
+      "account_ref": "VB-3307",
+      "kind": "vehicle_loan",
+      "overdue_cents": 91480,
+      "days_overdue": 38,
+      "instalment_cents": 45740
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ],
+    "faults": {
+     "create_promise": 2
+    }
+   },
+   "expect": {
+    "outcome": "no_commitment",
+    "reason": "system_issue",
+    "promises": [],
+    "notes": [
+     [
+      "VB-3307",
+      "system_issue"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "If `create_promise` fails (`ok: false` or a server error), call it once more for the same account. If that also fails, tell the customer this promise could not be recorded, note that account `system_issue` and carry on with the remaining accounts, whose promises stand. ... | `no_commitment` | `declined`, `hardship`, `disputed`, `system_issue` | no promise recorded; the cause is the note code of the first account, in `get_account` order, whose note is not `already_paid` |"
+  }
+ ]
+}
