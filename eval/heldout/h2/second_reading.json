@@ -1,0 +1,221 @@
+[
+ {
+  "id": "C1",
+  "expect": "2026-12-02",
+  "basis": "Band A (12d); memo item1: 5th bd after Tue 11-24: 25,26,27,(30 closed per memo),Dec1,Dec2"
+ },
+ {
+  "id": "C2",
+  "expect": "2026-11-17",
+  "basis": "Band A; 5th bd after 11-10: 11,12,13 (no longer closed, memo item2),16,17"
+ },
+ {
+  "id": "C3",
+  "expect": "2026-11-27",
+  "basis": "Band B; last bd of Nov: 11-30 closed (memo) -> Fri 11-27; today 11-26 before it"
+ },
+ {
+  "id": "C4",
+  "expect": "2026-12-30",
+  "basis": "Band B; today 11-27 IS last bd of Nov -> last bd of Dec: 12-31 closed -> Wed 12-30"
+ },
+ {
+  "id": "C5",
+  "expect": "2026-12-30",
+  "basis": "Band C; 2nd bd after Wed 12-23: 24,25 closed, weekend, 28 closed, 29, 30"
+ },
+ {
+  "id": "C6",
+  "expect": 70,
+  "basis": "Card 15% of 437.80=65.67 -> next multiple of 5 = 70 (min 30, <= arrears); band irrelevant"
+ },
+ {
+  "id": "C7",
+  "expect": 26.4,
+  "basis": "Card 15% of 26.40=3.96->5, min 30, capped at arrears 26.40"
+ },
+ {
+  "id": "C8",
+  "expect": 130,
+  "basis": "Overdraft memo item4: 20% of 612.35=122.47 -> next multiple of 10 = 130, min 50"
+ },
+ {
+  "id": "C9",
+  "expect": true,
+  "basis": "Fri 2026-11-13 removed from closure days by memo item2 (applies from 30 Oct)"
+ },
+ {
+  "id": "C10",
+  "expect": [
+   [
+    845.2,
+    "2026-11-18"
+   ],
+   [
+    845.2,
+    "2026-11-27"
+   ],
+   [
+    281.74,
+    "2026-11-27"
+   ]
+  ],
+  "basis": "Band B limit 4, deadline 11-27; opening=att1; step1 2nd bd after Mon 11-16 = 11-18; step2 deadline; step3 floor=instalment (A/B)"
+ },
+ {
+  "id": "C11",
+  "expect": [
+   [
+    612.35,
+    "2026-12-30"
+   ]
+  ],
+  "basis": "Band C limit 3, deadline 12-30; step1 2nd bd = 12-30 (att2); step2 identical -> silent but att3 = limit; floor step never reached"
+ },
+ {
+  "id": "C12",
+  "expect": [
+   [
+    437.8,
+    "2026-11-27"
+   ],
+   [
+    70,
+    "2026-11-27"
+   ]
+  ],
+  "basis": "Band B limit 4, deadline 11-27; step1 date 12-01 > deadline -> 11-27 (att2); step2 duplicate silent (att3); step3 floor 70 (att4)"
+ },
+ {
+  "id": "C13",
+  "expect": 1,
+  "basis": "Band C limit 3; floor=full arrears 300; deadline 11-26 = step1 date; step1 said (att2), step2 duplicate silent (att3=limit) -> 1 offer"
+ },
+ {
+  "id": "C14",
+  "expect": [
+   "postcode",
+   "birth_year"
+  ],
+  "basis": "2.1 postcode first then year of birth; API enum names"
+ },
+ {
+  "id": "C15",
+  "expect": 2,
+  "basis": "2.1 failed at the second wrong answer in total; API 'Two wrong answers in total end the check'"
+ },
+ {
+  "id": "C16",
+  "expect": "M1 1AE",
+  "basis": "2.1 / API: capitals, one space before last three characters"
+ },
+ {
+  "id": "C17",
+  "expect": 23300,
+  "basis": "API create_promise amount in whole pence (integer)"
+ },
+ {
+  "id": "C18",
+  "expect": "care",
+  "basis": "2.9 transfer to Care queue; API enum 'care'"
+ },
+ {
+  "id": "C19",
+  "expect": {
+   "outcome": "handed_over",
+   "reason": "hardship"
+  },
+  "basis": "2.11 transfers close as handed_over with reason hardship"
+ },
+ {
+  "id": "C20",
+  "expect": "N-SYS",
+  "basis": "CL-12: system failure on any product (tool fails twice): N-SYS"
+ },
+ {
+  "id": "C21",
+  "expect": {
+   "outcome": "promise_taken",
+   "reason": "",
+   "promises": [
+    [
+     "FL-L-61205",
+     52000,
+     "2026-11-19"
+    ]
+   ],
+   "notes": [
+    [
+     "FL-C-61204",
+     "NC-DSP"
+    ]
+   ],
+   "transfers": []
+  },
+  "basis": "11-17 is before 18 Nov so NC-DSP still valid (memo item3). Card disputed -> note; loan (band B, deadline 11-27) opening counts refused (2.8) -> step1 520 on 2nd bd after 11-17 = 11-19; yes; read-back yes"
+ },
+ {
+  "id": "C22",
+  "expect": {
+   "outcome": "promise_taken",
+   "reason": "",
+   "promises": [
+    [
+     "FL-C-62311",
+     18000,
+     "2026-11-20"
+    ]
+   ],
+   "notes": [
+    [
+     "FL-O-62310",
+     "NX-QRY"
+    ]
+   ],
+   "transfers": []
+  },
+  "basis": "11-18 calls included -> overdraft dispute code NX-QRY. Card band B deadline 11-27; step1 180 on 2nd bd after Wed 11-18 = Fri 11-20; yes; read-back yes"
+ },
+ {
+  "id": "C23",
+  "expect": {
+   "outcome": "no_promise",
+   "reason": "dispute",
+   "promises": [],
+   "notes": [
+    [
+     "FL-C-63401",
+     "NX-QRY"
+    ],
+    [
+     "FL-L-63400",
+     "NL-DSP"
+    ]
+   ],
+   "transfers": []
+  },
+  "basis": "Order card then loan. Card dispute (on/after 18 Nov) -> NX-QRY; loan band C step1 300 on 11-23 offered, customer disputes -> NL-DSP (unchanged). First non-paid note in handling order is card dispute -> reason dispute"
+ },
+ {
+  "id": "C24",
+  "expect": {
+   "outcome": "promise_taken",
+   "reason": "",
+   "promises": [
+    [
+     "FL-O-64521",
+     23300,
+     "2026-11-26"
+    ]
+   ],
+   "notes": [
+    [
+     "FL-L-64520",
+     "NL-REF"
+    ]
+   ],
+   "transfers": []
+  },
+  "basis": "Overdraft first (band B, deadline 11-27): opening no; step1 233 on 11-26; yes. Loan band A (limit 3, deadline 5th bd = 12-02): opening=att1, step1 640/11-26 no (att2), step2 640/12-02 no (att3=limit) -> NL-REF. Read-back yes -> one promise in pence"
+ }
+]
