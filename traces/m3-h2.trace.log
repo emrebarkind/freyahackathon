@@ -1,0 +1,119 @@
+[    0.0s] START 2026-10-11T11:44:20+0000
+[    0.0s] NOTE briefs=['eval/heldout/h2/brief.md'] tool_api=eval/heldout/h2/openapi.json slot=m3-h2
+[    0.0s] STEP 1. spec extraction
+[    0.9s] NOTE extraction mode B
+[  154.5s] MODEL CALL #1 model=claude-opus-5-5 seconds=153.6 cost_usd=0.521 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  154.5s] MODEL CALL #2 model=claude-opus-5-5 seconds=153.6 cost_usd=0.183 purpose: independent reading: behaviour checks from the materials only (oracle)
+[  154.5s] NOTE oracle: 22 independent checks
+[  227.8s] MODEL CALL #3 model=claude-opus-5-5 seconds=73.4 cost_usd=0.407 purpose: audit the high-risk fields and the critical policies of the reading against the source documents
+[  227.8s] NOTE audit: **Field audit**
+[  227.8s] 
+[  227.8s] - **calendar**: supported. "Monday to Friday, except Ferncliff closure days 2026-11-13, 2026-12-24, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01". Today is 2026-10-11, which is before the memo, and "Where the memo gives a start date, the earlier text still applies to calls before that date". So the base list is correct. The memo's item 2 (drop 11-13, add 11-30) is in `changes` from 2026-10-30, since "Items 1, 2 and 4 apply from today."
+[  227.8s] - **date_rules**: not_decided. The pack never uses "next <weekday>", so the default is harmless.
+[  227.8s] - **confirm**: not_decided. The pack is silent; the default applies.
+[  227.8s] - **callback**: not_decided. The pack does not describe third parties or callbacks. The API offers schedule_callback, so the defaults are kept.
+[  227.8s] - **identity.questions**: supported. "Ask for the postcode first, then the year of birth. Send the postcode in capital letters with exactly one space before the last three characters … Send the year of birth as four digits." Postcode is upper with space_before_last:3; birth_year is a year; the order is correct.
+[  227.8s] - **identity.max_wrong**: supported (2). "The identity check has failed at the second wrong answer in total, across both questions." This beats the email's "three goes?".
+[  227.8s] - **identity.hints**: supported ({}). The verify response has no hint field.
+[  227.8s] - **identity (rest)**: supported. "An unreadable value is rejected with ok=false and is not counted as a wrong answer." The engine handles ok=false; the response field names match the API.
+[  227.8s] - **products.amount_field / days_field / list/id/type**: supported. The API fields are "arrears" ("amount overdue in pounds"), "days_overdue", "products", "ref" and "product_type".
+[  227.8s] - **products.floor_field**: supported. "Personal loan: the monthly instalment in bands A and B" maps to "instalment".
+[  227.8s] - **products.floor_pct**: supported. The base is 15 / 25. "Overdraft floor: 20% of the arrears instead of 25%" is a dated change from 2026-10-30.
+[  227.8s] - **products (rest)**: supported.
+[  227.8s]   - names use {last4}, which is an API field.
+[  227.8s]   - amount_scale is 1 (pounds).
+[  227.8s]   - promise_scale is 100: "Promised amount in whole pence".
+[  227.8s]   - floor_round up:5 / up:10, floor_min 30 / 50, and the built-in cap at the arrears carry 2.4 in order: percentage, round up, minimum, cap.
+[  227.8s]   - Sample checks: card £150 gives 22.5, rounded to 25, raised to the minimum 30. Card £20 gives 3, rounded to 5, raised to 30, capped at 20. Card £200 gives exactly 30.
+[  227.8s] - **bands**: supported.
+[  227.8s]   - The table gives A 1–20 with 3 attempts, B 21–60 with 4, and C 61+ with 3.
+[  227.8s]   - Band A has n 7 in the base and n 5 from 2026-10-30 ("Band A deadline is now the 5th business day").
+[  227.8s]   - Band B: "if today is itself the last business day of the month (or later), the deadline is the last business day of the following month". This matches roll_if_not_after_today.
+[  227.8s]   - Band C: "In band C the floor is the full arrears" is carried by floor_full_types personal_loan.
+[  227.8s]   - The attempt counts include the opening ask, consistent with opening_is_attempt.
+[  227.8s] - **ladder**: supported. 2.6 gives "1. the full arrears, on the 2nd business day after today; 2. … on the deadline; 3. the floor, on the deadline". Because the opening counts as attempt 1, the opening "full today" ask is ladder step 1. Clamping a step to the deadline is built-in.
+[  227.8s] - **notes**: supported (enabled). "Every product that ends without a promise gets one note."
+[  227.8s] - **events**: supported.
+[  227.8s]   - 2.11 gives promise_taken, claims_paid, handed_over with hardship / plans / general, no_promise with refused or dispute, and id_not_passed with failed or declined.
+[  227.8s]   - The queues come from the email: Care, Plans, General.
+[  227.8s]   - CL-12 supplies the per-product notes; "N-SYS" covers system failure.
+[  227.8s]   - The service_error reason and the not_reached reasons are not given in the materials. They are recorded as assumptions; the materials do not decide them, so they are not changed.
+[  227.8s] - **tool_bodies**: supported. They match the API's required fields: field/answer, product_ref/amount/
+[  227.8s] NOTE audit changed: nothing
+[  227.8s] NOTE policy verdicts: changes=supported, event_changes=supported, multi.order=supported, multi.outcome_priority=supported, products.floor_full_below=supported, products.floor_min=supported, products.floor_pct=supported, products.floor_round=supported, products.promise_round=not_decided, products.promise_scale=supported, products.step_round=not_decided, rules.deadline_adjust=not_decided, rules.first_ask=supported, rules.hardship_transfer=supported, rules.ladder_repeat_last=supported, rules.notes_before_transfer=supported, rules.opening_blocks_repeat=supported, rules.opening_is_attempt=supported, rules.promise_retries=supported, rules.refuse_deadline_is_refusal=supported, rules.skipped_repeat_counts=supported, rules.too_much_floor=supported, rules.too_much_skips_full=not_decided, rules.week_end_today=not_decided
+[  227.9s] NOTE critical policies:
+[  227.9s]   - rules.skipped_repeat_counts: explicit: true
+[  227.9s]   - rules.opening_is_attempt: explicit: true
+[  227.9s]   - rules.opening_blocks_repeat: derived: true
+[  227.9s]   - rules.too_much_skips_full: unspecified: false
+[  227.9s]   - rules.too_much_floor: explicit: "refuse"
+[  227.9s]   - rules.ladder_repeat_last: explicit: false
+[  227.9s]   - rules.refuse_deadline_is_refusal: derived: true
+[  227.9s]   - rules.promise_retries: derived: 1
+[  227.9s]   - rules.hardship_transfer: explicit: "direct"
+[  227.9s]   - rules.notes_before_transfer: explicit: false
+[  227.9s]   - rules.deadline_adjust: unspecified: "previous_business_day"
+[  227.9s]   - rules.first_ask: explicit: "today"
+[  227.9s]   - rules.week_end_today: unspecified: "literal" (engine default)
+[  227.9s]   - products.floor_pct: explicit: {"credit_card": 15, "overdraft": 25}
+[  227.9s]   - products.floor_min: explicit: {"credit_card": 30, "overdraft": 50}
+[  227.9s]   - products.floor_full_below: unspecified: null (engine default)
+[  227.9s]   - products.floor_round: explicit: {"credit_card": "up:5", "overdraft": "up:10"}
+[  227.9s]   - products.step_round: unspecified: "cents" (engine default)
+[  227.9s]   - products.promise_scale: explicit: 100
+[  227.9s]   - products.promise_round: unspecified: null (engine default)
+[  227.9s]   - multi.outcome_priority: unsupported: [] (engine default)
+[  227.9s]   - multi.order: explicit: [{"by": "type", "rank": ["overdraft", "credit_card", "personal_loan"]}, {"by": "amount", "desc": true}]
+[  227.9s]   - event_changes: explicit: [{"event": "dispute", "from": "2026-11-18", "set": {"note": {"overdraft": "NX-QRY", "credit_card": "NX-QRY", "personal_loan": "NL-DSP"}}}]
+[  227.9s]   - changes: explicit: [{"from": "2026-10-30", "set": {"bands.0.deadline": {"kind": "business_days_after", "n": 5}, "calendar.holidays": ["2026-11-30", "2026-12-24", "2026-12-25", "2026-12-28", "2026-12-31", "2027-01-01"], "products.floor_pct.overdraft": 20}}]
+[  227.9s] NOTE code warning: events.service_error.reason: code 'service_error' appears in no supplied document and the materials give no code table for reason
+[  227.9s] NOTE code warning: events.no_callback.reason: code 'no_callback' appears in no supplied document and the materials give no code table for reason
+[  227.9s] NOTE code warning: events.wrong_number.reason: code 'wrong_number' appears in no supplied document and the materials give no code table for reason
+[  227.9s] NOTE code warning: events.deceased.reason: code 'deceased' appears in no supplied document and the materials give no code table for reason
+[  227.9s] NOTE code warning: events.unclear.reason: code 'unclear' appears in no supplied document and the materials give no code table for reason
+[  227.9s] NOTE validation round 1: 0 problem(s)
+[  227.9s] NOTE oracle: 22 agree, 0 disagree, 0 unusable
+[  227.9s] NOTE assumption: Today is 2026-10-11, before memo FL-OPS-26-11 (dated 30 October 2026). Following the pack's order of authority ('the earlier text still applies to calls before that date'), the base spec holds the COL-POL-07 values. The memo's items 1, 2 and 4 are dated changes from 2026-10-30: band A deadline becomes the 5th business day, holidays drop 2026-11-13 and add 2026-11-30, and the overdraft floor becomes 20%. Item 3, the dispute codes, applies from 2026-11-18.
+[  227.9s] NOTE assumption: Identity: the email's 'three goes?' is overridden by policy 2.1. The check fails at the second wrong answer in total, so max_wrong is 2.
+[  227.9s] NOTE assumption: Postcode length varies, so no fixed length is set. The year of birth is four digits (kind year).
+[  227.9s] NOTE assumption: The verify tool returns no hint field, so hints is empty. Unreadable answers return ok=false and are not counted; no special reject_values are needed.
+[  227.9s] NOTE assumption: Floor sample checks: card arrears 150 gives 22.50, rounded up to 25, minimum 30, so 30. Card arrears 200 gives exactly 30, so 30. Card arrears 20 gives 3, then 5, then 30, capped at the arrears, so 20. Card arrears 1000 gives 150, already a multiple of 5. Overdraft arrears 300 gives 75, rounded up to 80 (25%); after the memo it gives 60 (20%), which stays 60. Overdraft arrears 40 gives a floor of 40 (capped at the arrears).
+[  227.9s] NOTE assumption: Personal loan floor: the instalment in bands A and B. In band C the full arrears (floor_full_types), as the email's 'full stop' is overridden by policy 2.4.
+[  227.9s] NOTE assumption: Band C has no upper bound; max is set to 100000.
+[  227.9s] NOTE assumption: Band B: when today is the last business day of the month or later, the deadline rolls to the last business day of the following month (roll_if_not_after_today).
+[  227.9s] NOTE assumption: Ladder: the opening ask (full arrears today) is attempt 1, so it is ladder step 1. It is followed by: full on the 2nd business day, full on the deadline, and the floor on the deadline. Band attempt limits are copied as 3/4/3, including the opening. As a result, bands A and C end before the floor step: in band C, step 3 repeats step 2 because the deadline is the 2nd business day, and it is skipped but still uses an attempt.
+[  227.9s] NOTE assumption: Hardship goes direct to the Care queue and writes no notes. The hardship event therefore closes as handed_over/hardship with no note.
+[  227.9s] NOTE assumption: The brief gives no close reason for a system failure. service_error closes as no_promise with reason 'service_error' and note N-SYS (assumed code).
+[  227.9s] NOTE assumption: Third-party, callback, wrong-number, deceased and unclear handling are not described in the pack. The default callback settings are used, and these close as not_reached with assumed reasons named after the event.
+[  227.9s] NOTE assumption: max_unclear, confirm.max_asks, human.ask_first, max_not_talk, date_rules and callback defaults are not stated in the pack; the defaults are used.
+[  227.9s] NOTE assumption: Floor spoken name: the pack only says 'floor'. 'minimum payment' is used for all product types.
+[  227.9s] NOTE assumption: No exact wording is prescribed by the pack. Lines are written plainly, and no SMS line is required.
+[  227.9s] STEP 2. local checks: structure, tool API, engine self-test on synthetic customers
+[  228.9s] TEST PASS local happy path, pays in full today
+[  228.9s] TEST PASS local someone else answers, books a callback
+[  228.9s] TEST PASS local wrong number
+[  228.9s] TEST PASS local identity fails
+[  228.9s] TEST PASS local identity answered the way people speak
+[  228.9s] TEST PASS local already paid
+[  228.9s] TEST PASS local dispute
+[  228.9s] TEST PASS local hardship, accepts support
+[  228.9s] TEST PASS local restructuring request
+[  228.9s] TEST PASS local flat refusals
+[  228.9s] TEST PASS local the bank fails to record the promise twice
+[  228.9s] TEST PASS local the callback booking fails once, then works
+[  228.9s] TEST PASS local several products, all paid today
+[  228.9s] TEST PASS local every band and product type gives a deadline and a floor
+[  228.9s] NOTE local checks: structural 0, tool API 0, self-test 14/14
+[  228.9s] NOTE assumption (recorded as unspecified by the materials): rules.too_much_skips_full: Later full-amount steps are not skipped after 'too much'; each step is offered unless it repeats an earlier offer.
+[  228.9s] NOTE assumption (recorded as unspecified by the materials): rules.deadline_adjust: Deadlines and steps are already computed as business days; any other non-business date moves to the previous business day (engine default).
+[  228.9s] NOTE assumption (recorded as unspecified by the materials): rules.week_end_today: No 'last business day of this week' step exists; the default applies.
+[  228.9s] NOTE assumption (recorded as unspecified by the materials): products.floor_full_below: Not used; the cap at the arrears is carried by floor_min and the built-in rule that a floor never exceeds the amount owed.
+[  228.9s] NOTE assumption (recorded as unspecified by the materials): products.step_round: There are no percentage ladder steps.
+[  228.9s] NOTE assumption (recorded as unspecified by the materials): products.promise_round: No rounding rule is given; amounts in pounds and pence convert exactly to whole pence.
+[  228.9s] NOTE UNSUPPORTED by the engine (policy kept as the brief states it): rule the spec cannot carry, not applied: Otherwise `no_promise` with the reason of the first product (in handling order) whose note is not a paid note: `refused` or `dispute`.
+[  228.9s] NOTE repair budget used: 0/3
+[  228.9s] STEP 3. compile workflow
+[  229.0s] NOTE workflow: 25 nodes, 16 engine-run calls, 196292 bytes
+[  229.0s] NOTE RESULT: INCOMPLETE -- the agent does not meet these:
+[  229.0s]   - not carried: Otherwise `no_promise` with the reason of the first product (in handling order) whose note is not a paid note: `refused` or `dispute`.
+[  229.0s] END 2026-10-11T11:48:09+0000 total_seconds=229.0 model_calls=3 model_cost_usd=1.11
