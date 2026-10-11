@@ -20,13 +20,15 @@ SCRIPTS = {
                      "Which account is this about?", "Which account is this about?", "OK. I can pay the full amount today.", "Yes, I confirm.", "No, thank you."],
  "rejected-day": ["Hello?", "Yes, this is Daniel Reyes.", "14 March 1988.", "4471.", "Yes... no, Friday does not work.", "Yes.",
                   "I can pay the full amount on the 20th.", "Yes, I confirm.", "No, thank you."],
+ "pub10-reentry": ["Hello?", "Yes, this is Grace Lin.", "23 February 1989.", "9904.", "I can't pay today. I will pay the full amount this Friday.",
+                   "Yes, I confirm.", "No, that is all."],
  "fragmented-amount": ["Hello?", "Yes, this is Daniel Reyes.", "14 March 1988.", "4471.", "I cannot pay today. My salary...",
                        "I can pay three hundred and", "fifty dollars on Friday.", "aaa...", "Yes, I confirm.", "No."],
 }
 res = {}
 ONLY = sys.argv[3].split(',') if len(sys.argv) > 3 else list(SCRIPTS)
 for name, msgs in [(n, m) for n, m in SCRIPTS.items() if n in ONLY]:
-    sess = http("/v1/practice/sessions", {"case": "PUB-01"})["variables"]
+    sess = http("/v1/practice/sessions", {"case": "PUB-10" if name.startswith("pub10") else "PUB-01"})["variables"]
     cid, turns = None, []
     for m in msgs:
         body = {"workflowId": wf, "message": m, "customerVariables": sess}
