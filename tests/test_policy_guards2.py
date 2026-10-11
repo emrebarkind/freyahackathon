@@ -122,3 +122,36 @@ def test_a_missing_tool_needs_no_body_mapping():
     s = copy.deepcopy(E.A)
     s["tool_bodies"]["schedule_callback"] = {}
     assert not [e for e in extract.validate(s, o) if "schedule_callback" in e]
+
+
+def test_progress_needs_fixes_without_losses_or_moved_rules():
+    from builder import extract
+    old = copy.deepcopy(E.A)
+    old["products"]["floor_min"] = 20
+    dropped = copy.deepcopy(old)
+    dropped["products"].pop("floor_min")                      # "fixes" an error by deleting a stated value
+    assert not extract.progress(old, dropped, ["e1"], [])[0]
+    moved = copy.deepcopy(old)
+    moved["unsupported_rules"] = ["the floor is never below 20"]   # "fixes" it by declaring the rule not carried
+    assert not extract.progress(old, moved, ["e1"], [])[0]
+    worse = copy.deepcopy(old)
+    assert not extract.progress(old, worse, ["e1"], ["e2"])[0]      # trades one problem for another
+    fixed = copy.deepcopy(old)
+    fixed["products"]["floor_min"] = 25
+    assert extract.progress(old, fixed, ["e1"], [])[0]              # a changed value is fine
+
+
+def test_a_rule_not_carried_makes_the_build_incomplete():
+    import pytest
+    from builder import build
+    from builder.trace import Trace
+    t = Trace(str(ROOT / "traces" / "test-verdict.trace.log"))
+    spec = comp.apply_defaults(copy.deepcopy(E.A), O)
+    spec["unsupported_rules"] = ["round the floor up to the next 0.05"]
+    with pytest.raises(SystemExit) as e:
+        build.finish(t, spec, {"failed": []})
+    assert e.value.code == 3
+    t = Trace(str(ROOT / "traces" / "test-verdict.trace.log"))
+    spec["unsupported_rules"] = []
+    build.finish(t, spec, {"failed": []})                           # complete: no exit
+    assert "RESULT: COMPLETE" in open(ROOT / "traces" / "test-verdict.trace.log").read()

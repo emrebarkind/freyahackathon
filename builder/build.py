@@ -85,9 +85,16 @@ def repair_loop(spec, chk, openapi, docs, trace, budget):
         id_failed = any("identity" in n for n in chk["failed"])
         score = lambda c: (len(c["structural"]), len(c["api"]), len(c["failed"]))
         not_worse = all(x <= y for x, y in zip(score(c2), score(chk)))
+        new_failed = set(c2["failed"]) - set(chk["failed"])     # a scenario that passed before must still pass
+        lost = extract.coverage(spec) - extract.coverage(cand)  # no stated value may be dropped
+        more_unsup = len(cand.get("unsupported_rules") or []) > len(spec.get("unsupported_rules") or [])
+        if new_failed or lost:
+            trace.note("repair rejected: " + (f"new failures {sorted(new_failed)}" if new_failed else "") +
+                       (f" dropped stated values {sorted(lost)[:6]}" if lost else ""))
+            not_worse = False
         if "identity.questions" in touched and not id_failed and not chk["structural"]:
             trace.note("repair changed the identity questions although no identity scenario failed; rejected")
-        elif not_worse and score(c2) < score(chk):
+        elif not_worse and score(c2) < score(chk) and not more_unsup:
             spec, chk = cand, c2
             trace.note("repaired spec accepted")
         else:
@@ -163,7 +170,7 @@ def main():
     (out_dir / f"{slot}.compiled.json").write_text(json.dumps(wf, indent=1))
 
     if a.no_deploy:
-        trace.end()
+        finish(trace, spec, chk)
         return
     import freya
     trace.step("4. validate, save, publish")
@@ -182,6 +189,19 @@ def main():
     freya.export_workflow(ids["workflow_id"], str(path))
     trace.note(f"exported {path.relative_to(ROOT)}")
     print(json.dumps({"workflow_id": ids["workflow_id"], "agent_id": ids["agent_id"], "export": str(path.relative_to(ROOT))}))
+    finish(trace, spec, chk)
+
+
+def finish(trace, spec, chk):
+    """The run's verdict. INCOMPLETE when a rule of the materials is not carried or a local scenario still fails:
+    the agent exists and is exported, but the run is not reported as a success (exit status 3)."""
+    from builder import spec_model
+    gaps = spec_model.critical(spec) + [f"local scenario fails: {n}" for n in chk.get("failed", [])]
+    if gaps:
+        trace.note("RESULT: INCOMPLETE -- the agent does not meet these:" + "".join("\n  - " + g for g in gaps))
+        trace.end()
+        sys.exit(3)
+    trace.note("RESULT: COMPLETE -- every rule carried, every local scenario passes")
     trace.end()
 
 

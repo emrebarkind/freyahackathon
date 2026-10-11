@@ -411,6 +411,38 @@ def prune_hint(spec, openapi):
         r.pop("hint")
 
 
+COVERAGE_KEYS = ("calendar", "callback", "identity", "products", "bands", "bands_outside", "ladder", "rules", "events",
+                 "notes", "multi", "date_rules", "confirm")
+
+
+def coverage(spec):
+    """Paths of the policy values a spec states. A repair may change values; it may not drop one."""
+    out = set()
+
+    def walk(x, path):
+        if isinstance(x, dict):
+            for k, v in x.items():
+                walk(v, path + "." + str(k))
+        elif isinstance(x, list):
+            if not x:
+                return
+            for i, v in enumerate(x):
+                walk(v, path + "." + str(i))
+        elif x not in (None, "", False):
+            out.add(path)
+    for k in COVERAGE_KEYS:
+        walk(spec.get(k), k)
+    return out
+
+
+def progress(old, new, old_errs, new_errs):
+    """A repair counts only if it fixes problems, adds none, keeps every stated value and moves no rule out of the
+    agent's behaviour (a new unsupported_rules entry is a rule not carried, never an improvement)."""
+    lost = coverage(old) - coverage(new)
+    more_unsupported = len(new.get("unsupported_rules") or []) > len(old.get("unsupported_rules") or [])
+    return len(new_errs) < len(old_errs) and set(new_errs) <= set(old_errs) and not lost and not more_unsupported, lost
+
+
 def validate_loop(spec, base, openapi, trace, budget):
     for attempt in range(10):                 # bounded by the shared repair budget
         spec_model.normalise(spec)
@@ -428,10 +460,13 @@ def validate_loop(spec, base, openapi, trace, budget):
         except Exception as e:
             trace.note(f"repair answer did not parse ({e}); keeping the previous spec")
             continue
-        if len(validate(fixed, openapi)) < len(errs):
+        spec_model.normalise(fixed)
+        ok, lost = progress(spec, fixed, errs, validate(fixed, openapi))
+        if ok:
             spec = fixed
         else:                                 # no progress: another round would only spend time
-            trace.note("repair did not reduce the problems; no further validation repairs")
+            trace.note("validation repair rejected (no progress" + (f"; it dropped stated values: {sorted(lost)[:6]}" if lost else "")
+                       + "); no further validation repairs")
             break
     return spec
 

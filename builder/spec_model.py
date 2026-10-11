@@ -282,3 +282,15 @@ def assumed(spec):
     except Exception as e:
         out.append(f"could not list the defaults: {type(e).__name__}")
     return out
+
+
+def critical(spec):
+    """Rules from the materials the built agent does not carry out. Any of these makes the build INCOMPLETE: the
+    agent is still deployed and exported (an entry needs one), but the run never reports success."""
+    out = ["not carried: " + str(r) for r in spec.get("unsupported_rules") or []]
+    P_ = spec.get("products") or {}
+    if P_.get("promise_integer") and float(P_.get("promise_scale") or P_.get("amount_scale") or 1) == 1 \
+            and P_.get("promise_round") not in ("up", "down", "nearest"):
+        out.append("create_promise takes whole units and the materials give no rounding rule: amounts with a "
+                   "fraction are not recorded")
+    return out
