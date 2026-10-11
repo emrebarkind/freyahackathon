@@ -61,7 +61,6 @@
    "verified": "verified",
    "all_verified": "all_verified",
    "left": "wrong_answers_left",
-   "hint": "",
    "pass_values": [],
    "reject_values": []
   }
@@ -83,6 +82,7 @@
   },
   "amount_scale": 1,
   "promise_scale": 100,
+  "promise_round": null,
   "floor_round": "up_unit",
   "list_field": "products",
   "id_field": "product_id",
@@ -267,46 +267,46 @@
   }
  },
  "responses": {
-  "add_note": {
+  "verify_identity": {
    "field": "ok",
    "values": [
-    "true"
-   ]
-  },
-  "close_call": {
-   "field": "ok",
-   "values": [
-    "true"
-   ]
-  },
-  "create_promise": {
-   "field": "ok",
-   "values": [
-    "true"
+    true
    ]
   },
   "get_account": {
    "field": "ok",
    "values": [
-    "true"
+    true
+   ]
+  },
+  "create_promise": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "add_note": {
+   "field": "ok",
+   "values": [
+    true
    ]
   },
   "schedule_callback": {
    "field": "ok",
    "values": [
-    "true"
+    true
    ]
   },
   "transfer_to_agent": {
    "field": "ok",
    "values": [
-    "true"
+    true
    ]
   },
-  "verify_identity": {
+  "close_call": {
    "field": "ok",
    "values": [
-    "true"
+    true
    ]
   }
  },
@@ -315,107 +315,101 @@
   "dispute": "\"This isn't my debt\" or \"I never had that product\".",
   "already_paid": "\"I've already paid\".",
   "restructure": "A request for a payment plan or lower instalments.",
-  "too_much": "The customer says the full amount is too much.",
-  "human": "A request for a person."
+  "human": "A request for a person.",
+  "too_much": "The customer says the full amount is too much."
  },
  "call_variables": [],
  "lines": {
   "opening": "Hello, this is Isla, a digital assistant calling from Glenmorrow Savings Bank. We record this call.",
   "confirm_ask": "Am I speaking with {title} {last_name}?",
   "robot": "Yes, I'm Isla, a digital assistant calling from Glenmorrow Savings Bank.",
-  "scam": "I understand your caution. You can check this call by phoning Glenmorrow Savings Bank on the number on your card or in online banking.",
-  "purpose_before_verify": "I can only discuss the reason for my call once I've confirmed who I'm speaking with.",
-  "no_info": "I'm sorry, I don't have that information.",
-  "not_talk_once": "I understand. This will only take a few minutes.",
+  "scam": "I understand your caution. If you prefer, you can call Glenmorrow Savings Bank on the number you already have for us.",
+  "purpose_before_verify": "I can explain once I've confirmed I'm speaking with the right person.",
+  "no_info": "I'm sorry, I can only discuss this with the account holder.",
+  "not_talk_once": "I understand. It will only take a few minutes.",
   "tp_ask": "When would be a good time to reach {title} {last_name}?",
   "tp_ask_time": "What time would suit?",
-  "tp_outside_window": "I'm sorry, we can only call back between 9 am and 6:30 pm, today or on the next two business days. Is there another time that would suit?",
-  "tp_no_info": "I'm sorry, I can only discuss this with {title} {last_name}.",
-  "tp_booked": "Thank you. We'll call back on {date} at {time}.",
-  "wrong_number": "I'm sorry to have bothered you. Thank you for letting me know.",
+  "tp_outside_window": "I'm sorry, I can only arrange a call between 9 am and 6:30 pm, today or on the next two business days. Is there another time that would work?",
+  "tp_no_info": "I'm sorry, I can't share the reason for the call.",
+  "tp_booked": "Thank you. We will call back on {date} at {time}.",
+  "wrong_number": "Thank you for letting me know, and sorry for the trouble.",
   "condolence": "I'm very sorry for your loss.",
   "id_intro": "Before we go on, I need to ask you two security questions.",
-  "id_why": "We ask these questions to protect your information and make sure we only speak with you.",
-  "id_explain": "I can't continue without confirming your identity, because that keeps your details safe.",
-  "id_declined": "I understand. I'm unable to continue without confirming your identity.",
+  "id_why": "We ask these questions to make sure we only speak with the account holder about private matters.",
+  "id_explain": "These questions protect your privacy, so that nobody else can discuss your affairs.",
+  "id_declined": "I understand. Without these answers I can't go any further on this call.",
   "id_repeat": "Sorry, could you repeat that, please?",
   "id_continue": "Please go on.",
   "id_wrong": "I'm sorry, that doesn't match our records.",
-  "id_failed": "I'm sorry, I can't confirm your identity, so I can't continue. Please visit a branch or use online banking.",
-  "disclose_intro": "Thank you, {title} {last_name}. I'm calling about overdue payments on your account with us.",
-  "product_line": "Your {name} has {amount} in arrears, and it is {days} days overdue.",
+  "id_failed": "I'm sorry, I can't go any further on this call. Please visit a branch or use online banking.",
+  "disclose_intro": "Thank you. I'm calling about overdue payments on your account.",
+  "product_line": "Your {name} has {amount} in arrears and is {days} days overdue.",
   "ask_today": "Can you pay the full {amount} today?",
   "ask_today_multi": "Can you pay both in full today?",
-  "next_product": "Now, about your {name}.",
+  "next_product": "Now let's look at your {name}.",
   "offer": "Could you pay {amount} on {date}?",
-  "offer_floor_date": "Could you pay {amount} on {date}?",
-  "offer_floor": "Could you pay {amount}?",
-  "below_floor": "I'm sorry, I can't record less than {floor}. Could you pay {floor}?",
+  "offer_floor_date": "I can accept {amount} on {date}. Could you pay that?",
+  "offer_floor": "I can accept {amount}. Could you pay that?",
+  "below_floor": "I'm sorry, I can't accept less than {floor}. Could you pay {floor}?",
   "below_floor_again": "I'm sorry, that is still below what I can accept.",
   "date_past": "That date has already passed. Which day from today would work for you?",
-  "not_business_day": "That isn't a business day. The next business day is {date}. Would that work?",
+  "not_business_day": "That day is not a business day. The next business day is {date}. Would that work for you?",
   "after_deadline": "I'm sorry, the latest date I can accept is {date}. Could you pay by then?",
   "vague_ask": "Which exact day would you pay?",
   "propose_deadline": "Could you pay {amount} on {date}?",
   "ask_date_for_amount": "On which day would you pay {amount}?",
-  "repeat_offer": "Just to repeat, could you pay {amount} on {date}?",
+  "repeat_offer": "To repeat, could you pay {amount} on {date}?",
   "readback_intro": "Let me read back what we agreed.",
   "readback_item": "{amount} for your {name} on {date}.",
-  "clamped_note": "For your {name}, the latest date I can accept is {deadline}, so I've used that date.",
-  "confirm_q": "Is that correct?",
+  "clamped_note": "For your {name}, the latest date I can accept is {date}, so I've used that date.",
+  "confirm_q": "Do you confirm?",
   "recorded": "Thank you, your promise is recorded.",
   "sms_line": "",
   "record_failed": "I'm sorry, the promise for your {name} could not be recorded.",
-  "paid_line": "Thank you. Payments can take two business days to show, so I won't ask for a payment on your {name}.",
-  "dispute_line": "I understand. I won't ask for a payment on your {name} today.",
+  "paid_line": "Thank you. Payments can take two business days to show, so I won't ask for a payment on this product today.",
+  "dispute_line": "I understand. I won't ask for a payment on this product today.",
   "hardship": "I'm sorry to hear you're going through this. I'm passing you to our care team, who can help.",
   "hardship_declined": "I understand.",
-  "hardship_short": "Shall I put you through now?",
-  "restructure_line": "I'll pass you to our arrears solutions team, who can talk about payment plans.",
+  "hardship_short": "Is that all right?",
+  "restructure_line": "I'll pass you to our arrears solutions team, who can talk with you about payment plans.",
   "human_ask_help": "I can help with most things on this call. Is there something I can help you with?",
-  "transfer": "I'm transferring you now. Please hold.",
+  "transfer": "Please hold while I transfer you.",
   "offer_short": "Would that work for you?",
   "offer_short_date": "That would be on {date}.",
   "anything_else": "Is there anything else I can help you with?",
-  "promise_change": "I'm sorry, I can't change a promise once it's been saved on this call.",
+  "promise_change": "I'm sorry, a promise can't be changed once it is saved on this call.",
   "go_on": "Sorry, please go on.",
   "goodbye": "Thank you for your time. Goodbye.",
   "callback_failed": "I'm sorry, I couldn't book the callback.",
-  "transfer_failed": "I'm sorry, the transfer didn't go through.",
+  "transfer_failed": "I'm sorry, the transfer did not go through.",
   "confirm_again": "Sorry, I didn't catch that. Do you confirm, yes or no?",
-  "system_error": "I'm sorry, our system isn't responding right now.",
-  "below_floor_final": "I'm sorry, I can't record less than {amount}."
+  "system_error": "I'm sorry, our system is not responding right now.",
+  "below_floor_final": "I'm sorry, I can't accept less than {amount}.",
+  "no_band_line": "I'm not able to discuss your {name} on this call."
  },
  "assumptions": [
-  "The memo (19 Oct 2026, effective 2 Nov 2026) overrides policy v3.2 wherever they differ, as both the memo and Morag's email say. The memo also overrides the old dialler code list.",
-  "Memo A: the early band is now 1-14 days and the mid band 15-30 days. The late band (31-60) is unchanged. Each band keeps its deadline and number of attempts (early 1, mid 2, late 3).",
-  "Memo B: Friday 11 Dec 2026 is a non-business day and is added to the holidays. It is skipped when counting business days, and no promise or callback may fall on it.",
-  "Rule 11: 24 Dec 2026 is a normal business day, so it is not in the holidays list.",
-  "Memo C: the reason code 'refused' is retired. 'declined' is used as both the close_call reason and the add_note reason, and the tool API enums agree.",
-  "Memo D: the callback window is 09:00-18:30 inclusive, replacing 09:00-20:00. A callback can be today or on one of the next two business days, must be later than now, and must fall on a business day.",
-  "The memo keeps the 30% floor (rule 17) and the limit of two wrong identity answers in total (rule 9).",
-  "Floor = 30% of arrears_amount, rounded up to the next whole pound. A result that is already a whole number of pounds is not rounded further. Examples: £100.00 gives £30; £101.00 gives £30.30, which becomes £31. monthly_payment is never used or quoted.",
-  "If the rounded-up floor would be more than arrears_amount (only possible for very small debts), the floor is capped at the full arrears_amount, because rule 18 only accepts amounts between the floor and arrears_amount.",
-  "get_account gives amounts in pounds (amount_scale 1). create_promise takes whole pence (promise_scale 100, so £87.50 is sent as 8750).",
-  "Rule 20 counts the opening ask (full amount today) as attempt 1, so opening_is_attempt is true. The early band's one attempt is the opening ask alone. The mid band adds step 2, and the late band adds steps 2 and 3.",
-  "With two products, a flat no to 'pay both in full today' counts as step 1 for each product (rule 23).",
-  "Ladder step 2 is the full amount on the 5th business day after today, or on the deadline if that is earlier. The engine is assumed to clamp offer dates to the product's deadline.",
-  "Rule 21: if the customer says the full amount is too much, the next step offers the floor on that step's date and uses an attempt. This is modelled as too_much_floor 'attempt_1' with ladder step 2 set to full_or_floor.",
-  "Mid-band deadline = today + 14 calendar days, moved back to the previous business day if it falls on a weekend or holiday (rule 14). Late-band deadline = the last business day of the current month, or of the next month if today is already that day.",
-  "A promise date must be today or later, on a business day, and no later than the product's deadline. For a non-business day the agent offers the next business day, or the deadline if that is earlier. For a date after the deadline it offers the deadline (rule 15).",
-  "Date of birth is sent as DDMMYYYY (%d%m%Y). Postcode is sent in capitals with one space before the last three characters. Postcode length is left unset because UK postcodes vary in length.",
-  "The verify_identity response has no hint field (its fields are ok, error, verified, wrong_answers_left and all_verified), so response.hint is empty and hints is empty. An unreadable answer comes back as ok=false and is not counted as wrong.",
-  "Hardship: the agent says one sentence of sympathy and tells the customer they are being passed to the care team. The call transfers to queue care_team and closes as handoff/care. No note is written, because rule 29 forbids notes on any transfer. transfer_support maps to the same care_team transfer.",
-  "Restructure and human transfers write no notes. Promises already recorded stay. The call closes as handoff with that transfer's reason.",
-  "The no_ptp reason is the note reason of the first product, in get_account order, that was not noted 'paid'.",
-  "The payment-link SMS was dropped and is out of scope, so sms_line is empty.",
-  "The brief does not say how 'next Friday' is read, so the default 'following_week' is used.",
-  "The brief does not say how a numeric-only date is read. 'dmy' is used, which matches the bank's day-month-year format.",
-  "The brief does not cover changing a recorded promise, so the agent says it cannot be changed on this call.",
-  "The brief does not define 'I don't want to talk', so the default max_not_talk of 2 is used.",
-  "The brief does not say what happens to a product outside 1-60 days in arrears, so bands_outside is null.",
-  "Asking what the call is about instead of answering a security question counts as declining (the default). Rule 10 allows one explanation, and a second refusal closes as id_fail/declined_id.",
-  "The brief gives no name for the floor, so it is spoken as 'minimum amount'.",
-  "The policy's 'the call is recorded' is spoken in active voice: 'We record this call.'"
+  "Where the memo of 19 Oct 2026 and policy v3.2 disagree, the memo wins (the email and the memo both say so). Memo A: early band is now 1-14 days and mid is 15-30; deadlines and attempts stay as in rule 13.",
+  "Memo B: Fri 11 Dec 2026 is a non-business day and is added to the holidays. 24 Dec 2026 stays a normal business day (rule 11).",
+  "Memo C: the reason code 'refused' is retired and replaced by 'declined' for both the close_call reason and the add_note reason. This overrides rule 25 and the old code list, and matches the tool API enums.",
+  "Memo D: the callback window is 09:00-18:30 inclusive, replacing 09:00-20:00. Callbacks are allowed today or on the next two business days, must be later than now, and only on business days (11 Dec is excluded by memo B).",
+  "The memo confirms the floor stays at 30% (rule 17) and the limit stays at two wrong answers (rule 9).",
+  "Floor = 30% of arrears_amount, rounded up to the next whole pound. A result that is already a whole pound stays as it is (e.g. 250.00 -> 75; 123.45 -> 37.035 -> 38). If rounding up would make the floor higher than the arrears amount, it is capped at the full arrears amount. monthly_payment is never used or quoted.",
+  "get_account amounts are in pounds. create_promise takes pence, so promise_scale is 100. The brief gives no rounding rule because pound amounts with pence convert exactly, so promise_round is null.",
+  "Rule 20 counts the opening ask (full amount today) as attempt 1, so opening_is_attempt is true and the band attempt numbers (1/2/3) include it. In the two-product case, a flat no to 'both in full today' counts as step 1 for each product (rule 23).",
+  "Ladder step 2 is the full amount, or the floor if the customer said the full amount is too much (rule 21), on the 5th business day after today. If the deadline is earlier, the date is clamped to the deadline: rule 20 says 'or on the deadline if that is earlier' and rule 15 forbids dates after the deadline. Step 3 is the floor on the deadline.",
+  "too_much_floor is set to attempt_1. With opening_is_attempt true, 'too much' in reply to the opening ask counts as a refusal of step 1, and the next step proposes the floor on that step's date.",
+  "If a mid-band deadline falls on a weekend or holiday it moves to the previous business day (rule 14). If today is the last business day of the month, the late-band deadline rolls to the last business day of next month (roll_if_not_after_today).",
+  "The early-band deadline is the 8th business day after today; today does not count, and holidays including 11 Dec are skipped.",
+  "Date of birth is sent as DDMMYYYY (%d%m%Y), so date_order is dmy. Postcode is sent in capitals with one space before the last three characters. Postcode length varies, so no length is set.",
+  "The verify tool returns no hint field, so hints is empty. Unreadable answers return ok=false and are not counted as wrong; this is handled through the ok flag.",
+  "The brief does not name the floor in customer-facing terms, so it is spoken as 'minimum amount'.",
+  "The hardship event closes as handoff/care via the care_team queue with no note (rule 29: no notes on any transfer). transfer_support uses the same codes.",
+  "The SMS/payment-link slide was dropped, so sms_line is empty.",
+  "The brief does not say whether 'next Friday' means this week's or next week's, so the default following_week is used.",
+  "The brief gives no limit for 'I don't want to talk', so the default of 2 is used. Asking what the call is about instead of answering counts as declining (default).",
+  "The brief does not cover changing a promise that is already saved, so the agent says it cannot be changed on this call.",
+  "Isla only calls customers 1-60 days in arrears and the brief gives no rule for values outside the bands, so bands_outside is null.",
+  "Wrong number and deceased closes use the codes in rule 6. The deceased case says the exact words 'I'm very sorry for your loss.'",
+  "The brief does not ask Isla to tell the customer what happens to the remaining balance when the floor is offered, so offer_floor_date does not mention it."
  ]
 }
