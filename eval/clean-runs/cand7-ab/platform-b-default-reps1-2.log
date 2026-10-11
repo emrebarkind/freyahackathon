@@ -1,0 +1,19 @@
+freya: GET /api/v2/simulations/f341aeb7-e8cf-4765-9b1a-01b1d3a880ee -> 502: error code: 502
+; retrying in 10 s (2/3)
+PASS PUB-11 medium Multi-product  | verify > verify > get_account > promise > promise > promise > close_call
+PASS PUB-12 hard   Multi-product  | verify > verify > verify > get_account > promise > add_note > add_note > close_call
+PASS PUB-13 hard   Multi-product  | verify > verify > get_account > promise > promise > close_call
+
+slowest agent turn per call: median 21 s, worst 22 s. Failed calls where the customer hung up: 0.
+WARNING: the phone agent was slow in this run. If the same agent is fast in another run, the model was busy and this score is too low.
+-- run 1 of 3: 3 / 3 passed, 1727 s
+
+PASS PUB-11 medium Multi-product  | verify > verify > get_account > promise > promise > promise > close_call
+FAIL PUB-12 hard   Multi-product  | verify > verify > verify > get_account > verify > verify > get_account > promise > add_note > add_note > close_call
+       - conversation: The conversation failed one of the success criteria: the phone question was asked only once (Message 4), rather than being 'asked again once' as required. All other criteria were met: the date of birth was asked only once (Message 2), exactly one
+PASS PUB-13 hard   Multi-product  | verify > verify > get_account > promise > promise > close_call
+
+slowest agent turn per call: median 13 s, worst 35 s. Failed calls where the customer hung up: 0.
+WARNING: the phone agent was slow in this run. If the same agent is fast in another run, the model was busy and this score is too low.
+-- run 2 of 3: 2 / 3 passed, 741 s
+
