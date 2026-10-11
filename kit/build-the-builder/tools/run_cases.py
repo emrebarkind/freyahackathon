@@ -94,7 +94,17 @@ def run_once(agent_id, cases, ids):
     """One simulation: every case once. Returns the scored rows."""
     sessions = {c["id"]: http("/v1/practice/sessions", {"case": c["id"]})["variables"] for c in cases}
     t0 = time.time()
-    sim_id, it_id, status = freya.run_simulation(agent_id, f"cases {time.strftime('%H:%M:%S')}", {ids[c["id"]]: sessions[c["id"]] for c in cases})
+    journal = ROOT / "results" / "sim-journal.jsonl"
+    journal.parent.mkdir(exist_ok=True)
+    def started(sim_id):              # written before waiting: scripts/recover_sim.py rebuilds a lost run from this line
+        with open(journal, "a") as f:
+            f.write(json.dumps({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "event": "started", "sim_id": sim_id, "agent_id": agent_id,
+                                "cases": [c["id"] for c in cases], "personas": {c["id"]: ids[c["id"]] for c in cases},
+                                "customer_ids": {c["id"]: sessions[c["id"]].get("customer_id") for c in cases},
+                                "label": os.environ.get("RUN_LABEL", "")}) + "\n")
+    sim_id, it_id, status = freya.run_simulation(agent_id, f"cases {time.strftime('%H:%M:%S')}", {ids[c["id"]]: sessions[c["id"]] for c in cases}, on_start=started)
+    with open(journal, "a") as f:
+        f.write(json.dumps({"at": time.strftime("%Y-%m-%d %H:%M:%S"), "event": "finished", "sim_id": sim_id, "status": status}) + "\n")
     took = time.time() - t0
     judge = {r["personaId"]: r for r in freya.get_iteration(sim_id, it_id)["runs"]}
     rows = []

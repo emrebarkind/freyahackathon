@@ -1,0 +1,65 @@
+{
+ "simulation_id": "0e827e31-ef75-4920-8843-89c1e43251e9",
+ "recovered": true,
+ "rows": [
+  {
+   "id": "PUB-12",
+   "family": "Multi-product",
+   "pass_": false,
+   "failed": [
+    "conversation: The conversation failed one of the success criteria: the phone question was asked only once (Message 4), rather than being 'asked again once' as required. All other criteria were met: the date of birth was asked only once (Message 2), exactly one promise was recorded for the credit card (Message 14 and system events), 'refused' notes were added for the personal loan and car loan (system events), a"
+   ],
+   "call_id": "ac5bf4f2-463e-4146-a41b-0d1f0b2fbe8b",
+   "customer_id": "c_b7a7970f-b8c",
+   "attempts": 1,
+   "tools": [
+    "verify_identity",
+    "verify_identity",
+    "verify_identity",
+    "get_account",
+    "verify_identity",
+    "verify_identity",
+    "get_account",
+    "create_promise",
+    "add_note",
+    "add_note",
+    "close_call"
+   ]
+  },
+  {
+   "id": "PUB-11",
+   "family": "Multi-product",
+   "pass_": true,
+   "failed": [],
+   "call_id": "9b6afbc8-b6e4-4a8e-8126-9459ed3d1b86",
+   "customer_id": "c_814325fd-ec9",
+   "attempts": 0,
+   "tools": [
+    "verify_identity",
+    "verify_identity",
+    "get_account",
+    "create_promise",
+    "create_promise",
+    "create_promise",
+    "close_call"
+   ]
+  },
+  {
+   "id": "PUB-13",
+   "family": "Multi-product",
+   "pass_": true,
+   "failed": [],
+   "call_id": "9f014bd5-ee94-4dbc-9aac-6b6009360b76",
+   "customer_id": "c_582b042f-1af",
+   "attempts": 0,
+   "tools": [
+    "verify_identity",
+    "verify_identity",
+    "get_account",
+    "create_promise",
+    "create_promise",
+    "close_call"
+   ]
+  }
+ ]
+}

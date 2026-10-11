@@ -1,0 +1,24 @@
+  talk   median  9.90  mean  8.96  share of mean total 85.1%
+  code   median  0.98  mean  1.24  share of mean total 11.8%
+  api    median  0.03  mean  0.31  share of mean total  2.9%
+  reply  median  0.01  mean  0.01  share of mean total  0.1%
+  other  median  0.00  mean  0.00  share of mean total  0.0%
+  total  median 11.52  p90 18.83
+  talk   median  6.01  mean 10.19  share of mean total 87.8%
+  code   median  0.99  mean  1.32  share of mean total 11.4%
+  api    median  0.00  mean  0.08  share of mean total  0.7%
+  reply  median  0.01  mean  0.01  share of mean total  0.1%
+  other  median  0.00  mean  0.00  share of mean total  0.0%
+  total  median  8.47  p90 26.86
+  talk   median 13.99  mean 15.42  share of mean total 88.3%
+  code   median  0.48  mean  0.74  share of mean total  4.2%
+  api    median  0.03  mean  1.28  share of mean total  7.4%
+  reply  median  0.01  mean  0.01  share of mean total  0.1%
+  other  median  0.00  mean  0.00  share of mean total  0.0%
+  total  median 17.83  p90 32.56
+  talk   median 18.77  mean 17.13  share of mean total 91.0%
+  code   median  0.73  mean  1.41  share of mean total  7.5%
+  api    median  0.00  mean  0.27  share of mean total  1.4%
+  reply  median  0.01  mean  0.01  share of mean total  0.1%
+  other  median  0.00  mean  0.00  share of mean total  0.0%
+  total  median 20.63  p90 26.67

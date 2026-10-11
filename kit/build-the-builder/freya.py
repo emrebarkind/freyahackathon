@@ -104,7 +104,7 @@ def get_call(call_id):
 AGENT_LLM = {"provider": os.environ.get("FREYA_AGENT_PROVIDER", "experimental-5"), "model": os.environ.get("FREYA_AGENT_MODEL", "experimental-5")}
 SIM_LLM = {"provider": "google", "model": "gemini-3-flash-preview"}        # plays the customer and judges
 
-def run_simulation(agent_id, name, variables_by_persona, max_seconds=420, concurrency=int(os.environ.get("FREYA_SIM_CONCURRENCY", "5"))):
+def run_simulation(agent_id, name, variables_by_persona, max_seconds=420, concurrency=int(os.environ.get("FREYA_SIM_CONCURRENCY", "5")), on_start=None):
     """Start a text simulation, wait for it, return (simulation_id, iteration_id)."""
     while True:                      # a workspace runs one simulation at a time: wait for the running one instead of failing
         try:
@@ -118,6 +118,7 @@ def run_simulation(agent_id, name, variables_by_persona, max_seconds=420, concur
             if "concurrent simulations" not in str(e): raise
             print("another simulation is running in this workspace, waiting 30 s", flush=True); time.sleep(30)
     sim_id = (sim.get("simulation") or sim)["id"]
+    if on_start: on_start(sim_id)    # record the id at once: a lost client must not lose the simulation
     while True:
         time.sleep(10)
         s = api("GET", f"/api/v2/simulations/{sim_id}"); s = s.get("simulation") or s
