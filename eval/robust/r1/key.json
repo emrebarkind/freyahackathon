@@ -1,0 +1,491 @@
+{
+ "package": "r1",
+ "rules": {
+  "PREC": "Memos override the policy only where they say so; a withdrawn memo item is not applied.",
+  "DL": "Deadline per account from its band (policy P10, overdraft late band per memo M1.1), counting business days with memo M2 holiday changes.",
+  "BD": "Business days: Mon-Fri minus policy holidays plus 2026-12-07 (M2.3); 2026-12-24 is a business day (M2.1 withdraws M1.2).",
+  "OFF": "Persuasion offers per account (P16), capped at the account's deadline.",
+  "FL": "Floor per kind (P14), unchanged by memos.",
+  "CB": "Callback window (P4) with business days per memo M2.3.",
+  "ID": "Identity answer formats per the tool API.",
+  "AMT": "create_promise takes pence.",
+  "FAIL": "Failed promise write: retry once, no note, service_error close if nothing else (P22, P23, P25).",
+  "CONV": "Whole-call ledger outcomes."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-02T10:00",
+    "product": {
+     "account_ref": "ac_od_71",
+     "kind": "overdraft",
+     "arrears": 640.0,
+     "days_overdue": 27,
+     "excess": 180.5
+    }
+   },
+   "expect": "2026-12-08",
+   "source": "M1.1. Overdrafts in the late band now have a shorter deadline: the 3rd business day after today. This changes P10 for overdrafts with 11 to 60 days overdue only. Cards and loans in the late band, and overdrafts in the early band, keep the policy deadline. The overdraft floor and the number of attempts do not change. / M2.3. The core systems migration closes all branches on Monday 2026-12-07. Add 2026-12-07 to the holiday list of P9. It is not a business day for promises or for callbacks."
+  },
+  {
+   "id": "C2",
+   "rule": "PREC",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-02T10:00",
+    "product": {
+     "account_ref": "ac_od_72",
+     "kind": "overdraft",
+     "arrears": 215.4,
+     "days_overdue": 6,
+     "excess": 95.0
+    }
+   },
+   "expect": "2026-12-17",
+   "source": "M1.1. Overdrafts in the late band now have a shorter deadline: the 3rd business day after today. This changes P10 for overdrafts with 11 to 60 days overdue only. Cards and loans in the late band, and overdrafts in the early band, keep the policy deadline. The overdraft floor and the number of attempts do not change. / | 1 to 10 | early | the 10th business day after today | 1 |"
+  },
+  {
+   "id": "C3",
+   "rule": "PREC",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-02T10:00",
+    "product": {
+     "account_ref": "ac_ln_33",
+     "kind": "loan",
+     "arrears": 388.2,
+     "days_overdue": 30,
+     "repayment": 194.1
+    }
+   },
+   "expect": "2026-12-11",
+   "source": "M1.1. Overdrafts in the late band now have a shorter deadline: the 3rd business day after today. This changes P10 for overdrafts with 11 to 60 days overdue only. Cards and loans in the late band, and overdrafts in the early band, keep the policy deadline. The overdraft floor and the number of attempts do not change. / | 11 to 60 | late | the 6th business day after today | 2 | ... The band table is the same for cards, loans and overdrafts."
+  },
+  {
+   "id": "C4",
+   "rule": "PREC",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-16T15:00",
+    "product": {
+     "account_ref": "ac_cd_18",
+     "kind": "card",
+     "card_ending": "2210",
+     "arrears": 1250.75,
+     "days_overdue": 45,
+     "min_due": 62.55
+    }
+   },
+   "expect": "2026-12-24",
+   "source": "| 11 to 60 | late | the 6th business day after today | 2 | ... The band table is the same for cards, loans and overdrafts. / M2.1. Item M1.2 is withdrawn. Branches will open on 2026-12-24 after all, and 2026-12-24 is a normal business day."
+  },
+  {
+   "id": "C5",
+   "rule": "DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-16T15:00",
+    "product": {
+     "account_ref": "ac_od_71",
+     "kind": "overdraft",
+     "arrears": 640.0,
+     "days_overdue": 27,
+     "excess": 180.5
+    }
+   },
+   "expect": "2026-12-21",
+   "source": "M1.1. Overdrafts in the late band now have a shorter deadline: the 3rd business day after today. This changes P10 for overdrafts with 11 to 60 days overdue only. Cards and loans in the late band, and overdrafts in the early band, keep the policy deadline. The overdraft floor and the number of attempts do not change. / M2.2. Item M1.1 stays in force unchanged."
+  },
+  {
+   "id": "C6",
+   "rule": "OFF",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-04T11:00",
+    "product": {
+     "account_ref": "ac_od_71",
+     "kind": "overdraft",
+     "arrears": 640.0,
+     "days_overdue": 27,
+     "excess": 180.5
+    }
+   },
+   "expect": [
+    [
+     640.0,
+     "2026-12-10"
+    ],
+    [
+     180.5,
+     "2026-12-10"
+    ]
+   ],
+   "source": "Attempt 1: the full arrears on the last business day of this week. If today is that day, the last business day of next week. If that day is after the account's deadline, use the deadline instead. Attempt 2, late band only: the floor on the deadline. / M1.1. Overdrafts in the late band now have a shorter deadline: the 3rd business day after today. This changes P10 for overdrafts with 11 to 60 days overdue only. Cards and loans in the late band, and overdrafts in the early band, keep the policy deadline. The overdraft floor and the number of attempts do not change. / M2.3. The core systems migration closes all branches on Monday 2026-12-07. Add 2026-12-07 to the holiday list of P9. It is not a business day for promises or for callbacks."
+  },
+  {
+   "id": "C7",
+   "rule": "PREC",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-04T11:00",
+    "product": {
+     "account_ref": "ac_ln_33",
+     "kind": "loan",
+     "arrears": 388.2,
+     "days_overdue": 30,
+     "repayment": 194.1
+    }
+   },
+   "expect": [
+    [
+     388.2,
+     "2026-12-11"
+    ],
+    [
+     194.1,
+     "2026-12-15"
+    ]
+   ],
+   "source": "Attempt 1: the full arrears on the last business day of this week. If today is that day, the last business day of next week. If that day is after the account's deadline, use the deadline instead. Attempt 2, late band only: the floor on the deadline. / M1.1. Overdrafts in the late band now have a shorter deadline: the 3rd business day after today. This changes P10 for overdrafts with 11 to 60 days overdue only. Cards and loans in the late band, and overdrafts in the early band, keep the policy deadline. The overdraft floor and the number of attempts do not change. / M2.3. The core systems migration closes all branches on Monday 2026-12-07. Add 2026-12-07 to the holiday list of P9. It is not a business day for promises or for callbacks."
+  },
+  {
+   "id": "C8",
+   "rule": "PREC",
+   "type": "business_day",
+   "input": {
+    "date": "2026-12-24"
+   },
+   "expect": true,
+   "source": "M2.1. Item M1.2 is withdrawn. Branches will open on 2026-12-24 after all, and 2026-12-24 is a normal business day."
+  },
+  {
+   "id": "C9",
+   "rule": "BD",
+   "type": "business_day",
+   "input": {
+    "date": "2026-12-07"
+   },
+   "expect": false,
+   "source": "M2.3. The core systems migration closes all branches on Monday 2026-12-07. Add 2026-12-07 to the holiday list of P9. It is not a business day for promises or for callbacks."
+  },
+  {
+   "id": "C10",
+   "rule": "PREC",
+   "type": "business_day",
+   "input": {
+    "date": "2026-11-19"
+   },
+   "expect": false,
+   "source": "Business days are Monday to Friday, except Kestrel Mutual holidays: 2026-11-19, 2026-12-25, 2026-12-28, 2027-01-01. / M2.4. Nothing else in the policy changes."
+  },
+  {
+   "id": "C11",
+   "rule": "PREC",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-02T10:00",
+    "product": {
+     "account_ref": "ac_od_71",
+     "kind": "overdraft",
+     "arrears": 640.0,
+     "days_overdue": 27,
+     "excess": 180.5
+    }
+   },
+   "expect": 180.5,
+   "source": "The floor is `min_due` for a card, `repayment` for a loan and `excess` for an overdraft. / M1.1. Overdrafts in the late band now have a shorter deadline: the 3rd business day after today. This changes P10 for overdrafts with 11 to 60 days overdue only. Cards and loans in the late band, and overdrafts in the early band, keep the policy deadline. The overdraft floor and the number of attempts do not change."
+  },
+  {
+   "id": "C12",
+   "rule": "PREC",
+   "type": "attempts",
+   "input": {
+    "now": "2026-12-02T10:00",
+    "product": {
+     "account_ref": "ac_od_71",
+     "kind": "overdraft",
+     "arrears": 640.0,
+     "days_overdue": 27,
+     "excess": 180.5
+    }
+   },
+   "expect": 2,
+   "source": "| 11 to 60 | late | the 6th business day after today | 2 | ... The band table is the same for cards, loans and overdrafts. / M1.1. Overdrafts in the late band now have a shorter deadline: the 3rd business day after today. This changes P10 for overdrafts with 11 to 60 days overdue only. Cards and loans in the late band, and overdrafts in the early band, keep the policy deadline. The overdraft floor and the number of attempts do not change."
+  },
+  {
+   "id": "C13",
+   "rule": "CB",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-12-04T17:00",
+    "date": "2026-12-07",
+    "time": "10:00"
+   },
+   "expect": false,
+   "source": "A callback may be booked for today or the next business day, from 09:30 to 18:30, both included, and later than `now`. / M2.3. The core systems migration closes all branches on Monday 2026-12-07. Add 2026-12-07 to the holiday list of P9. It is not a business day for promises or for callbacks."
+  },
+  {
+   "id": "C14",
+   "rule": "CB",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-12-04T17:00",
+    "date": "2026-12-08",
+    "time": "10:00"
+   },
+   "expect": true,
+   "source": "A callback may be booked for today or the next business day, from 09:30 to 18:30, both included, and later than `now`. / M2.3. The core systems migration closes all branches on Monday 2026-12-07. Add 2026-12-07 to the holiday list of P9. It is not a business day for promises or for callbacks."
+  },
+  {
+   "id": "C15",
+   "rule": "ID",
+   "type": "id_answer",
+   "input": {
+    "field": "dob",
+    "value": "1984-03-07"
+   },
+   "expect": "07/03/1984",
+   "source": "For dob: DD/MM/YYYY with leading zeros, e.g. 07/03/1984. (openapi verify_identity.answer)"
+  },
+  {
+   "id": "C16",
+   "rule": "AMT",
+   "type": "promise_amount",
+   "input": {
+    "amount": 412.35
+   },
+   "expect": 41235,
+   "source": "The promised amount in pence (pounds x 100), e.g. 412.35 pounds is 41235. (openapi create_promise.amount_pence)"
+  },
+  {
+   "id": "C17",
+   "rule": "FAIL",
+   "type": "note",
+   "input": {
+    "situation": "service_error"
+   },
+   "expect": null,
+   "source": "Kestrel Mutual has no note code for system failures. An account whose promise could not be saved gets no note."
+  },
+  {
+   "id": "C18",
+   "rule": "FAIL",
+   "type": "close",
+   "input": {
+    "situation": "service_error"
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "service_error"
+   },
+   "source": "| `no_promise` | ... | `service_error` if no promise and an account could not be saved and no other account is noted |"
+  },
+  {
+   "id": "C19",
+   "rule": "CONV",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-16T11:00",
+    "products": [
+     {
+      "account_ref": "ac_ln_51",
+      "kind": "loan",
+      "arrears": 299.99,
+      "days_overdue": 8,
+      "repayment": 150.0
+     },
+     {
+      "account_ref": "ac_od_52",
+      "kind": "overdraft",
+      "arrears": 477.6,
+      "days_overdue": 25,
+      "excess": 120.0
+     }
+    ],
+    "script": [
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ],
+    "faults": {
+     "create_promise": 2
+    }
+   },
+   "expect": {
+    "outcome": "promise",
+    "reason": "",
+    "promises": [
+     [
+      "ac_od_52",
+      47760,
+      "2026-11-16"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Read all promises back together and ask for one confirmation. Then call `create_promise` once per account, in `get_account` order. / If a call fails, retry it once at once. If the retry also fails, tell the customer that promise could not be saved, keep any promises already recorded, and go on with the next account. / Kestrel Mutual has no note code for system failures. An account whose promise could not be saved gets no note. / | `promise` | none | at least one promise recorded |"
+  },
+  {
+   "id": "C20",
+   "rule": "CONV",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-02T10:00",
+    "products": [
+     {
+      "account_ref": "ac_od_61",
+      "kind": "overdraft",
+      "arrears": 530.0,
+      "days_overdue": 40,
+      "excess": 210.25
+     },
+     {
+      "account_ref": "ac_cd_62",
+      "kind": "card",
+      "card_ending": "7781",
+      "arrears": 845.3,
+      "days_overdue": 5,
+      "min_due": 42.27
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promise",
+    "reason": "",
+    "promises": [
+     [
+      "ac_od_61",
+      21025,
+      "2026-12-08"
+     ]
+    ],
+    "notes": [
+     [
+      "ac_cd_62",
+      "refused"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Attempt 1: the full arrears on the last business day of this week. If today is that day, the last business day of next week. If that day is after the account's deadline, use the deadline instead. Attempt 2, late band only: the floor on the deadline. / M1.1. Overdrafts in the late band now have a shorter deadline: the 3rd business day after today. This changes P10 for overdrafts with 11 to 60 days overdue only. Cards and loans in the late band, and overdrafts in the early band, keep the policy deadline. The overdraft floor and the number of attempts do not change. / M2.3. The core systems migration closes all branches on Monday 2026-12-07. Add 2026-12-07 to the holiday list of P9. It is not a business day for promises or for callbacks. / P17. When an account's attempts are used up, that account ends without a promise, noted `refused`."
+  },
+  {
+   "id": "C21",
+   "rule": "CONV",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-12T14:00",
+    "products": [
+     {
+      "account_ref": "ac_ln_81",
+      "kind": "loan",
+      "arrears": 702.4,
+      "days_overdue": 20,
+      "repayment": 175.6
+     },
+     {
+      "account_ref": "ac_od_82",
+      "kind": "overdraft",
+      "arrears": 318.9,
+      "days_overdue": 15,
+      "excess": 88.0
+     }
+    ],
+    "script": [
+     {
+      "k": "proposes",
+      "date": "2026-11-20",
+      "product": "all"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promise",
+    "reason": "",
+    "promises": [
+     [
+      "ac_ln_81",
+      70240,
+      "2026-11-20"
+     ],
+     [
+      "ac_od_82",
+      31890,
+      "2026-11-17"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "P12. If the customer names one date for everything and it is after one account's deadline, record that account on its own deadline and say so in the read-back. The other accounts keep the named date. / M1.1. Overdrafts in the late band now have a shorter deadline: the 3rd business day after today. This changes P10 for overdrafts with 11 to 60 days overdue only. Cards and loans in the late band, and overdrafts in the early band, keep the policy deadline. The overdraft floor and the number of attempts do not change. / Business days are Monday to Friday, except Kestrel Mutual holidays: 2026-11-19, 2026-12-25, 2026-12-28, 2027-01-01."
+  },
+  {
+   "id": "C22",
+   "rule": "CONV",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-17T09:30",
+    "products": [
+     {
+      "account_ref": "ac_cd_91",
+      "kind": "card",
+      "card_ending": "4406",
+      "arrears": 960.15,
+      "days_overdue": 14,
+      "min_due": 48.01
+     }
+    ],
+    "script": [
+     {
+      "k": "proposes",
+      "date": "2026-12-24"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promise",
+    "reason": "",
+    "promises": [
+     [
+      "ac_cd_91",
+      96015,
+      "2026-12-24"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "M2.1. Item M1.2 is withdrawn. Branches will open on 2026-12-24 after all, and 2026-12-24 is a normal business day. / P11. A promise date must be today or later, a business day, and not after that account's deadline."
+  }
+ ]
+}
