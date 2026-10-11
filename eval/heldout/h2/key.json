@@ -1,0 +1,547 @@
+{
+ "package": "h2",
+ "rules": {
+  "DEADLINE": "Deadline per band from the product's days_overdue: A (1-20) 5th business day after today (memo; policy said 7th); B (21-60) last business day of the current month, or of next month if today is that day; C (61+) 2nd business day after today.",
+  "BDAY": "Business days are Mon-Fri minus closure days 2026-12-24, 12-25, 12-28, 12-31, 2027-01-01 and 2026-11-30 (memo added); 2026-11-13 removed by the memo.",
+  "FLOOR": "Card 15% rounded up to next £5, min £30, capped at arrears; overdraft 20% (memo) rounded up to next £10, min £50, capped; loan instalment in A/B, full arrears in C.",
+  "LADDER": "Steps: arrears on 2nd business day after today, arrears on deadline, floor on deadline; dates clamped to deadline; opening ask counts as attempt 1; limits A 3, B 4, C 3; skipped repeats are not said but use an attempt.",
+  "ORDER": "Products handled overdraft, card, loan regardless of get_account order.",
+  "IDENTITY": "Postcode then year of birth; postcode in capitals with one space before the last three characters; the second wrong answer fails the check (policy beats the email's 'three goes').",
+  "AMOUNT": "create_promise amount in integer pence.",
+  "HARDSHIP": "Hardship transfers straight to the care queue; close handed_over / hardship; no notes.",
+  "CODES": "Per-product codes from CL-12; dispute codes NO-DSP/NC-DSP replaced by NX-QRY from 2026-11-18 inclusive; NL-DSP unchanged; N-SYS for system failure.",
+  "DISPUTE": "A dispute ends only that product; later products treat the opening ask as refused; close no_promise with the first non-paid note's reason."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-24T10:00",
+    "product": {
+     "ref": "FL-C-30117",
+     "product_type": "credit_card",
+     "last4": "5521",
+     "arrears": 437.8,
+     "days_overdue": 12
+    }
+   },
+   "expect": "2026-12-02",
+   "source": "| A | 1 to 20 | the 7th business day after today | 3 | / Band A deadline is now the 5th business day after today (it was the 7th). / \"The Nth business day after today\" never counts today itself. / 2026-11-13 is no longer a closure day (the office move is postponed). 2026-11-30 (Monday) is added as a closure day for the year-end systems switch."
+  },
+  {
+   "id": "C2",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-10T09:30",
+    "product": {
+     "ref": "FL-C-40982",
+     "product_type": "credit_card",
+     "last4": "1093",
+     "arrears": 180.0,
+     "days_overdue": 3
+    }
+   },
+   "expect": "2026-11-17",
+   "source": "Band A deadline is now the 5th business day after today (it was the 7th). / \"The Nth business day after today\" never counts today itself. / 2026-11-13 is no longer a closure day (the office move is postponed). 2026-11-30 (Monday) is added as a closure day for the year-end systems switch."
+  },
+  {
+   "id": "C3",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-26T14:00",
+    "product": {
+     "ref": "FL-L-77310",
+     "product_type": "personal_loan",
+     "arrears": 845.2,
+     "days_overdue": 35,
+     "instalment": 281.74
+    }
+   },
+   "expect": "2026-11-27",
+   "source": "| B | 21 to 60 | the last business day of the current calendar month | 4 | / Band B: if today is itself the last business day of the month (or later), the deadline is the last business day of the following month. / 2026-11-13 is no longer a closure day (the office move is postponed). 2026-11-30 (Monday) is added as a closure day for the year-end systems switch."
+  },
+  {
+   "id": "C4",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-27T11:15",
+    "product": {
+     "ref": "FL-L-77310",
+     "product_type": "personal_loan",
+     "arrears": 845.2,
+     "days_overdue": 35,
+     "instalment": 281.74
+    }
+   },
+   "expect": "2026-12-30",
+   "source": "| B | 21 to 60 | the last business day of the current calendar month | 4 | / Band B: if today is itself the last business day of the month (or later), the deadline is the last business day of the following month. / Promises may only fall on a business day: Monday to Friday, except Ferncliff closure days 2026-11-13, 2026-12-24, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01. / 2026-11-13 is no longer a closure day (the office move is postponed). 2026-11-30 (Monday) is added as a closure day for the year-end systems switch."
+  },
+  {
+   "id": "C5",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-23T15:00",
+    "product": {
+     "ref": "FL-O-12045",
+     "product_type": "overdraft",
+     "arrears": 612.35,
+     "days_overdue": 75
+    }
+   },
+   "expect": "2026-12-30",
+   "source": "| C | 61 or more | the 2nd business day after today | 3 | / Promises may only fall on a business day: Monday to Friday, except Ferncliff closure days 2026-11-13, 2026-12-24, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01. / \"The Nth business day after today\" never counts today itself."
+  },
+  {
+   "id": "C6",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-26T14:00",
+    "product": {
+     "ref": "FL-C-30117",
+     "product_type": "credit_card",
+     "last4": "5521",
+     "arrears": 437.8,
+     "days_overdue": 35
+    }
+   },
+   "expect": 70.0,
+   "source": "Credit card: 15% of the arrears, rounded up to the next whole multiple of £5 (an exact multiple stays as it is), with a minimum of £30. The floor is never more than the arrears; if the formula gives more, use the arrears."
+  },
+  {
+   "id": "C7",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-24T10:00",
+    "product": {
+     "ref": "FL-C-58800",
+     "product_type": "credit_card",
+     "last4": "7314",
+     "arrears": 26.4,
+     "days_overdue": 9
+    }
+   },
+   "expect": 26.4,
+   "source": "Credit card: 15% of the arrears, rounded up to the next whole multiple of £5 (an exact multiple stays as it is), with a minimum of £30. The floor is never more than the arrears; if the formula gives more, use the arrears."
+  },
+  {
+   "id": "C8",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-23T15:00",
+    "product": {
+     "ref": "FL-O-12045",
+     "product_type": "overdraft",
+     "arrears": 612.35,
+     "days_overdue": 75
+    }
+   },
+   "expect": 130.0,
+   "source": "Overdraft: 25% of the arrears, rounded up to the next whole multiple of £10, minimum £50, never more than the arrears. / Overdraft floor: 20% of the arrears instead of 25%. Rounding and minimum are unchanged."
+  },
+  {
+   "id": "C9",
+   "rule": "BDAY",
+   "type": "business_day",
+   "input": {
+    "date": "2026-11-13"
+   },
+   "expect": true,
+   "source": "Promises may only fall on a business day: Monday to Friday, except Ferncliff closure days 2026-11-13, 2026-12-24, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01. / 2026-11-13 is no longer a closure day (the office move is postponed). 2026-11-30 (Monday) is added as a closure day for the year-end systems switch."
+  },
+  {
+   "id": "C10",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-16T10:00",
+    "product": {
+     "ref": "FL-L-77310",
+     "product_type": "personal_loan",
+     "arrears": 845.2,
+     "days_overdue": 35,
+     "instalment": 281.74
+    }
+   },
+   "expect": [
+    [
+     845.2,
+     "2026-11-18"
+    ],
+    [
+     845.2,
+     "2026-11-27"
+    ],
+    [
+     281.74,
+     "2026-11-27"
+    ]
+   ],
+   "source": "1. the full arrears, on the 2nd business day after today; / 2. the full arrears, on the deadline; / 3. the floor, on the deadline. / Any step whose date is after the product's deadline uses the deadline instead. / the opening \"everything today\" question counts as attempt 1 for every product, even though it is asked only once. Each step offered is one more attempt. A step that would repeat, with the same amount and the same date, an offer already made for that product is not said out loud, but it **still uses up one attempt**. When the attempt limit of the band is reached, or the steps run out, the product ends without a promise and gets a refusal note. / | B | 21 to 60 | the last business day of the current calendar month | 4 | / Personal loan: the monthly instalment in bands A and B. In band C the floor is the full arrears. / 2026-11-13 is no longer a closure day (the office move is postponed). 2026-11-30 (Monday) is added as a closure day for the year-end systems switch."
+  },
+  {
+   "id": "C11",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-23T15:00",
+    "product": {
+     "ref": "FL-O-12045",
+     "product_type": "overdraft",
+     "arrears": 612.35,
+     "days_overdue": 75
+    }
+   },
+   "expect": [
+    [
+     612.35,
+     "2026-12-30"
+    ]
+   ],
+   "source": "1. the full arrears, on the 2nd business day after today; / 2. the full arrears, on the deadline; / 3. the floor, on the deadline. / Any step whose date is after the product's deadline uses the deadline instead. / the opening \"everything today\" question counts as attempt 1 for every product, even though it is asked only once. Each step offered is one more attempt. A step that would repeat, with the same amount and the same date, an offer already made for that product is not said out loud, but it **still uses up one attempt**. When the attempt limit of the band is reached, or the steps run out, the product ends without a promise and gets a refusal note. / | C | 61 or more | the 2nd business day after today | 3 | / Promises may only fall on a business day: Monday to Friday, except Ferncliff closure days 2026-11-13, 2026-12-24, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C12",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-26T14:00",
+    "product": {
+     "ref": "FL-C-30117",
+     "product_type": "credit_card",
+     "last4": "5521",
+     "arrears": 437.8,
+     "days_overdue": 35
+    }
+   },
+   "expect": [
+    [
+     437.8,
+     "2026-11-27"
+    ],
+    [
+     70.0,
+     "2026-11-27"
+    ]
+   ],
+   "source": "1. the full arrears, on the 2nd business day after today; / 2. the full arrears, on the deadline; / 3. the floor, on the deadline. / Any step whose date is after the product's deadline uses the deadline instead. / the opening \"everything today\" question counts as attempt 1 for every product, even though it is asked only once. Each step offered is one more attempt. A step that would repeat, with the same amount and the same date, an offer already made for that product is not said out loud, but it **still uses up one attempt**. When the attempt limit of the band is reached, or the steps run out, the product ends without a promise and gets a refusal note. / | B | 21 to 60 | the last business day of the current calendar month | 4 | / Credit card: 15% of the arrears, rounded up to the next whole multiple of £5 (an exact multiple stays as it is), with a minimum of £30. The floor is never more than the arrears; if the formula gives more, use the arrears. / 2026-11-13 is no longer a closure day (the office move is postponed). 2026-11-30 (Monday) is added as a closure day for the year-end systems switch."
+  },
+  {
+   "id": "C13",
+   "rule": "LADDER",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-24T10:00",
+    "product": {
+     "ref": "FL-L-90021",
+     "product_type": "personal_loan",
+     "arrears": 300.0,
+     "days_overdue": 61,
+     "instalment": 100.0
+    }
+   },
+   "expect": 1,
+   "source": "1. the full arrears, on the 2nd business day after today; / 2. the full arrears, on the deadline; / 3. the floor, on the deadline. / Any step whose date is after the product's deadline uses the deadline instead. / the opening \"everything today\" question counts as attempt 1 for every product, even though it is asked only once. Each step offered is one more attempt. A step that would repeat, with the same amount and the same date, an offer already made for that product is not said out loud, but it **still uses up one attempt**. When the attempt limit of the band is reached, or the steps run out, the product ends without a promise and gets a refusal note. / | C | 61 or more | the 2nd business day after today | 3 | / Personal loan: the monthly instalment in bands A and B. In band C the floor is the full arrears. / 2026-11-13 is no longer a closure day (the office move is postponed). 2026-11-30 (Monday) is added as a closure day for the year-end systems switch."
+  },
+  {
+   "id": "C14",
+   "rule": "IDENTITY",
+   "type": "identity_fields",
+   "input": {},
+   "expect": [
+    "postcode",
+    "birth_year"
+   ],
+   "source": "Ask for the postcode first, then the year of birth."
+  },
+  {
+   "id": "C15",
+   "rule": "IDENTITY",
+   "type": "identity_max_wrong",
+   "input": {},
+   "expect": 2,
+   "source": "**Order of authority:** the memo FL-OPS-26-11 (part 4) wins over everything else; the policy extract (part 2) and the code list (part 3) win over the email (part 1). / The identity check has failed at the second wrong answer in total, across both questions. / I think they get three goes? Check the policy."
+  },
+  {
+   "id": "C16",
+   "rule": "IDENTITY",
+   "type": "id_answer",
+   "input": {
+    "field": "postcode",
+    "value": "M11AE"
+   },
+   "expect": "M1 1AE",
+   "source": "Send the postcode in capital letters with exactly one space before the last three characters (for example `LS6 2QT`)."
+  },
+  {
+   "id": "C17",
+   "rule": "AMOUNT",
+   "type": "promise_amount",
+   "input": {
+    "amount": 233.0
+   },
+   "expect": 23300,
+   "source": "Promised amount in whole pence (integer). £194.83 is sent as 19483. Values in pounds are rejected."
+  },
+  {
+   "id": "C18",
+   "rule": "HARDSHIP",
+   "type": "transfer",
+   "input": {
+    "situation": "hardship"
+   },
+   "expect": "care",
+   "source": "Transfer to the Care queue at once, whatever has been agreed so far."
+  },
+  {
+   "id": "C19",
+   "rule": "HARDSHIP",
+   "type": "close",
+   "input": {
+    "situation": "hardship"
+   },
+   "expect": {
+    "outcome": "handed_over",
+    "reason": "hardship"
+   },
+   "source": "Transfers close as `handed_over` with reason `hardship`, `plans` or `general`."
+  },
+  {
+   "id": "C20",
+   "rule": "CODES",
+   "type": "note",
+   "input": {
+    "situation": "service_error"
+   },
+   "expect": "N-SYS",
+   "source": "System failure on any product (a tool fails twice): `N-SYS`."
+  },
+  {
+   "id": "C21",
+   "rule": "CODES",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-17T11:00",
+    "products": [
+     {
+      "ref": "FL-C-61204",
+      "product_type": "credit_card",
+      "last4": "8830",
+      "arrears": 250.0,
+      "days_overdue": 14
+     },
+     {
+      "ref": "FL-L-61205",
+      "product_type": "personal_loan",
+      "arrears": 520.0,
+      "days_overdue": 33,
+      "instalment": 173.4
+     }
+    ],
+    "script": [
+     {
+      "k": "dispute",
+      "product": "credit_card"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promise_taken",
+    "reason": "",
+    "promises": [
+     [
+      "FL-L-61205",
+      52000,
+      "2026-11-19"
+     ]
+    ],
+    "notes": [
+     [
+      "FL-C-61204",
+      "NC-DSP"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "| dispute | NO-DSP | NC-DSP | NL-DSP | / From 18 November 2026 (calls on that day included), the overdraft and credit card dispute codes NO-DSP and NC-DSP are retired and both are replaced by `NX-QRY`. The loan code NL-DSP does not change. / These end that product only: write the note and carry on with the remaining products. For products still to come, the opening question counts as already refused. / 1. the full arrears, on the 2nd business day after today; / 2. the full arrears, on the deadline; / 3. the floor, on the deadline. / Any step whose date is after the product's deadline uses the deadline instead. / Read all agreed promises back together and ask for one confirmation, then record one promise per product. Every product that ends without a promise gets one note. / At least one promise recorded: `promise_taken`. / Promised amount in whole pence (integer). £194.83 is sent as 19483. Values in pounds are rejected."
+  },
+  {
+   "id": "C22",
+   "rule": "CODES",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-18T11:00",
+    "products": [
+     {
+      "ref": "FL-O-62310",
+      "product_type": "overdraft",
+      "arrears": 410.0,
+      "days_overdue": 8
+     },
+     {
+      "ref": "FL-C-62311",
+      "product_type": "credit_card",
+      "last4": "2047",
+      "arrears": 180.0,
+      "days_overdue": 25
+     }
+    ],
+    "script": [
+     {
+      "k": "dispute",
+      "product": "overdraft"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promise_taken",
+    "reason": "",
+    "promises": [
+     [
+      "FL-C-62311",
+      18000,
+      "2026-11-20"
+     ]
+    ],
+    "notes": [
+     [
+      "FL-O-62310",
+      "NX-QRY"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "From 18 November 2026 (calls on that day included), the overdraft and credit card dispute codes NO-DSP and NC-DSP are retired and both are replaced by `NX-QRY`. The loan code NL-DSP does not change. / These end that product only: write the note and carry on with the remaining products. For products still to come, the opening question counts as already refused. / 1. the full arrears, on the 2nd business day after today; / 2. the full arrears, on the deadline; / 3. the floor, on the deadline. / Any step whose date is after the product's deadline uses the deadline instead. / | B | 21 to 60 | the last business day of the current calendar month | 4 | / Read all agreed promises back together and ask for one confirmation, then record one promise per product. Every product that ends without a promise gets one note. / At least one promise recorded: `promise_taken`. / Promised amount in whole pence (integer). £194.83 is sent as 19483. Values in pounds are rejected."
+  },
+  {
+   "id": "C23",
+   "rule": "CODES",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-19T11:00",
+    "products": [
+     {
+      "ref": "FL-L-63400",
+      "product_type": "personal_loan",
+      "arrears": 300.0,
+      "days_overdue": 70,
+      "instalment": 100.0
+     },
+     {
+      "ref": "FL-C-63401",
+      "product_type": "credit_card",
+      "last4": "6612",
+      "arrears": 95.5,
+      "days_overdue": 45
+     }
+    ],
+    "script": [
+     {
+      "k": "dispute",
+      "product": "credit_card"
+     },
+     {
+      "k": "dispute",
+      "product": "personal_loan"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "dispute",
+    "promises": [],
+    "notes": [
+     [
+      "FL-C-63401",
+      "NX-QRY"
+     ],
+     [
+      "FL-L-63400",
+      "NL-DSP"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "From 18 November 2026 (calls on that day included), the overdraft and credit card dispute codes NO-DSP and NC-DSP are retired and both are replaced by `NX-QRY`. The loan code NL-DSP does not change. / | dispute | NO-DSP | NC-DSP | NL-DSP | / If not, take the products one at a time in the order overdraft, card, loan. / These end that product only: write the note and carry on with the remaining products. For products still to come, the opening question counts as already refused. / Otherwise `no_promise` with the reason of the first product (in handling order) whose note is not a paid note: `refused` or `dispute`."
+  },
+  {
+   "id": "C24",
+   "rule": "ORDER",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-24T10:00",
+    "products": [
+     {
+      "ref": "FL-L-64520",
+      "product_type": "personal_loan",
+      "arrears": 640.0,
+      "days_overdue": 12,
+      "instalment": 160.0
+     },
+     {
+      "ref": "FL-O-64521",
+      "product_type": "overdraft",
+      "arrears": 233.0,
+      "days_overdue": 40
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promise_taken",
+    "reason": "",
+    "promises": [
+     [
+      "FL-O-64521",
+      23300,
+      "2026-11-26"
+     ]
+    ],
+    "notes": [
+     [
+      "FL-L-64520",
+      "NL-REF"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "If not, take the products one at a time in the order overdraft, card, loan. / 1. the full arrears, on the 2nd business day after today; / 2. the full arrears, on the deadline; / 3. the floor, on the deadline. / Any step whose date is after the product's deadline uses the deadline instead. / the opening \"everything today\" question counts as attempt 1 for every product, even though it is asked only once. Each step offered is one more attempt. A step that would repeat, with the same amount and the same date, an offer already made for that product is not said out loud, but it **still uses up one attempt**. When the attempt limit of the band is reached, or the steps run out, the product ends without a promise and gets a refusal note. / | A | 1 to 20 | the 7th business day after today | 3 | / Band A deadline is now the 5th business day after today (it was the 7th). / | refused after ladder | NO-REF | NC-REF | NL-REF | / Read all agreed promises back together and ask for one confirmation, then record one promise per product. Every product that ends without a promise gets one note. / At least one promise recorded: `promise_taken`. / Promised amount in whole pence (integer). £194.83 is sent as 19483. Values in pounds are rejected."
+  }
+ ]
+}
