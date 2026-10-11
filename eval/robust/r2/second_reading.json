@@ -1,0 +1,222 @@
+{
+ "checks": [
+  {
+   "id": "C1",
+   "expect": "2026-11-26",
+   "source": "Rule 10: late band 'the 5th business day after today, but never later than the last business day of the current calendar month'; early band 'the 10th business day after today'. Rule 11: 'today itself is never counted. The late-band month cap applies even when it makes the deadline today.'",
+   "confidence": "high",
+   "note": "Fri 11-20, late. 5th bd = 12-01 (11-27,11-30 holidays); Nov cap = last bd 11-26."
+  },
+  {
+   "id": "C2",
+   "expect": "2027-01-07",
+   "source": "Rule 10: late band 'the 5th business day after today, but never later than the last business day of the current calendar month'; early band 'the 10th business day after today'. Rule 11: 'today itself is never counted. The late-band month cap applies even when it makes the deadline today.'",
+   "confidence": "high",
+   "note": "Thu 12-17, early (30). 10 bd skipping 12-24/25/31, 01-01, 01-06."
+  },
+  {
+   "id": "C3",
+   "expect": "2026-12-14",
+   "source": "Rule 10: late band 'the 5th business day after today, but never later than the last business day of the current calendar month'; early band 'the 10th business day after today'. Rule 11: 'today itself is never counted. The late-band month cap applies even when it makes the deadline today.'",
+   "confidence": "high",
+   "note": "Fri 12-04, late. 12-08 holiday; 5th bd 12-14; Dec cap 12-30."
+  },
+  {
+   "id": "C4",
+   "expect": "2026-11-26",
+   "source": "Rule 10: late band 'the 5th business day after today, but never later than the last business day of the current calendar month'; early band 'the 10th business day after today'. Rule 11: 'today itself is never counted. The late-band month cap applies even when it makes the deadline today.'",
+   "confidence": "high",
+   "note": "Thu 11-26, late; month cap = today (11-27, 11-30 holidays)."
+  },
+  {
+   "id": "C5",
+   "expect": 123.5,
+   "source": "Rules 5-7: 'floor is a percentage of past_due: 10% credit card, 25% personal loan, 50% car loan' / 'Round the floor up to the next multiple of 0.05' / 'never below 20.00. If past_due itself is below 20.00, the floor is the full past_due.'",
+   "confidence": "high",
+   "note": "10% of 1234.56 = 123.456 -> 123.50."
+  },
+  {
+   "id": "C6",
+   "expect": 24.7,
+   "source": "Rules 5-7: 'floor is a percentage of past_due: 10% credit card, 25% personal loan, 50% car loan' / 'Round the floor up to the next multiple of 0.05' / 'never below 20.00. If past_due itself is below 20.00, the floor is the full past_due.'",
+   "confidence": "high",
+   "note": "25% of 98.70 = 24.675 -> 24.70."
+  },
+  {
+   "id": "C7",
+   "expect": 25.05,
+   "source": "Rules 5-7: 'floor is a percentage of past_due: 10% credit card, 25% personal loan, 50% car loan' / 'Round the floor up to the next multiple of 0.05' / 'never below 20.00. If past_due itself is below 20.00, the floor is the full past_due.'",
+   "confidence": "high",
+   "note": "25% of 100.20 = 25.05 already multiple of 0.05."
+  },
+  {
+   "id": "C8",
+   "expect": 15.4,
+   "source": "Rules 5-7: 'floor is a percentage of past_due: 10% credit card, 25% personal loan, 50% car loan' / 'Round the floor up to the next multiple of 0.05' / 'never below 20.00. If past_due itself is below 20.00, the floor is the full past_due.'",
+   "confidence": "high",
+   "note": "past_due < 20 -> floor = past_due."
+  },
+  {
+   "id": "C9",
+   "expect": false,
+   "source": "Rule 9 holiday list includes 2026-11-30.",
+   "confidence": "high",
+   "note": "Holiday (Monday)."
+  },
+  {
+   "id": "C10",
+   "expect": true,
+   "source": "Rule 9: Monday to Friday except listed holidays.",
+   "confidence": "high",
+   "note": "Wednesday, not a holiday."
+  },
+  {
+   "id": "C11",
+   "expect": 2470,
+   "source": "Rule 4: '24.70 is sent as 2470'.",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C12",
+   "expect": 123405,
+   "source": "Rule 4: create_promise takes whole cents as integer.",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C13",
+   "expect": [
+    [
+     61.75,
+     "2026-11-26"
+    ],
+    [
+     20.0,
+     "2026-11-26"
+    ]
+   ],
+   "source": "Rules 16-18: steps full past_due at today+7 (rule 13), half amount on deadline, floor on deadline (late only); 'If the step would propose the same amount on the same date as an earlier proposal, skip it silently'; opening question included in comparison.",
+   "confidence": "high",
+   "note": "Deadline = today 11-26; step1 123.45 on 12-03 -> capped to 11-26 = opening ask -> skipped. Half 61.725->61.75; floor 12.35->20."
+  },
+  {
+   "id": "C14",
+   "expect": [
+    [
+     87.3,
+     "2026-11-26"
+    ],
+    [
+     43.65,
+     "2026-11-26"
+    ]
+   ],
+   "source": "Rules 16-18: steps full past_due at today+7 (rule 13), half amount on deadline, floor on deadline (late only); 'If the step would propose the same amount on the same date as an earlier proposal, skip it silently'; opening question included in comparison.",
+   "confidence": "high",
+   "note": "Today Fri 11-20, deadline 11-26. Step1 11-27 holiday -> 12-01 > deadline -> 11-26. Half 43.65 = floor 43.65 -> step3 duplicate skipped."
+  },
+  {
+   "id": "C15",
+   "expect": [
+    [
+     36.0,
+     "2026-12-22"
+    ],
+    [
+     20.0,
+     "2026-12-22"
+    ]
+   ],
+   "source": "Rules 16-18: steps full past_due at today+7 (rule 13), half amount on deadline, floor on deadline (late only); 'If the step would propose the same amount on the same date as an earlier proposal, skip it silently'; opening question included in comparison.",
+   "confidence": "high",
+   "note": "Deadline 12-22; step1 12-22 too. Floor 9->20; half 18 -> raised to floor 20; step3 duplicate skipped."
+  },
+  {
+   "id": "C16",
+   "expect": [
+    [
+     333.33,
+     "2026-12-21"
+    ],
+    [
+     166.7,
+     "2026-12-30"
+    ]
+   ],
+   "source": "Rules 16-18: steps full past_due at today+7 (rule 13), half amount on deadline, floor on deadline (late only); 'If the step would propose the same amount on the same date as an earlier proposal, skip it silently'; opening question included in comparison.",
+   "confidence": "high",
+   "note": "Early, deadline 12-30. Half 166.665 -> 166.70."
+  },
+  {
+   "id": "C17",
+   "expect": 1,
+   "source": "Rules 16-18: steps full past_due at today+7 (rule 13), half amount on deadline, floor on deadline (late only); 'If the step would propose the same amount on the same date as an earlier proposal, skip it silently'; opening question included in comparison.",
+   "confidence": "high",
+   "note": "Deadline=today 11-26; step1 equals opening -> skipped; step2 43.65; step3 floor 43.65 duplicate -> skipped."
+  },
+  {
+   "id": "C18",
+   "expect": 1,
+   "source": "Rules 16-18: steps full past_due at today+7 (rule 13), half amount on deadline, floor on deadline (late only); 'If the step would propose the same amount on the same date as an earlier proposal, skip it silently'; opening question included in comparison.",
+   "confidence": "high",
+   "note": "Deadline 12-28. Floor=half=15.40. Step1 12-24 holiday -> 12-28; steps 2,3 identical -> skipped."
+  },
+  {
+   "id": "C19",
+   "expect": 3,
+   "source": "Rules 16-18: steps full past_due at today+7 (rule 13), half amount on deadline, floor on deadline (late only); 'If the step would propose the same amount on the same date as an earlier proposal, skip it silently'; opening question included in comparison.",
+   "confidence": "high",
+   "note": "Deadline 12-14: 410 on 12-11, 205 on 12-14, 102.50 on 12-14 all distinct."
+  },
+  {
+   "id": "C20",
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "service_error",
+    "promises": [],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Rule 25: 'try exactly once more with the same values. If the second try fails too ... close as no_promise / service_error. Do not call add_note for a system failure'. API 500: 'Nothing was recorded.'",
+   "confidence": "high",
+   "note": "Step1 123.45 on 12-11 accepted and confirmed; both create_promise calls fail."
+  },
+  {
+   "id": "C21",
+   "expect": {
+    "outcome": "promise",
+    "promises": [
+     [
+      "p_r2_17",
+      10005,
+      "2026-11-26"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Rule 13: 'Any date that is not a business day, whether the customer named it ... moves forward to the next business day. If the moved date is after the deadline, the deadline is used instead.' Rule 20: accept amount from floor (62.50) up to past_due.",
+   "confidence": "high",
+   "note": "Deadline 11-26 (Nov cap). Customer's 11-27 is a holiday -> 12-01 > deadline -> 11-26. 100.05 EUR = 10005 cents."
+  },
+  {
+   "id": "C22",
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "refused",
+    "promises": [],
+    "notes": [
+     [
+      "p_r2_18",
+      "refused"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Rule 21: 'When the limit is used up and the customer has refused every proposal, stop. Close as no_promise / refused.' Rule 31: add_note with reason refused.",
+   "confidence": "high",
+   "note": "Only one non-skipped step (43.65 on 11-26); two refusals exhaust the ladder."
+  }
+ ]
+}
