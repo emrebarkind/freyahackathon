@@ -1,0 +1,22 @@
+[
+ {"id":"C1","expect":"2026-10-15","basis":"D.3 'Take the 15th of the current month. If that day is before today, take the 15th of the following month'; 34 dpd = Tier 2; 2026-10-15 is Thu"},
+ {"id":"C2","expect":"2026-10-15","basis":"D.3 '(So when today is the 15th, the deadline is today.)'"},
+ {"id":"C3","expect":"2026-11-16","basis":"D.3 15 Oct before today -> 15 Nov (Sun) -> 'move it forward to the next business day' = Mon 16 Nov"},
+ {"id":"C4","expect":"2026-12-15","basis":"D.3 15 Nov before 16 Nov -> 15 Dec 2026 (Tue, not a holiday)"},
+ {"id":"C5","expect":"2026-10-28","basis":"D.2 Tier 1 'the 6th business day after today (today itself is never counted)'; D.4 holiday 2026-10-26: 20,21,22,23,27,28"},
+ {"id":"C6","expect":84,"basis":"E.1 overdraft 'one quarter of overdue_eur, rounded up to the next whole euro': 333.33/4=83.33 -> 84"},
+ {"id":"C7","expect":72.4,"basis":"E.1 'If overdue_eur is below 100, the floor is the whole overdue amount'"},
+ {"id":"C8","expect":[[612.5,"2026-10-15"],[307,"2026-10-15"]],"basis":"F.1 opening counts as proposal 1; Tier 2 limit 3; F.2 step1 full on deadline, step2 half 306.25 rounded up 307; F.4 stop at limit"},
+ {"id":"C9","expect":[[307,"2026-10-15"],[45.0,"2026-10-15"]],"basis":"deadline = today, so F.2 step1 (612.5 on 10-15) equals the opening -> F.3 'is skipped ... does not count'; step2 307, step3 floor 45"},
+ {"id":"C10","expect":2,"basis":"same as C9: two proposals after the opening (limit 3 incl. opening)"},
+ {"id":"C11","expect":[[410.0,"2026-10-28"]],"basis":"Tier 1 '2 proposals' incl. opening (F.1); step1 full on deadline 2026-10-28, then limit reached"},
+ {"id":"C12","expect":[],"basis":"floor 72.4 (E.1 <100); deadline 10-15 = today; step1 = opening; step2 half 37 'below the floor, the floor instead' = 72.4 on 10-15 = opening; step3 same; all skipped (F.3), 'the ladder has no steps left' (F.4)"},
+ {"id":"C13","expect":[[333.33,"2026-12-15"],[167,"2026-12-15"]],"basis":"deadline 12-15, opening was 333.33 on 11-16; step1 full on deadline; step2 166.665 -> 167 >= floor 84; limit 3 reached"},
+ {"id":"C14","expect":false,"basis":"D.4 bank holidays include 2026-10-26"},
+ {"id":"C15","expect":{"outcome":"no_promise","reason":"hardship"},"basis":"H table; OPS-26-31 'Calls before that date keep hardship'"},
+ {"id":"C16","expect":{"outcome":"no_promise","reason":"financial_difficulty"},"basis":"OPS-26-31 'on or after 4 November 2026 ... hardship is replaced by financial_difficulty'"},
+ {"id":"C17","expect":{"outcome":"no_promise","reason":"financial_difficulty"},"basis":"OPS-26-31 item 1"},
+ {"id":"C18","expect":{"outcome":"no_promise","reason":"dispute"},"basis":"H 'every product disputed (G.2)'; memo item 2 'Nothing else changes'"},
+ {"id":"C19","expect":"hardship","basis":"G.3 'note hardship on each remaining product'; memo item 2 'add_note reason stays'; API add_note enum has no financial_difficulty"},
+ {"id":"C20","expect":12995,"basis":"E.3 'amount in euro cents, as a whole number'; API amount integer"}
+]
