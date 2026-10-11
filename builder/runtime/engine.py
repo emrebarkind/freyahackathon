@@ -2229,6 +2229,23 @@ def run_turn(V, s, stage):
         s["stall"] = s.get("stall", 0) + 1 if empty else 0
         if empty and s["stall"] >= STALL_MAX and (S.get("rules") or dict()).get("non_answer_counts"):
             return stalled_out(V, s)
+    if stage in ("nego", "confirm", "hardship"):        # an amount split over two messages ("three hundred and" / "fifty")
+        frag = s.pop("num_frag", None)
+        if frag is not None and t:
+            lead = re.match(r"\s*((?:(?:%s|\d+)[\s-]*)+)" % "|".join(sorted(NUM_WORDS, key=len, reverse=True)), t.lower())
+            rest = words_to_number(lead.group(1)) if lead else None
+            if rest is not None and rest < 100 and (a is None or abs(float(a) - rest) < 0.005):
+                a = frag + rest                          # extraction read only the second piece
+        if V.get("_cut") == "yes" and t and a is None:
+            tail = re.search(r"((?:(?:%s|\d+)[\s-]+)*(?:hundred|thousand))(?:\s+and)?\s*$" % "|".join(NUM_WORDS), t.lower())
+            if tail and words_to_number(tail.group(1)):
+                s["num_frag"] = words_to_number(tail.group(1))
+                if k in ("proposes", "vague", "gives_amount", "unclear", "none") and not dtxt \
+                        and s.get("go_on_total", 0) < GO_ON_MAX:
+                    s["go_on_total"] = s.get("go_on_total", 0) + 1
+                    s["reask"] = True
+                    say(V, L("go_on") or "Sorry, please go on.")
+                    return talk(V, stage, s)
     if V.get("_cut") == "yes" and stage in ("open", "tp", "id", "nego", "confirm", "hardship") and not dtxt and a is None \
             and k in ("unclear", "none", "too_much", "cannot") \
             and s.get("cut_waits", 0) < 2 and s.get("go_on_total", 0) < GO_ON_MAX \
