@@ -72,6 +72,11 @@ Rules for the design:
   "farewell": the exact last sentence the agent says for that ending, as the materials require it, in the call's
   language; it is spoken by the end node itself, so the flow must not repeat it).
 - Do not invent services, fields, codes or rules the materials do not give.
+- The platform's turn rule: in one agent turn the agent first calls every tool the turn needs, then speaks once; after
+  it has spoken it cannot call a tool until the caller speaks again. Order every step of "flow" accordingly: a tool a
+  later sentence of the same turn depends on is called before the agent starts speaking.
+- The agent ends a call by calling the ending's tool (end_<ending name>), only after it has said everything the step
+  requires; the ending's farewell is then spoken for it. Say so in "flow" where each ending happens.
 """
 
 
@@ -124,15 +129,23 @@ def compile_agent(d, base):
                       "function": {"name": t["name"], "handler": "__function__:api_call",
                                    "description": t["when"][:900], "parameters": {"type": "object", "properties": props}}})
     endings = d["endings"] or [{"name": "completed", "when": "the caller has no more requests and the call is over"}]
+    for e in endings:     # the agent ends the call itself: one tool per ending sets end_reason; routing follows it
+        tools.append({"type": "function", "function": {
+            "name": "end_" + _snake(e["name"]), "handler": "__function__:code_exec",
+            "description": ("End the call: " + e["when"])[:900] + " Call it only after everything the step requires has been said.",
+            "parameters": {"type": "object", "properties": {
+                "code": {"type": "string", "default": "vars['end_reason'] = '" + _snake(e["name"]) + "'"},
+                "timeout_ms": {"type": "number", "default": 5000}}}}})
     nodes = {
         "assist": {
             "name": "assist", "node_type": "conversation",
             "on_enter": {"type": "tts", "text": d["opening"]}, "on_enter_first_entry_only": True,
-            "task_message": d["flow"] + "\n\n" + "\n".join(f"{v['name']}: {{{{{v['name']}}}}}" for v in d["variables"]),
+            "task_message": d["flow"] + "\n\n" + TURN_RULE + "\n\n" + "\n".join(f"{v['name']}: {{{{{v['name']}}}}}" for v in d["variables"]),
             "tools": tools,
             "max_node_turns": 60, "max_turn_transition": "end_" + _snake(endings[0]["name"]),
             "transitions": [{"target_node": "end_" + _snake(e["name"]), "description": e["when"][:300],
-                             "condition": {"operator": "matches_intent", "description": e["when"][:300]}} for e in endings],
+                             "condition": {"logic": "or", "conditions": [{"variable": "end_reason", "operator": "equals",
+                                                                          "operand": _snake(e["name"])}]}} for e in endings],
         }}
     for e in endings:
         n = "end_" + _snake(e["name"])
@@ -145,6 +158,11 @@ def compile_agent(d, base):
                                      else {"message_mode": {"type": "string", "default": "none"}})}}}}
     return {"initial_node": "assist", "system_prompt": d["system_prompt"],
             "test_variables": {v["name"]: v["example"] for v in d["variables"]}, "global_nodes": {}, "nodes": nodes}
+
+
+TURN_RULE = ("PLATFORM RULE / PLATFORM KURALI: In one turn, first call every tool the turn needs, then speak once; after "
+             "speaking you cannot call a tool until the caller speaks again. End the call only by calling the matching "
+             "end_... tool, after you have said everything the step requires.")
 
 
 def _param(field, known):
@@ -177,6 +195,8 @@ def checks(d, wf, base):
         out.append("no bank tool in the design")
     for n in wf["nodes"].values():
         for t in n.get("tools") or []:
+            if t["function"].get("handler") != "__function__:api_call":
+                continue
             url = t["function"]["parameters"]["properties"]["url"]["default"]
             if not url.startswith(base.rstrip("/") + "/"):
                 out.append(f"tool {t['function']['name']} calls {url}, not the bank base URL {base}")
