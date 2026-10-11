@@ -1,0 +1,237 @@
+{
+ "checks": [
+  {
+   "id": "C1",
+   "expect": "2026-12-08",
+   "source": "M1.1 Overdrafts in the late band now have a shorter deadline: the 3rd business day after today.",
+   "confidence": "high",
+   "note": "Dec 3,4,(7 hol),8; P9 holidays 2026-11-19,12-25,12-28,2027-01-01 + M2.3 2026-12-07; M2.1 makes 12-24 a business day"
+  },
+  {
+   "id": "C2",
+   "expect": "2026-12-17",
+   "source": "P10: 1 to 10 | early | the 10th business day after today",
+   "confidence": "high",
+   "note": "early overdraft keeps policy deadline; Dec 7 skipped"
+  },
+  {
+   "id": "C3",
+   "expect": "2026-12-11",
+   "source": "P10: 11 to 60 | late | the 6th business day after today",
+   "confidence": "high",
+   "note": "Dec 3,4,8,9,10,11"
+  },
+  {
+   "id": "C4",
+   "expect": "2026-12-24",
+   "source": "M2.1 2026-12-24 is a normal business day.",
+   "confidence": "high",
+   "note": "Dec 17,18,21,22,23,24"
+  },
+  {
+   "id": "C5",
+   "expect": "2026-12-21",
+   "source": "M1.1 the 3rd business day after today",
+   "confidence": "high",
+   "note": "Dec 17,18,21"
+  },
+  {
+   "id": "C6",
+   "expect": [
+    [
+     640.0,
+     "2026-12-10"
+    ],
+    [
+     180.5,
+     "2026-12-10"
+    ]
+   ],
+   "source": "P16 Attempt 1: ... If today is that day, the last business day of next week. If that day is after the account's deadline, use the deadline instead. Attempt 2, late band only: the floor on the deadline.",
+   "confidence": "high",
+   "note": "now Fri 12-04 -> next week Fri 12-11 > deadline 12-10 (3rd bd, 12-07 holiday)"
+  },
+  {
+   "id": "C7",
+   "expect": [
+    [
+     388.2,
+     "2026-12-11"
+    ],
+    [
+     194.1,
+     "2026-12-15"
+    ]
+   ],
+   "source": "P16 attempts; P10 late deadline 6th business day",
+   "confidence": "high",
+   "note": "today Fri -> next Fri 12-11; deadline 8,9,10,11,14,15"
+  },
+  {
+   "id": "C8",
+   "expect": true,
+   "source": "M2.1 Item M1.2 is withdrawn... 2026-12-24 is a normal business day.",
+   "confidence": "high",
+   "note": "Thursday"
+  },
+  {
+   "id": "C9",
+   "expect": false,
+   "source": "M2.3 Add 2026-12-07 to the holiday list of P9.",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C10",
+   "expect": false,
+   "source": "P9 holidays: 2026-11-19",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C11",
+   "expect": 180.5,
+   "source": "P14 The floor is ... excess for an overdraft. M1.1 The overdraft floor ... do not change.",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C12",
+   "expect": 2,
+   "source": "P10 late | 2; M1.1 the number of attempts do not change",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C13",
+   "expect": false,
+   "source": "M2.3 It is not a business day for promises or for callbacks.",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C14",
+   "expect": true,
+   "source": "P4 A callback may be booked for today or the next business day, from 09:30 to 18:30",
+   "confidence": "high",
+   "note": "next business day after Fri 12-04 is Tue 12-08 since 12-07 is a holiday"
+  },
+  {
+   "id": "C15",
+   "expect": "07/03/1984",
+   "source": "For dob: DD/MM/YYYY with leading zeros, e.g. 07/03/1984.",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C16",
+   "expect": 41235,
+   "source": "amount_pence: The promised amount in pence (pounds x 100), e.g. 412.35 pounds is 41235.",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C17",
+   "expect": null,
+   "source": "P23 Kestrel Mutual has no note code for system failures. An account whose promise could not be saved gets no note.",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C18",
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "service_error"
+   },
+   "source": "P25: service_error if no promise and an account could not be saved and no other account is noted",
+   "confidence": "high",
+   "note": ""
+  },
+  {
+   "id": "C19",
+   "expect": {
+    "outcome": "promise",
+    "reason": "",
+    "promises": [
+     [
+      "ac_od_52",
+      47760,
+      "2026-11-16"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "P22 If the retry also fails, tell the customer that promise could not be saved ... go on with the next account. P23 ... gets no note.",
+   "confidence": "high",
+   "note": "yes to full today; loan create fails twice (call+retry), overdraft succeeds"
+  },
+  {
+   "id": "C20",
+   "expect": {
+    "outcome": "promise",
+    "reason": "",
+    "promises": [
+     [
+      "ac_od_61",
+      21025,
+      "2026-12-08"
+     ]
+    ],
+    "notes": [
+     [
+      "ac_cd_62",
+      "refused"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "P16/P17; M1.1 late overdraft deadline 3rd business day",
+   "confidence": "high",
+   "note": "no(today); OD att1 640@12-04 no; att2 210.25@12-08 yes; card early att1 845.3@12-04 no -> refused; readback yes"
+  },
+  {
+   "id": "C21",
+   "expect": {
+    "outcome": "promise",
+    "reason": "",
+    "promises": [
+     [
+      "ac_ln_81",
+      70240,
+      "2026-11-20"
+     ],
+     [
+      "ac_od_82",
+      31890,
+      "2026-11-17"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "P12 If the customer names one date for everything and it is after one account's deadline, record that account on its own deadline",
+   "confidence": "high",
+   "note": "loan deadline 11-23 (11-19 hol), OD 11-17; amount assumed full arrears since customer named only a date in reply to full-arrears ask"
+  },
+  {
+   "id": "C22",
+   "expect": {
+    "outcome": "promise",
+    "reason": "",
+    "promises": [
+     [
+      "ac_cd_91",
+      96015,
+      "2026-12-24"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "M2.1 2026-12-24 is a normal business day.",
+   "confidence": "high",
+   "note": "deadline 12-29; 12-24 valid"
+  }
+ ]
+}

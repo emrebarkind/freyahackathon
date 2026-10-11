@@ -1,0 +1,455 @@
+{
+ "package": "r2",
+ "rules": {
+  "R-DEADLINE": "Deadline: early band (1-30 days late) 10th business day after today; late band (31-90) 5th business day after today capped at the last business day of the current month; holidays skipped.",
+  "R-FLOOR": "Floor = 10%/25%/50% of past_due (card/personal loan/car loan), rounded up to a multiple of 0.05 euro, at least 20.00 euro, or past_due when that is below 20.00.",
+  "R-BDAY": "Promises only on Monday-Friday that are not Orvane Bank holidays.",
+  "R-CENTS": "get_account amounts are euros with cents; create_promise takes integer cents.",
+  "R-LADDER": "After the opening full-today ask (not counted), steps: full on today+7 (moved off non-business days, capped at deadline), half on deadline, floor on deadline (late only); a step repeating an earlier proposal (opening included) is skipped but still counts toward the limit (early 2, late 3).",
+  "R-FAIL": "create_promise failing twice: close no_promise/service_error, no note.",
+  "R-MOVE": "A customer date on a non-business day moves to the next business day; if that is after the deadline, the deadline is used."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "R-DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-20T10:30",
+    "product": {
+     "product_id": "p_r2_01",
+     "type": "credit_card",
+     "card_last4": "4417",
+     "past_due": 123.45,
+     "days_late": 45
+    }
+   },
+   "expect": "2026-11-26",
+   "source": "| 31 to 90 | late | the 5th business day after today, but never later than the last business day of the current calendar month | 3 | Count business days after today: today itself is never counted. The late-band month cap applies even when it makes the deadline today. Business days are Monday to Friday, except Orvane Bank holidays: 2026-11-02, 2026-11-11, 2026-11-27, 2026-11-30, 2026-12-08, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01, 2027-01-06."
+  },
+  {
+   "id": "C2",
+   "rule": "R-DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-17T14:00",
+    "product": {
+     "product_id": "p_r2_02",
+     "type": "personal_loan",
+     "past_due": 640.1,
+     "days_late": 30
+    }
+   },
+   "expect": "2027-01-07",
+   "source": "| 1 to 30 | early | the 10th business day after today | 2 | Count business days after today: today itself is never counted. The late-band month cap applies even when it makes the deadline today. Business days are Monday to Friday, except Orvane Bank holidays: 2026-11-02, 2026-11-11, 2026-11-27, 2026-11-30, 2026-12-08, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01, 2027-01-06."
+  },
+  {
+   "id": "C3",
+   "rule": "R-DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-04T09:15",
+    "product": {
+     "product_id": "p_r2_03",
+     "type": "car_loan",
+     "past_due": 410.0,
+     "days_late": 52
+    }
+   },
+   "expect": "2026-12-14",
+   "source": "| 31 to 90 | late | the 5th business day after today, but never later than the last business day of the current calendar month | 3 | Count business days after today: today itself is never counted. The late-band month cap applies even when it makes the deadline today. Business days are Monday to Friday, except Orvane Bank holidays: 2026-11-02, 2026-11-11, 2026-11-27, 2026-11-30, 2026-12-08, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01, 2027-01-06."
+  },
+  {
+   "id": "C4",
+   "rule": "R-DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-26T16:40",
+    "product": {
+     "product_id": "p_r2_04",
+     "type": "personal_loan",
+     "past_due": 310.0,
+     "days_late": 77
+    }
+   },
+   "expect": "2026-11-26",
+   "source": "| 31 to 90 | late | the 5th business day after today, but never later than the last business day of the current calendar month | 3 | Count business days after today: today itself is never counted. The late-band month cap applies even when it makes the deadline today. Business days are Monday to Friday, except Orvane Bank holidays: 2026-11-02, 2026-11-11, 2026-11-27, 2026-11-30, 2026-12-08, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01, 2027-01-06."
+  },
+  {
+   "id": "C5",
+   "rule": "R-FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-09T11:00",
+    "product": {
+     "product_id": "p_r2_05",
+     "type": "credit_card",
+     "card_last4": "4417",
+     "past_due": 1234.56,
+     "days_late": 12
+    }
+   },
+   "expect": 123.5,
+   "source": "The **floor** is a percentage of `past_due`: 10% for a credit card, 25% for a personal loan, 50% for a car loan. Round the floor up to the next multiple of €0.05. A result that is already a multiple of €0.05 stays as it is."
+  },
+  {
+   "id": "C6",
+   "rule": "R-FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-17T11:00",
+    "product": {
+     "product_id": "p_r2_06",
+     "type": "personal_loan",
+     "past_due": 98.7,
+     "days_late": 40
+    }
+   },
+   "expect": 24.7,
+   "source": "The **floor** is a percentage of `past_due`: 10% for a credit card, 25% for a personal loan, 50% for a car loan. Round the floor up to the next multiple of €0.05. A result that is already a multiple of €0.05 stays as it is. The floor is never below €20.00. If `past_due` itself is below €20.00, the floor is the full `past_due`."
+  },
+  {
+   "id": "C7",
+   "rule": "R-FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-02T11:00",
+    "product": {
+     "product_id": "p_r2_07",
+     "type": "personal_loan",
+     "past_due": 100.2,
+     "days_late": 8
+    }
+   },
+   "expect": 25.05,
+   "source": "The **floor** is a percentage of `past_due`: 10% for a credit card, 25% for a personal loan, 50% for a car loan. Round the floor up to the next multiple of €0.05. A result that is already a multiple of €0.05 stays as it is."
+  },
+  {
+   "id": "C8",
+   "rule": "R-FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-10T11:00",
+    "product": {
+     "product_id": "p_r2_08",
+     "type": "car_loan",
+     "past_due": 15.4,
+     "days_late": 61
+    }
+   },
+   "expect": 15.4,
+   "source": "The floor is never below €20.00. If `past_due` itself is below €20.00, the floor is the full `past_due`."
+  },
+  {
+   "id": "C9",
+   "rule": "R-BDAY",
+   "type": "business_day",
+   "input": {
+    "date": "2026-11-30"
+   },
+   "expect": false,
+   "source": "Business days are Monday to Friday, except Orvane Bank holidays: 2026-11-02, 2026-11-11, 2026-11-27, 2026-11-30, 2026-12-08, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01, 2027-01-06. A promise may only fall on a business day."
+  },
+  {
+   "id": "C10",
+   "rule": "R-BDAY",
+   "type": "business_day",
+   "input": {
+    "date": "2026-12-09"
+   },
+   "expect": true,
+   "source": "Business days are Monday to Friday, except Orvane Bank holidays: 2026-11-02, 2026-11-11, 2026-11-27, 2026-11-30, 2026-12-08, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01, 2027-01-06. A promise may only fall on a business day."
+  },
+  {
+   "id": "C11",
+   "rule": "R-CENTS",
+   "type": "promise_amount",
+   "input": {
+    "amount": 24.7
+   },
+   "expect": 2470,
+   "source": "`create_promise` takes the amount in whole cents, as an integer: €24.70 is sent as 2470. Promised amount in whole euro cents, as an integer: 24.70 euros is sent as 2470."
+  },
+  {
+   "id": "C12",
+   "rule": "R-CENTS",
+   "type": "promise_amount",
+   "input": {
+    "amount": 1234.05
+   },
+   "expect": 123405,
+   "source": "`create_promise` takes the amount in whole cents, as an integer: €24.70 is sent as 2470. Promised amount in whole euro cents, as an integer: 24.70 euros is sent as 2470."
+  },
+  {
+   "id": "C13",
+   "rule": "R-LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-26T10:00",
+    "product": {
+     "product_id": "p_r2_09",
+     "type": "credit_card",
+     "card_last4": "4417",
+     "past_due": 123.45,
+     "days_late": 45
+    }
+   },
+   "expect": [
+    [
+     61.75,
+     "2026-11-26"
+    ],
+    [
+     20.0,
+     "2026-11-26"
+    ]
+   ],
+   "source": "This opening question is not a ladder step and does not count toward the limit. Step 1: the full `past_due` on the date seven calendar days after today, adjusted by rule 13. | Step 2: the half amount on the deadline. | Step 3, late band only: the floor on the deadline. Before proposing a step, compare it with every proposal already made in this call, the opening question included. If the step would propose the same amount on the same date as an earlier proposal, skip it silently and go to the next step. A skipped step still uses up one step of the band's limit. | 31 to 90 | late | the 5th business day after today, but never later than the last business day of the current calendar month | 3 | The **half amount** is half of `past_due`, rounded up to the next multiple of €0.05 in the same way, but never below the floor. The **floor** is a percentage of `past_due`: 10% for a credit card, 25% for a personal loan, 50% for a car loan. The floor is never below €20.00. If `past_due` itself is below €20.00, the floor is the full `past_due`."
+  },
+  {
+   "id": "C14",
+   "rule": "R-LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-20T10:00",
+    "product": {
+     "product_id": "p_r2_10",
+     "type": "car_loan",
+     "past_due": 87.3,
+     "days_late": 33
+    }
+   },
+   "expect": [
+    [
+     87.3,
+     "2026-11-26"
+    ],
+    [
+     43.65,
+     "2026-11-26"
+    ]
+   ],
+   "source": "Step 1: the full `past_due` on the date seven calendar days after today, adjusted by rule 13. | Step 2: the half amount on the deadline. | Step 3, late band only: the floor on the deadline. Any date that is not a business day, whether the customer named it or a ladder step produced it, moves forward to the next business day. If the moved date is after the deadline, the deadline is used instead. If the step would propose the same amount on the same date as an earlier proposal, skip it silently and go to the next step. A skipped step still uses up one step of the band's limit. The **half amount** is half of `past_due`, rounded up to the next multiple of €0.05 in the same way, but never below the floor. The **floor** is a percentage of `past_due`: 10% for a credit card, 25% for a personal loan, 50% for a car loan. Round the floor up to the next multiple of €0.05. A result that is already a multiple of €0.05 stays as it is. | 31 to 90 | late | the 5th business day after today, but never later than the last business day of the current calendar month | 3 |"
+  },
+  {
+   "id": "C15",
+   "rule": "R-LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-15T13:00",
+    "product": {
+     "product_id": "p_r2_11",
+     "type": "personal_loan",
+     "past_due": 36.0,
+     "days_late": 58
+    }
+   },
+   "expect": [
+    [
+     36.0,
+     "2026-12-22"
+    ],
+    [
+     20.0,
+     "2026-12-22"
+    ]
+   ],
+   "source": "Step 1: the full `past_due` on the date seven calendar days after today, adjusted by rule 13. | Step 2: the half amount on the deadline. | Step 3, late band only: the floor on the deadline. If the step would propose the same amount on the same date as an earlier proposal, skip it silently and go to the next step. A skipped step still uses up one step of the band's limit. The **half amount** is half of `past_due`, rounded up to the next multiple of €0.05 in the same way, but never below the floor. The floor is never below €20.00. If `past_due` itself is below €20.00, the floor is the full `past_due`. | 31 to 90 | late | the 5th business day after today, but never later than the last business day of the current calendar month | 3 | Count business days after today: today itself is never counted. The late-band month cap applies even when it makes the deadline today."
+  },
+  {
+   "id": "C16",
+   "rule": "R-LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-14T10:00",
+    "product": {
+     "product_id": "p_r2_12",
+     "type": "credit_card",
+     "card_last4": "4417",
+     "past_due": 333.33,
+     "days_late": 19
+    }
+   },
+   "expect": [
+    [
+     333.33,
+     "2026-12-21"
+    ],
+    [
+     166.7,
+     "2026-12-30"
+    ]
+   ],
+   "source": "| 1 to 30 | early | the 10th business day after today | 2 | Step 1: the full `past_due` on the date seven calendar days after today, adjusted by rule 13. | Step 2: the half amount on the deadline. | Step 3, late band only: the floor on the deadline. The **half amount** is half of `past_due`, rounded up to the next multiple of €0.05 in the same way, but never below the floor. Business days are Monday to Friday, except Orvane Bank holidays: 2026-11-02, 2026-11-11, 2026-11-27, 2026-11-30, 2026-12-08, 2026-12-24, 2026-12-25, 2026-12-31, 2027-01-01, 2027-01-06. Count business days after today: today itself is never counted. The late-band month cap applies even when it makes the deadline today."
+  },
+  {
+   "id": "C17",
+   "rule": "R-LADDER",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-26T15:00",
+    "product": {
+     "product_id": "p_r2_13",
+     "type": "car_loan",
+     "past_due": 87.3,
+     "days_late": 70
+    }
+   },
+   "expect": 1,
+   "source": "This opening question is not a ladder step and does not count toward the limit. Step 1: the full `past_due` on the date seven calendar days after today, adjusted by rule 13. | Step 2: the half amount on the deadline. | Step 3, late band only: the floor on the deadline. Any date that is not a business day, whether the customer named it or a ladder step produced it, moves forward to the next business day. If the moved date is after the deadline, the deadline is used instead. If the step would propose the same amount on the same date as an earlier proposal, skip it silently and go to the next step. A skipped step still uses up one step of the band's limit. | 31 to 90 | late | the 5th business day after today, but never later than the last business day of the current calendar month | 3 | The **half amount** is half of `past_due`, rounded up to the next multiple of €0.05 in the same way, but never below the floor. The **floor** is a percentage of `past_due`: 10% for a credit card, 25% for a personal loan, 50% for a car loan."
+  },
+  {
+   "id": "C18",
+   "rule": "R-LADDER",
+   "type": "attempts",
+   "input": {
+    "now": "2026-12-17T10:00",
+    "product": {
+     "product_id": "p_r2_14",
+     "type": "car_loan",
+     "past_due": 15.4,
+     "days_late": 44
+    }
+   },
+   "expect": 1,
+   "source": "This opening question is not a ladder step and does not count toward the limit. Step 1: the full `past_due` on the date seven calendar days after today, adjusted by rule 13. | Step 2: the half amount on the deadline. | Step 3, late band only: the floor on the deadline. Any date that is not a business day, whether the customer named it or a ladder step produced it, moves forward to the next business day. If the moved date is after the deadline, the deadline is used instead. If the step would propose the same amount on the same date as an earlier proposal, skip it silently and go to the next step. A skipped step still uses up one step of the band's limit. The floor is never below €20.00. If `past_due` itself is below €20.00, the floor is the full `past_due`. The **half amount** is half of `past_due`, rounded up to the next multiple of €0.05 in the same way, but never below the floor. | 31 to 90 | late | the 5th business day after today, but never later than the last business day of the current calendar month | 3 |"
+  },
+  {
+   "id": "C19",
+   "rule": "R-LADDER",
+   "type": "attempts",
+   "input": {
+    "now": "2026-12-04T10:00",
+    "product": {
+     "product_id": "p_r2_15",
+     "type": "personal_loan",
+     "past_due": 410.0,
+     "days_late": 52
+    }
+   },
+   "expect": 3,
+   "source": "This opening question is not a ladder step and does not count toward the limit. Step 1: the full `past_due` on the date seven calendar days after today, adjusted by rule 13. | Step 2: the half amount on the deadline. | Step 3, late band only: the floor on the deadline. A skipped step still uses up one step of the band's limit. | 31 to 90 | late | the 5th business day after today, but never later than the last business day of the current calendar month | 3 |"
+  },
+  {
+   "id": "C20",
+   "rule": "R-FAIL",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-04T11:00",
+    "products": [
+     {
+      "product_id": "p_r2_16",
+      "type": "credit_card",
+      "card_last4": "4417",
+      "past_due": 123.45,
+      "days_late": 45
+     }
+    ],
+    "faults": {
+     "create_promise": 2
+    },
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "service_error",
+    "promises": [],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "If `create_promise` fails (an error or `ok: false`), try exactly once more with the same values. If the second try fails too, tell the customer it could not be recorded and close as `no_promise` / `service_error`. Do not call `add_note` for a system failure: the note service has no code for it. Step 1: the full `past_due` on the date seven calendar days after today, adjusted by rule 13. | Step 2: the half amount on the deadline. | Step 3, late band only: the floor on the deadline."
+  },
+  {
+   "id": "C21",
+   "rule": "R-MOVE",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-20T12:00",
+    "products": [
+     {
+      "product_id": "p_r2_17",
+      "type": "personal_loan",
+      "past_due": 250.0,
+      "days_late": 40
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "proposes",
+      "date": "2026-11-27",
+      "amount": 100.05
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "promise",
+    "promises": [
+     [
+      "p_r2_17",
+      10005,
+      "2026-11-26"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "Any date that is not a business day, whether the customer named it or a ladder step produced it, moves forward to the next business day. If the moved date is after the deadline, the deadline is used instead. | 31 to 90 | late | the 5th business day after today, but never later than the last business day of the current calendar month | 3 | Accept an amount from the floor up to `past_due`, both included, on a date allowed by section 5. `create_promise` takes the amount in whole cents, as an integer: €24.70 is sent as 2470."
+  },
+  {
+   "id": "C22",
+   "rule": "R-LADDER",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-26T11:30",
+    "products": [
+     {
+      "product_id": "p_r2_18",
+      "type": "car_loan",
+      "past_due": 87.3,
+      "days_late": 70
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "no"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "refused",
+    "promises": [],
+    "notes": [
+     [
+      "p_r2_18",
+      "refused"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "This opening question is not a ladder step and does not count toward the limit. Step 1: the full `past_due` on the date seven calendar days after today, adjusted by rule 13. | Step 2: the half amount on the deadline. | Step 3, late band only: the floor on the deadline. If the step would propose the same amount on the same date as an earlier proposal, skip it silently and go to the next step. A skipped step still uses up one step of the band's limit. When the limit is used up and the customer has refused every proposal, stop. Close as `no_promise` / `refused`. When a call ends without a recorded promise after the debt was stated, call `add_note` once for the product, before `close_call`, with the reason that matches the closing reason: `refused`, `hardship` or `dispute`, or `paid` for rule 27."
+  }
+ ]
+}
