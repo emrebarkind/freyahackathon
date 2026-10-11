@@ -13,11 +13,20 @@ Hidden briefs arrive at 17:00 UTC. Steps:
    A run may be repeated; submit the agent of one run with that run's trace. Never edit the agent.
 5. Commit `briefs/hidden-*`, `traces/hidden-*`, `submission/hidden-*`; push; put that commit in the form.
 
+Two commits are recorded, and they must agree on the builder:
+
+* **builder source commit**: the commit the final runs were made from (`git rev-parse HEAD` before step 3, with a
+  clean working tree; write it into `docs/CANDIDATE.md`).
+* **submission commit**: the commit that adds the hidden-brief traces and exports on top of it (the form's `commit`).
+
+Before sending: `git diff <builder source commit> <submission commit> -- builder requirements.txt scripts kit`
+must print nothing, so the organisers' clone at the submission commit runs exactly the builder that made the agents.
+
 Form (the fields the hackathon page asks for):
 
 ```json
 {
-  "team": "<team name>",
+  "team": "<team name: from the registration / kit email, not in this repository>",
   "repo": "https://github.com/emrebarkind/freyahackathon",
   "commit": "<commit that holds the hidden-brief traces and exports>",
   "run_command": "python3 builder/build.py {brief_path} {tool_api_path}",
@@ -41,6 +50,9 @@ the Freya workflow id, agent id, node and call counts, and every test the builde
 * `git clone <repo> && git checkout <commit> && pip install -r requirements.txt`
 * Environment: `FREYA_API_KEY` (+ `FREYA_API_URL` if not staging) and a Claude login or `ANTHROPIC_API_KEY` for the
   builder's own calls (Claude Opus via the Claude Agent SDK, ~$1 per brief). Nothing else; no key is in the repository.
+  The hackathon page says teams pay for their builder's model calls and that the top ten are re-run by the
+  organisers; it does not say whose model key that re-run uses. Not confirmed: ask in the support channel; if they
+  need ours, a key can be passed as `ANTHROPIC_API_KEY` only, never committed.
 * `python3 builder/build.py <brief files...> <tool api file>`; a run takes about 3 minutes. It creates one workflow
   per brief file name in the workspace it runs in (updated in place on a re-run) and exports it to `submission/`.
 * The extraction is a model reading, so two runs can differ in wording; the policy values are checked against the
