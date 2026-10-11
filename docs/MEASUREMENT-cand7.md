@@ -145,8 +145,11 @@ Official rule: a run passes only if the ledger is right **and** the judge passes
       number'`.
     * The truncation also happens after the agent's shortest line, and with a 15–25 s gap before the agent speaks.
   * **Same run, PUB-11:** the same truncation in identity for 8 turns, then a complete answer, then a PASS.
-  * **Classification:** a persona-simulator artifact, not a misread brief. The agent's behaviour (wait twice, then
-    re-ask, then count a non-answer) is bounded.
+  * **Classification, corrected:** the *fragments* come from the persona simulator, but the agent's response to them
+    had two real agent defects, found later by local replay (see "PUB-13 talkative: local replay"). The earlier
+    statements "not an agent bug" and "the agent's behaviour is bounded" were **wrong**:
+    * after unanswered read-backs, the engine dropped the customer's completed plan;
+    * it said "please go on" 18 times in one call.
   * **No change made** to keep candidate 7 fixed. A possible mitigation, untested: re-ask the pending question instead
     of "please go on", so the persona does not have to reason about its own cut message.
 
