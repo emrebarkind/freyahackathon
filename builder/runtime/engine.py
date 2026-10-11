@@ -1037,7 +1037,7 @@ def after_account(V, s):
         if n < 2:
             return call(V, s, "api_account")
         return close(V, s, "service_error", L("no_info"))
-    prods = [product_facts(V, r) for r in raws]
+    prods = order_products([product_facts(V, r) for r in raws], raws)
     s["products"] = prods
     s["ci"] = -1
     outside = [p for p in prods if p.get("reason") == "no_band"]
@@ -1444,7 +1444,57 @@ def refuses_asked_day(V, s, dtxt, target):
     return True
 
 
+def order_products(prods, raws):
+    """The brief's handling order (multi.order: a list of sort keys, the first decides), else the account's order.
+    {"by": "type", "rank": [types in order]} | {"by": "amount"|"days"|"<record field>", "desc": true|false}"""
+    keys = (S.get("multi") or dict()).get("order") or []
+    if not keys:
+        return prods
+    raw_of = dict((id(p), r) for p, r in zip(prods, raws))
+
+    def key(p):
+        out = []
+        for k in keys:
+            by = k.get("by")
+            if by == "type":
+                rank = [str(x) for x in k.get("rank") or []]
+                out.append(rank.index(p["type"]) if p["type"] in rank else len(rank))
+                continue
+            v = p["full"] if by == "amount" else p["days_late"] if by == "days" else num(raw_of[id(p)].get(by))
+            v = float(v or 0)
+            out.append(-v if k.get("desc") else v)
+        return out
+    return sorted(prods, key=key)                    # stable: ties keep the account's order
+
+
+def pay_day(V, p):
+    """'Yes, today': today, or on a call made on a non-business day the next business day (never past the deadline),
+    as deadline_adjust says for every other promise date."""
+    d = today_of(V)
+    if not is_business_day(d) and S.get("rules", dict()).get("deadline_adjust") != "none":
+        d = min(next_business_day(d), datetime.date.fromisoformat(p["deadline"]))
+    return iso(d)
+
+
+def consume_opening(V, prods):
+    """The opening 'full amount today' ask was not accepted (a no, a counter-proposal, 'too much', a dispute on one
+    product...). Where the brief makes that ask a proposal, it is now one: a ladder step equal to it is a repeat
+    (opening_blocks_repeat / opening_is_attempt) and it used attempt 1 (opening_is_attempt). Runs once per product."""
+    first = (lambda q: q["deadline"]) if S.get("rules", dict()).get("first_ask") == "deadline" else (lambda q: iso(today_of(V)))
+    R_ = S.get("rules") or dict()
+    for q in prods:
+        if q["status"] in ("open", "agreed") and q.get("used", 0) == 0 and not q.get("opening_done"):
+            q["opening_done"] = True
+            if R_.get("opening_is_attempt") or R_.get("opening_blocks_repeat"):
+                q["refused_offers"].append([round(q["full"], 2), first(q)])
+            if R_.get("opening_is_attempt"):
+                q["used"] = 1
+                q["made"] = 1
+
+
 def stage_nego(V, s, k, t, dtxt, a, scope):
+    if k == "too_much" and not dtxt and a is None and S.get("rules", dict()).get("too_much_floor") == "refuse":
+        k = "no"                                     # the brief: "too much" is a refusal of the proposal on the table
     prods = s["products"]
     multi = len(prods) > 1
     pv = cur(s) if s.get("phase") != "today" else None
@@ -1504,7 +1554,7 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             by_deadline = S.get("rules", dict()).get("first_ask") == "deadline"
             for p in prods:
                 if p["status"] == "open":
-                    agree(p, p["full"], p["deadline"] if by_deadline else iso(today_of(V)))
+                    agree(p, p["full"], p["deadline"] if by_deadline else pay_day(V, p))
             return readback(V, s)
         if target is not None:
             pass
@@ -1522,20 +1572,12 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             s["ci"] = next_open(s)
             p = cur(s)
             intro = L("next_product", name=p["name"], amount=money(p["full"])) if multi else ""
-            first = (lambda q: q["deadline"]) if S.get("rules", dict()).get("first_ask") == "deadline" else (lambda q: iso(today_of(V)))
-            R_ = S.get("rules") or dict()
-            for q in prods:
-                if q["status"] == "open" and q.get("used", 0) == 0:
-                    if R_.get("opening_is_attempt") or R_.get("opening_blocks_repeat"):
-                        # the brief makes the opening ask a proposal: a step equal to it is a repeat
-                        q["refused_offers"].append([round(q["full"], 2), first(q)])
-                    if R_.get("opening_is_attempt"):                    # the brief counts it as attempt 1
-                        q["used"] = 1
-                        q["made"] = 1
-                p = cur(s) or p
+            consume_opening(V, prods)
+            p = cur(s) or p
             return start_product(V, s, p, intro)
         else:
             s["ci"] = next_open(s)
+        consume_opening(V, prods)                     # any other first answer: the opening ask is spent too
     p = cur(s)
     if p is None:
         s["ci"] = next_open(s)
@@ -1645,9 +1687,9 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             agree(p, p["offer"][0], p["offer"][1])
             return advance(V, s)
         if p.get("offer") and not p["offer"][1]:
-            agree(p, p["offer"][0], iso(today_of(V)))
+            agree(p, p["offer"][0], pay_day(V, p))
             return advance(V, s)
-        agree(p, default_amount(p), iso(today_of(V)))
+        agree(p, default_amount(p), pay_day(V, p))
         return advance(V, s)
     if k in ("no", "refuses", "cannot", "none", "unclear"):
         if p.get("after_deadline_offered") and S.get("rules", dict()).get("refuse_deadline_is_refusal", True):

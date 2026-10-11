@@ -191,6 +191,13 @@ def validate(spec, openapi, docs_text=""):
             errs.append(f"multi.outcome_priority: '{x}' is not a ranking entry (use event keys of the endings that share a "
                         f"no-promise close, e.g. refused, dispute; a recorded promise always wins and paid closes only "
                         f"when every product is paid)")
+    for k in (spec.get("multi") or {}).get("order") or []:
+        if not isinstance(k, dict) or not k.get("by") or (k.get("by") == "type" and not isinstance(k.get("rank"), list)):
+            errs.append(f"multi.order entry {k!r} must be {{by: type, rank: [types]}} or {{by: amount|days|<field>, desc: bool}}")
+        elif k.get("by") == "type":
+            bad = [x for x in k["rank"] if x not in (spec["products"].get("names") or {})]
+            if bad and "*" not in (spec["products"].get("names") or {}):
+                errs.append(f"multi.order rank names product types {bad} that products.names does not have")
     R_ = spec.get("rules") or {}
     if R_.get("notes_before_transfer") and (R_.get("hardship_transfer") != "direct" or not (spec.get("notes") or {}).get("enabled")):
         errs.append("rules.notes_before_transfer applies only to the direct hardship transfer (rules.hardship_transfer "
@@ -239,7 +246,7 @@ def validate(spec, openapi, docs_text=""):
                           ("date_rules.next_weekday", ("following_week", "upcoming")),
                           ("identity.date_order", ("dmy", "mdy")),
                           ("rules.first_ask", ("today", "deadline")),
-                          ("rules.too_much_floor", ("attempt_1", "asked_date")),
+                          ("rules.too_much_floor", ("attempt_1", "asked_date", "refuse")),
                           ("rules.week_end_today", ("next_week", "today", "literal")),
                           ("rules.skipped_repeat_counts", (True, False)),
                           ("rules.promise_retries", (0, 1, 2, 3)),

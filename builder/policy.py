@@ -41,6 +41,7 @@ CRITICAL = {
     "products.promise_scale": (1, "amounts"),
     "products.promise_round": (None, "amounts"),
     "multi.outcome_priority": ([], "codes"),
+    "multi.order": ([], "products"),
     "event_changes": ([], "codes"),
 }
 KINDS = ("explicit", "derived", "unspecified", "unsupported")
@@ -67,7 +68,7 @@ def effective(spec, path):
     v = get(spec, path)
     if path == "products.promise_scale" and v in (None, ""):          # the engine: promise_scale or amount_scale or 1
         return float(get(spec, "products.amount_scale") or 1), True
-    if v in (None, "") or (path in ("event_changes", "multi.outcome_priority") and not v):
+    if v in (None, "") or (path in ("event_changes", "multi.outcome_priority", "multi.order") and not v):
         return CRITICAL[path][0], True
     return v, False
 

@@ -118,7 +118,10 @@ use the default shown and record it in `assumptions`.
                                                    // next_business_day, or none (only if the brief says promise dates need not be business days)
            "first_ask": "today",                   // the first payment question after disclosure: "today" (full amount today) or
                                                    // "deadline" (full amount by the deadline); a plain yes agrees to that
-           "too_much_floor": "attempt_1",
+           "too_much_floor": "attempt_1",           // what "the full amount is too much" does: "attempt_1" (default: the
+                                                   // floor is offered next, as an attempt), "asked_date" (the floor on the
+                                                   // date just asked, no attempt used), or "refuse" (only if the brief says
+                                                   // "too much" counts as a refusal of the proposal on the table)
            "ladder_repeat_last": false,            // true only if the brief says the last step is repeated for further attempts
            "notes_before_transfer": false,        // true only if the brief says to note each product before that direct
                                                    // transfer (otherwise a transfer writes no notes)
@@ -150,7 +153,11 @@ use the default shown and record it in `assumptions`.
  "notes": {"enabled": false},                      // true if the brief requires add_note for products that end without a promise
  "multi": {"clamp_single_date": true,              // one date for all products: a product whose deadline is earlier gets its own deadline
            "continue_after_paid": true, "continue_after_dispute": true,
-           "outcome_priority": []},                // only if the brief ranks product endings for the call's close when no
+           "outcome_priority": [],
+           "order": []},                           // only if the brief fixes the order products are handled in, e.g.
+                                                   // [{"by": "type", "rank": ["overdraft", "credit_card", "personal_loan"]},
+                                                   //  {"by": "amount", "desc": true}] (amount = the amount owed; "days" =
+                                                   // days late; or a product record field); otherwise the account's order                // only if the brief ranks product endings for the call's close when no
                                                    // promise was recorded, e.g. ["refused", "dispute", "service_error"]
                                                    // (event keys, highest first); otherwise the first product's ending
  "human": {"ask_first": true},                     // asks once whether it can help before transferring to a human
@@ -310,7 +317,7 @@ on or after it.
 `policy`: the evidence for every critical policy, keyed by dotted path. Critical paths: rules.skipped_repeat_counts,
 opening_is_attempt, opening_blocks_repeat, too_much_skips_full, too_much_floor, ladder_repeat_last,
 refuse_deadline_is_refusal, promise_retries, hardship_transfer, notes_before_transfer, deadline_adjust, first_ask, week_end_today;
-products.floor_pct, floor_min, floor_full_below, floor_round, step_round, promise_scale, promise_round; multi.outcome_priority; event_changes. A path you
+products.floor_pct, floor_min, floor_full_below, floor_round, step_round, promise_scale, promise_round; multi.outcome_priority, multi.order; event_changes. A path you
 leave unset still has a value (the engine default: skipped_repeat_counts true, opening_is_attempt false,
 opening_blocks_repeat false, too_much_skips_full false, too_much_floor "attempt_1", ladder_repeat_last false,
 refuse_deadline_is_refusal true, promise_retries 1, hardship_transfer "ask_first", deadline_adjust

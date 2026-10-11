@@ -186,3 +186,71 @@ def test_never_zero_drops_an_inexpressible_optional_value_and_flags_it():
     broken = json.load(open(ROOT / "submission" / "brief-b.spec.json"))
     broken["bands"] = "early"                                                # a required part: not dropped
     assert build.degrade(broken, O)[1] == []
+
+
+# ---------------------------------------------------------------- M1: the opening ask on every first answer
+
+def _offers(said):
+    import re
+    return re.findall(r"pay (\d+) dollars on \w+ (\d+ \w+)", said)
+
+
+def test_a_dispute_on_one_product_at_the_opening_spends_the_opening_for_the_others():
+    global S
+    saved = S
+    try:
+        S = copy.deepcopy(saved)
+        S["rules"].update(opening_is_attempt=True, opening_blocks_repeat=True)
+        S["ladder"] = [dict(amount="full", date="today"), dict(amount="full", date="deadline"), dict(amount="floor", date="deadline")]
+        for b in S["bands"]:
+            b["attempts"], b["ladder"] = 3, None
+        led, said = run([{"k": "dispute", "f": "credit_card"}, {"k": "no"}, {"k": "no"}, {"k": "no"}])
+        today = [o for o in _offers(said) if o[1] == "14 October"]
+        assert not today, said                      # the loan is not offered "today" again: that was the opening ask
+    finally:
+        S = saved
+
+
+def test_too_much_as_a_refusal_only_when_the_brief_says_so():
+    global S
+    saved = S
+    try:
+        S = copy.deepcopy(saved)
+        S["ladder"] = [dict(amount="full", date="business_days_after:2"), dict(amount="floor", date="deadline")]
+        for b in S["bands"]:
+            b["attempts"], b["ladder"] = 2, None
+        script = [{"k": "no"}, {"k": "too_much"}, {"k": "no"}, {"k": "no"}]
+        _, said_default = run(script, prods=P[:1])
+        S["rules"]["too_much_floor"] = "refuse"
+        led, said_refuse = run(script, prods=P[:1])
+        assert led["outcome"] == S["events"]["refused"]["outcome"]
+        assert said_default != said_refuse                    # the option changes what follows "too much"
+    finally:
+        S = saved
+
+
+def test_yes_today_on_a_saturday_is_recorded_for_the_next_business_day():
+    bank = selftest.GenericBank(S, IDENT, copy.deepcopy(P[:1]), {})
+    turns = [dict(k="confirmed", t="yes")] + [dict(k="answer", t=IDENT[q["field"]]) for q in S["identity"]["questions"]] + \
+        [dict(k=k, t=k, d="", a=None, f="none", cut="no") for k in ("yes", "yes", "no")]
+    led, _ = selftest.simulate(S, dict(customer_id="c", first_name="A", last_name="M", title="Mr", now="2026-10-17T11:00"),
+                               bank, turns, openapi=O)
+    assert led["promises"] and led["promises"][0][2] == "2026-10-19"
+
+
+def test_products_are_handled_in_the_briefs_order():
+    global S
+    saved = S
+    try:
+        S = copy.deepcopy(saved)
+        loan_first = [P[1], P[0]]
+        _, said = run([{"k": "no"}] * 8, prods=loan_first)
+        assert said.index("personal loan") < said.index("credit card")             # default: account order
+        S["multi"]["order"] = [{"by": "type", "rank": ["credit_card", "personal_loan"]}]
+        _, said = run([{"k": "no"}] * 8, prods=loan_first)
+        assert said.index("credit card") < said.index("personal loan")
+        S["multi"]["order"] = [{"by": "amount", "desc": True}]
+        _, said = run([{"k": "no"}] * 8, prods=[P[0], P[1]])
+        assert said.index("personal loan") < said.index("credit card")             # 500 before 300
+    finally:
+        S = saved
