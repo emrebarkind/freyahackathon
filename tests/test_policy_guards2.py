@@ -72,6 +72,7 @@ def test_a_skipped_repeat_counts_only_when_the_brief_says_so():
     b["attempts"], b["ladder"] = 2, None
     rec = {"product_id": "p1", "type": "credit_card", "past_due": 300.0, "days_late": b["min"],
            spec["products"]["floor_field"]["credit_card"]: 90.0}
+    spec["rules"]["opening_blocks_repeat"] = True                         # r2: "the opening included"
     # step 1 (full today) repeats the opening ask: skipped
     spec["rules"]["skipped_repeat_counts"] = True
     assert len(offers(spec, "2026-10-14T11:00", rec)) == 1
@@ -82,14 +83,17 @@ def test_a_skipped_repeat_counts_only_when_the_brief_says_so():
     assert spec_model.assumed(comp.apply_defaults(copy.deepcopy(spec), O))
 
 
-def test_the_opening_ask_is_never_proposed_again_as_a_step():
+def test_a_step_equal_to_the_opening_ask_follows_the_brief():
     spec = copy.deepcopy(E.A)
     spec["ladder"] = [dict(amount="full", date="today"), dict(amount="floor", date="deadline")]
     b = min(spec["bands"], key=lambda b: b["min"])
     b["attempts"], b["ladder"] = 2, None
     rec = {"product_id": "p1", "type": "credit_card", "past_due": 300.0, "days_late": b["min"],
            spec["products"]["floor_field"]["credit_card"]: 90.0}
+    spec["rules"]["opening_blocks_repeat"] = True              # r2: a step equal to the opening ask is a repeat
     assert [300.0, "2026-10-14"] not in offers(spec, "2026-10-14T11:00", rec)
+    spec["rules"]["opening_blocks_repeat"] = False             # p1: the opening ask "is not a proposal"
+    assert offers(spec, "2026-10-14T11:00", rec)[0] == [300.0, "2026-10-14"]
 
 
 def test_returning_to_a_product_repeats_its_open_offer():

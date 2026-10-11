@@ -14,6 +14,8 @@ use the default shown and record it in `assumptions`.
  },
  "date_rules": {"next_weekday": "following_week"}, // "following_week": 'next Friday' = Friday of the next calendar week;
                                                    // "upcoming": 'next Friday' = the first Friday after today
+ "max_unclear": 3,                                  // only if the brief says how often an unclear answer to a payment question is
+                                                   // asked again before it counts as a refusal
  "confirm": {"max_asks": 2},                       // how many times the agent asks "Am I speaking with ...?" before closing as unclear
  "callback": {                                     // when someone else answers and a callback is booked
    "days": ["today", "next_business_day"],         // allowed callback days. Items: "today", "next_business_day", "tomorrow",
@@ -120,6 +122,9 @@ use the default shown and record it in `assumptions`.
            "week_end_today": null,                 // only if the brief says what a "last business day of this week" step
                                                    // means when today is that day: "next_week" (use next week's) or "today";
                                                    // omit when the brief is silent (the step is then read literally)
+           "opening_blocks_repeat": false,        // true only if the brief says a ladder step equal to the opening ask counts as
+                                                   // a repeat and is skipped ("the opening included"); false if the opening ask is
+                                                   // "not a proposal" (then a step may name the same amount and date)
            "opening_is_attempt": false},           // true only if the brief counts the opening ask ("can you pay the full amount
                                                    // today?") as persuasion attempt 1: its refusal then uses an attempt and the
                                                    // ladder's step 1 is that ask; the attempts of each band include it

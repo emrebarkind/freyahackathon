@@ -55,7 +55,9 @@ def offers(spec, now, rec):
     try:
         p["used"] = 0
         first = p["deadline"] if (spec.get("rules") or {}).get("first_ask") == "deadline" else engine.iso(engine.today_of(V))
-        p["refused_offers"].append([round(p["full"], 2), first])   # the refused opening ask, as the engine records it
+        R_ = spec.get("rules") or {}
+        if R_.get("opening_is_attempt") or R_.get("opening_blocks_repeat"):
+            p["refused_offers"].append([round(p["full"], 2), first])   # the opening ask is a proposal: no repeat of it
         if (spec.get("rules") or {}).get("opening_is_attempt"):
             p["used"] = 1                       # the opening ask already used attempt 1 (as the engine does on refusal)
             p["made"] = 1

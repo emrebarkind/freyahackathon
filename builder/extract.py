@@ -214,6 +214,7 @@ def validate(spec, openapi):
                           ("rules.skipped_repeat_counts", (True, False)),
                           ("rules.promise_retries", (0, 1, 2, 3)),
                           ("rules.hardship_transfer", ("direct",)),
+                          ("rules.opening_blocks_repeat", (True, False)),
                           ("products.promise_round", ("up", "down", "nearest"))):
         v = get(spec, path)
         if v is not None and v not in allowed:

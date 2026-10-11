@@ -766,7 +766,7 @@ def stage_id(V, s, k, t):
         s["why_answered"] = True          # explaining why the questions are needed is not a refusal
         say(V, L("id_why"), q["ask"])
         return talk(V, "id", s)
-    purpose_declines = S["identity"].get("purpose_is_decline", S["identity"].get("why_is_decline", True))
+    purpose_declines = S["identity"].get("purpose_is_decline", True)
     if k in ("refuses", "asks_why") or (k == "purpose" and purpose_declines) or (k == "question" and S["identity"].get("question_is_decline")):
         s["declined"] = s.get("declined", 0) + 1
         if s["declined"] >= 2:
@@ -1498,10 +1498,13 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             p = cur(s)
             intro = L("next_product", name=p["name"], amount=money(p["full"])) if multi else ""
             first = (lambda q: q["deadline"]) if S.get("rules", dict()).get("first_ask") == "deadline" else (lambda q: iso(today_of(V)))
+            R_ = S.get("rules") or dict()
             for q in prods:
                 if q["status"] == "open" and q.get("used", 0) == 0:
-                    q["refused_offers"].append([round(q["full"], 2), first(q)])   # never proposed again as a step
-                    if (S.get("rules") or dict()).get("opening_is_attempt"):      # the brief counts it as attempt 1
+                    if R_.get("opening_is_attempt") or R_.get("opening_blocks_repeat"):
+                        # the brief makes the opening ask a proposal: a step equal to it is a repeat
+                        q["refused_offers"].append([round(q["full"], 2), first(q)])
+                    if R_.get("opening_is_attempt"):                    # the brief counts it as attempt 1
                         q["used"] = 1
                         q["made"] = 1
                 p = cur(s) or p
