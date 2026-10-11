@@ -17,6 +17,9 @@ from builder import compile as comp, spec_model  # noqa: E402
 from builder.runtime import cal, engine  # noqa: E402
 
 
+OPENAPI = [None]
+
+
 def setup(spec, openapi):
     spec = copy.deepcopy(spec)
     spec_model.normalise(spec)
@@ -118,9 +121,38 @@ def answer(spec, c):
             return None
         norm = engine.normalize_answer(q, str(i["value"]))          # what the engine makes of the answer it heard
         return engine.format_answer(q, norm if norm not in ("", "partial") else str(i["value"]))
+    if t == "conversation":
+        got = conversation(spec, i, OPENAPI[0])
+        e = c["expect"]
+        for k in ("promises", "notes", "transfers"):
+            if k in e:
+                e[k] = sorted([list(x) if isinstance(x, (list, tuple)) else x for x in e[k]])
+        return got
     if t == "promise_amount":
         return engine.promise_amount({"agreed": [float(i["amount"]), ""]})
     raise ValueError("unknown check type " + t)
+
+
+TURN_KINDS = {"yes", "no", "proposes", "too_much", "hardship", "dispute", "already_paid", "restructure", "human"}
+
+
+def conversation(spec, i, openapi):
+    """Play a scripted customer (after a passed identity check) through the compiled workflow against the local
+    generic bank and return the ledger: what was really written, in the API's own units."""
+    from builder import selftest
+    ident, _ = selftest.identity_values(spec)
+    V0 = dict(customer_id="c_eval", first_name="Alex", last_name="Morgan", title="Mr", now=i["now"])
+    bank = selftest.GenericBank(spec, ident, copy.deepcopy(i["products"]), i.get("faults") or {})
+    turns = [dict(k="confirmed", t="yes that's me")] + [dict(k="answer", t=ident[q["field"]]) for q in spec["identity"]["questions"]]
+    for t in i["script"]:
+        if t.get("k") not in TURN_KINDS:
+            raise ValueError("unknown turn kind " + str(t.get("k")))
+        turns.append(dict(k=t["k"], t=t.get("say", t["k"]), d=t.get("date", ""), a=t.get("amount"),
+                          f=t.get("product", "none"), cut="no"))
+    led, _ = selftest.simulate(spec, V0, bank, turns, openapi=openapi)
+    return {"outcome": led["outcome"], "reason": led["reason"] or "",
+            "promises": sorted([list(x) for x in led["promises"]]), "notes": sorted([list(x) for x in led["notes"]]),
+            "transfers": sorted(led["transfers"])}
 
 
 def same(got, exp):
@@ -137,6 +169,7 @@ def score(spec, pkg):
     pkg = pathlib.Path(pkg)
     key = json.load(open(pkg / "key.json"))
     openapi = json.load(open(pkg / "openapi.json"))
+    OPENAPI[0] = openapi
     try:
         spec = setup(spec, openapi)
     except Exception as e:
