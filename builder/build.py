@@ -139,6 +139,8 @@ def main():
     report_checks(trace, chk, "local")
     if not a.spec:
         spec, chk = repair_loop(spec, chk, openapi, docs, trace, budget)
+    for a_ in spec_model.assumed(spec):          # a default where the brief is silent: visible, never hidden
+        trace.note("assumption (engine default, the brief is silent): " + a_)
     for u in spec_model.unsupported(spec):    # valid policy the engine cannot carry out as written: say so, never change it
         trace.note("UNSUPPORTED by the engine (policy kept as the brief states it): " + u)
     (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))

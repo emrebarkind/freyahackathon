@@ -54,14 +54,19 @@ use the default shown and record it in `assumptions`.
    "amount_field": "past_due",                     // account field with the amount owed
    "days_field": "days_late",                      // account field with how many days late the product is
    "floor_field": {"<product type>": "<account field holding the minimum acceptable amount>"},
-   "floor_pct": null,                              // only if the floor is a percentage of the amount owed instead (0 = any amount)
+   "floor_pct": null,                              // only if the floor is a percentage of the amount owed instead (0 = any amount);
+                                                   // a number, or {"<product type>": percentage} when it differs by type
+   "floor_min": null,                              // only if the brief sets a minimum floor ("never below 20"): a number or
+                                                   // {"<product type>": number}; a debt below it has the whole debt as floor
    "floor_names": {"<product type>": "<what the brief calls the floor, e.g. minimum payment>"},
    "amount_scale": 1,                              // 100 only if get_account gives amounts in cents/pence (minor units)
    "promise_scale": null,                          // only if create_promise takes another unit than get_account gives:
                                                    // 100 when get_account is in pounds/euros but create_promise wants pence/cents
    "promise_round": null,                          // only if the brief says how to round a promise to the unit create_promise
                                                    // takes: "up", "down" or "nearest"; never invent one
-   "floor_round": null                             // with floor_pct only: "up_unit" (round up to a whole unit) or "nearest_unit"
+   "floor_round": null,                            // with floor_pct only: "up_unit", "nearest_unit", or a step: "up:0.05",
+                                                   // "nearest:0.05", "down:0.05" (rounded once, on the exact percentage)
+   "step_round": null                              // only if the brief rounds the amounts of percentage ladder steps (pct:N), same values
    // If the account records have no product type, use the key "*" in names / floor_field / floor_names.
    // Optional, normally read from the tool API file: "list_field" (the array of products in the get_account
    // response), "id_field" (product id), "type_field" (product type).
@@ -76,6 +81,8 @@ use the default shown and record it in `assumptions`.
                                                    // last business day of the month and the 3rd business day).
                                                    // "roll_if_not_after_today": true when the brief says to use the next
                                                    // period's date if the computed one is today (e.g. 'or next month's')
+    "floor": null,                                 // only if this band has its own floor: "full" = the whole amount owed
+    "floor_full_types": [],                        // or only some product types have the whole amount as floor in this band
     "deadline_by_type": {},                        // only if a product type has its own deadline in this band:
                                                    // {"<product type>": <deadline rule>}
     "attempts": 1,                                 // persuasion attempts allowed in this band. Counting: if rules.opening_is_attempt
@@ -99,6 +106,8 @@ use the default shown and record it in `assumptions`.
                                                    // "deadline" (full amount by the deadline); a plain yes agrees to that
            "too_much_floor": "attempt_1",
            "ladder_repeat_last": false,            // true only if the brief says the last step is repeated for further attempts
+           "skipped_repeat_counts": null,         // only if the brief says whether a ladder step skipped because it would
+                                                   // repeat an earlier proposal still uses one of the band's proposals: true/false
            "week_end_today": null,                 // only if the brief says what a "last business day of this week" step
                                                    // means when today is that day: "next_week" (use next week's) or "today";
                                                    // omit when the brief is silent (the step is then read literally)
@@ -229,3 +238,7 @@ events.transfer_human has no queue: what the agent says instead of transferring,
 restructuring_no_transfer / support_no_transfer (optional, the same for those situations). no_band_line (said for a product whose days late fall in no band when the brief gives no rule,
 {name}), below_floor_final (said when the
 customer insists on an amount below the floor after it was offered: "I'm sorry, I can't record less than {amount}.").
+
+`unsupported_rules`: a list of rules from the materials (quoted, one string each) that no field of this spec can
+carry: a rounding, minimum, date rule, exception or condition the format has no place for. Never approximate such
+a rule with a nearby field value; list it here instead. The build reports every item.

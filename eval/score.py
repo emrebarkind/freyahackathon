@@ -54,10 +54,11 @@ def offers(spec, now, rec):
     engine.advance = lambda V_, s_, pre="": None
     try:
         p["used"] = 0
+        first = p["deadline"] if (spec.get("rules") or {}).get("first_ask") == "deadline" else engine.iso(engine.today_of(V))
+        p["refused_offers"].append([round(p["full"], 2), first])   # the refused opening ask, as the engine records it
         if (spec.get("rules") or {}).get("opening_is_attempt"):
             p["used"] = 1                       # the opening ask already used attempt 1 (as the engine does on refusal)
             p["made"] = 1
-            p["refused_offers"].append([round(p["full"], 2), engine.iso(engine.today_of(V))])
         engine.start_product(V, s, p)
         for _ in range(12):
             if not p.get("offer"):

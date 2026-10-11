@@ -226,6 +226,24 @@ def band_for(days_late):
     return None
 
 
+def round_rule(x, rule):
+    """The brief's rounding of a computed amount: up_unit / nearest_unit, or up:<step> / nearest:<step> / down:<step>
+    (e.g. up:0.05). No rule: to the cent. Computed on the exact value, once."""
+    x = round(x, 6)
+    rule = {"up_unit": "up:1", "nearest_unit": "nearest:1"}.get(str(rule or ""), str(rule or ""))
+    m = re.fullmatch(r"(up|nearest|down):([0-9.]+)", rule)
+    if not m or float(m.group(2)) <= 0:
+        return round(x, 2)
+    step = float(m.group(2))
+    q = x / step
+    n = int(q)
+    if m.group(1) == "up":
+        n = n + (1 if q - n > 1e-6 else 0)
+    elif m.group(1) == "nearest":
+        n = int(q + 0.5 + 1e-9)
+    return round(n * step, 2)
+
+
 def by_type(m, typ, default=None):
     """Per-product-type spec value: the type's own entry, else '*', else the only entry."""
     m = m or dict()
@@ -251,25 +269,27 @@ def product_facts(V, raw):
     full = (num(raw.get(S["products"].get("amount_field", "past_due"))) or 0.0) / scale
     ff = by_type(S["products"].get("floor_field"), typ)
     floor = num(raw.get(ff)) / scale if ff and num(raw.get(ff)) is not None else None
-    if floor is None and S["products"].get("floor_pct") is not None:
-        exact = round(full * float(S["products"]["floor_pct"]) / 100.0, 6)   # rounding happens once, on the exact value
-        fr = S["products"].get("floor_round")
-        if fr == "up_unit":
-            floor = float(int(exact) + (1 if exact - int(exact) > 1e-6 else 0))
-        elif fr == "nearest_unit":
-            floor = float(int(exact + 0.5))
-        else:
-            floor = round(exact, 2)
+    pct = S["products"].get("floor_pct")
+    pct = by_type(pct, typ) if isinstance(pct, dict) else pct          # one percentage, or one per product type
+    if floor is None and pct is not None:
+        floor = round_rule(full * float(pct) / 100.0, S["products"].get("floor_round"))
     if floor is None:
         floor = full
-    floor = min(floor, full)                      # a floor above the amount owed is the amount owed
+    fmin = S["products"].get("floor_min")
+    fmin = by_type(fmin, typ) if isinstance(fmin, dict) else fmin
+    if fmin is not None:
+        floor = max(floor, float(fmin))           # "never below X" (and the full amount when that is below X)
     dl = int(num(raw.get(S["products"].get("days_field", "days_late"))) or 0)
     b = band_for(dl)
     if b is None:                                 # no band and no rule for it: no offer is made for this product
         ev_ = (S.get("bands_outside") or dict()).get("event") or "service_error"
+        floor = min(floor, full)
         return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
                     band="", deadline=iso(today), attempts=0, ladder=None, used=0, made=0, too_much=False, floor_offered=False,
                     vague_asked=False, offer=None, agreed=None, status=ev_, reason="no_band", refused_offers=[])
+    if b.get("floor") == "full" or typ in (b.get("floor_full_types") or []):
+        floor = full                              # the band's own floor: the whole amount owed
+    floor = min(floor, full)                      # a floor above the amount owed is the amount owed
     rule = (b.get("deadline_by_type") or dict()).get(typ) or b["deadline"]   # a product type with its own deadline
     deadline = band_deadline(today, rule)
     if rule.get("roll_if_not_after_today") and deadline <= today:     # e.g. 'or next month's if today is that day'
@@ -1073,7 +1093,7 @@ def make_offer(V, s, p, step_idx, pre=""):
     if st_.get("amount") == "floor" or (st_.get("amount") == "full_or_floor" and p["too_much"]):
         amt = p["floor"]
     elif str(st_.get("amount", "")).startswith("pct:"):
-        amt = max(p["floor"], round(p["full"] * float(st_["amount"][4:]) / 100.0, 2))
+        amt = max(p["floor"], round_rule(p["full"] * float(st_["amount"][4:]) / 100.0, S["products"].get("step_round")))
     d = ladder_date(today, st_.get("date", "deadline"), p)
     dl = datetime.date.fromisoformat(p["deadline"])
     if not is_business_day(d) and S.get("rules", dict()).get("deadline_adjust") != "none":
@@ -1083,7 +1103,9 @@ def make_offer(V, s, p, step_idx, pre=""):
     offer = [round(amt, 2), iso(d)]
     repeat_ok = step_idx > len(ladder) and S.get("rules", dict()).get("ladder_repeat_last")   # the brief says so
     if offer in p["refused_offers"] and not repeat_ok:
-        if step_idx < len(ladder):          # a skipped repeat is not a proposal: it uses no attempt
+        if S.get("rules", dict()).get("skipped_repeat_counts") is not False:
+            p["made"] = p.get("made", 0) + 1     # a skipped step uses one of the band's proposals unless the brief says not
+        if step_idx < len(ladder) and p.get("made", 0) < p["attempts"]:
             return make_offer(V, s, p, step_idx + 1, pre)
         p["used"] = step_idx                 # rule: never repeat an offer the customer already refused
         p["status"] = "refused"
@@ -1123,6 +1145,10 @@ def advance(V, s, pre=""):
     if i is not None:
         s["ci"] = i
         p = s["products"][i]
+        if p.get("offer") and p["offer"][1] and p["offer"] not in p["refused_offers"]:
+            focus(p)                             # the customer talked about another product: this offer is still open
+            say(V, pre, L("repeat_offer", name=p["name"], amount=pay(p, p["offer"][0]), date=spoken(p["offer"][1])))
+            return talk(V, "nego", s)
         intro = L("next_product", name=p["name"], amount=money(p["full"])) if len(s["products"]) > 1 else ""
         return start_product(V, s, p, (pre + " " + intro).strip())
     agreed = [p for p in s["products"] if p["status"] == "agreed"]
@@ -1455,12 +1481,13 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             s["ci"] = next_open(s)
             p = cur(s)
             intro = L("next_product", name=p["name"], amount=money(p["full"])) if multi else ""
-            if (S.get("rules") or dict()).get("opening_is_attempt"):      # the brief counts the opening ask as attempt 1
-                for q in prods:                                           # a flat no is step 1 for every open product
-                    if q["status"] == "open" and q.get("used", 0) == 0:
+            first = (lambda q: q["deadline"]) if S.get("rules", dict()).get("first_ask") == "deadline" else (lambda q: iso(today_of(V)))
+            for q in prods:
+                if q["status"] == "open" and q.get("used", 0) == 0:
+                    q["refused_offers"].append([round(q["full"], 2), first(q)])   # never proposed again as a step
+                    if (S.get("rules") or dict()).get("opening_is_attempt"):      # the brief counts it as attempt 1
                         q["used"] = 1
                         q["made"] = 1
-                        q["refused_offers"].append([round(q["full"], 2), iso(today_of(V))])
                 p = cur(s) or p
             return start_product(V, s, p, intro)
         else:
