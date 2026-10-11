@@ -1,3 +1,29 @@
+# UPDATE 16:58 UTC: the final format changed (live page, checked 15:55 UTC; the organiser's e-mail reply confirms it)
+
+| Topic | Old runbook (10 Oct) | Now |
+|---|---|---|
+| Final case | Two hidden briefs | One case: Freya Bank, credit card statement debt |
+| Input | One .md brief and one tool API file | One zip folder of Markdown, Word, PDF and Excel files: BRIEF.md, README.md, analysis, flow drawing, announcements, service contract, test customers, Q&A, 6 example conversations. The builder works with the whole folder |
+| Bank API | Freya hosts it | **We write and host the mock on Cloudflare Workers**, from the service contract and the test customers. It must stay up until the results are out |
+| Language | English | **Turkish** (evaluation is still over text) |
+| Run command | `build.py {brief} {tool_api}` | `build.py {case_folder} {mock_url}` |
+| submission.json | `workflows{}`, `traces{}` | `members[]`, one `workflow`, one `trace`, `mock_url` (template: `docs/submission.template.json`; team "Emre", single member) |
+
+**Builder support for the new form** (branch `claude/keen-fermat-t25udu-finalinput`):
+* **Input:** a folder or a .zip (extracted to a temporary folder; the source is unchanged), plus an http(s) mock URL
+  argument.
+* **Formats:** Word, PDF, Excel and PowerPoint are converted with their file, page and sheet labels.
+* **Unreadable files** are listed as UNREAD and make the run INCOMPLETE.
+* **Mock URL:** replaces the tool API's server URL. Every bank call of the compiled workflow, chained copies
+  included, is checked against it.
+
+**Open items:**
+* **The builder needs an OpenAPI document (JSON or YAML with `paths`).** If the service contract is only a
+  Word/PDF/Markdown description, this is a blocker. It needs a contract → tool API step.
+* **The mock's logic** must come from the final service contract and test customers.
+* **Turkish** dates, amounts, negations, corrections, two-piece answers and fixed sentences must be extracted from
+  the final files. The engine's parsers and fallback lines are English.
+
 # Final runbook (prepared 2026-10-11 16:10 UTC)
 
 ## Fixed facts (from the published page; the final e-mail overrides them)
