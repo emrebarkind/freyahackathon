@@ -77,6 +77,17 @@ Rules for the design:
   later sentence of the same turn depends on is called before the agent starts speaking.
 - The agent ends a call by calling the ending's tool (end_<ending name>), only after it has said everything the step
   requires; the ending's farewell is then spoken for it. Say so in "flow" where each ending happens.
+- Data sources: the agent does not reliably see tool results of earlier turns. Every value it sends to a tool comes
+  from a call variable or from a tool result returned in the same turn; when a step needs a value from an earlier
+  turn's result (an identifier, a number, an address), the step first calls that source tool again in the same turn,
+  waits, and copies the value from the new result character for character. Write "flow" so: no tool is called early
+  to keep its result for a later turn.
+- Examples inside "system_prompt" and "flow" never use concrete identifiers, card numbers, account numbers or
+  addresses (from the materials or invented); use placeholders like [son dört hane] or [adres]. Number-reading
+  examples may use digits only where no tool field could take them.
+- A tool that changes or sends something is called only after the agent has read to the caller the exact values it
+  will act on (from a result of that turn or the turn before) and the caller has answered yes to that question;
+  a request to do the action is not that yes. Keep every confirmation step the materials require.
 """
 
 
@@ -162,7 +173,11 @@ def compile_agent(d, base):
 
 TURN_RULE = ("PLATFORM RULE / PLATFORM KURALI: In one turn, first call every tool the turn needs, then speak once; after "
              "speaking you cannot call a tool until the caller speaks again. End the call only by calling the matching "
-             "end_... tool, after you have said everything the step requires.")
+             "end_... tool, after you have said everything the step requires. DATA RULE / VERI KURALI: every value you send to "
+             "a tool comes from a call variable or from a tool result of THIS turn; if it comes from an earlier turn, call "
+             "the source tool again first in this turn and copy the value exactly. Never send a value from memory, from an "
+             "example or built from what the caller said. Call a tool that changes or sends something only after the "
+             "caller said yes to the exact values you read to them.")
 
 
 def _param(field, known):
