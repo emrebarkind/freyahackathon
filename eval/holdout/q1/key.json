@@ -1,0 +1,328 @@
+{
+ "package": "q1",
+ "rules": {
+  "R1": "Deadline is the Nth business day after today by band (A 12, B 9, C 7, D 5); weekends and the two holidays are skipped.",
+  "R2": "Each band's proposal limit (1/2/3/4) includes the opening full-amount-today ask, so post-opening proposals are limit minus one.",
+  "R3": "After the opening ask, the ladder is: full arrears on the week's last business day, full arrears on the deadline, floor on the deadline.",
+  "R4": "A ladder step identical (amount and date) to an earlier proposal, opening ask included, is skipped without being counted.",
+  "R5": "Floor is min_due for a store card and monthly_repayment for a loan.",
+  "R6": "Customer who refuses every allowed proposal is closed no_agreement / refused."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "R2",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-04T10:15",
+    "product": {
+     "product_id": "p_1",
+     "type": "store_card",
+     "card_last4": "4417",
+     "arrears": 212.4,
+     "days_late": 10,
+     "min_due": 35.0
+    }
+   },
+   "expect": 0,
+   "source": "5. Every product falls in one band by `days_late`: | 1 to 10 | A | the 12th business day after today | 1 | ... | 11 to 30 | B | the 9th business day after today | 2 | ... | 31 to 60 | C | the 7th business day after today | 3 | ... | 61 to 90 | D | the 5th business day after today | 4 | 10. ... That question is itself a proposal. It is the first of the proposals the band allows, so a band A customer who says no to it has had their only proposal."
+  },
+  {
+   "id": "C2",
+   "rule": "R2",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-16T09:40",
+    "product": {
+     "product_id": "p_2",
+     "type": "personal_loan",
+     "arrears": 480.0,
+     "days_late": 1,
+     "monthly_repayment": 160.0
+    }
+   },
+   "expect": [],
+   "source": "10. ... That question is itself a proposal. It is the first of the proposals the band allows, so a band A customer who says no to it has had their only proposal. 13. When the band's total is reached, or the ladder has no steps left, stop proposing."
+  },
+  {
+   "id": "C3",
+   "rule": "R3",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-10T11:00",
+    "product": {
+     "product_id": "p_3",
+     "type": "motor_loan",
+     "arrears": 615.75,
+     "days_late": 11,
+     "monthly_repayment": 205.25
+    }
+   },
+   "expect": [
+    [
+     615.75,
+     "2026-11-13"
+    ]
+   ],
+   "source": "5. Every product falls in one band by `days_late`: | 1 to 10 | A | the 12th business day after today | 1 | ... | 11 to 30 | B | the 9th business day after today | 2 | ... | 31 to 60 | C | the 7th business day after today | 3 | ... | 61 to 90 | D | the 5th business day after today | 4 | 11. A flat no ... moves the agent to the next step of the ladder below, as long as the band still has proposals left. Count every proposal made, the opening question included, against the band's total. Step 1: the full arrears on the last business day of the current week. Step 2: the full arrears on the deadline. Step 3: the floor on the deadline."
+  },
+  {
+   "id": "C4",
+   "rule": "R2",
+   "type": "attempts",
+   "input": {
+    "now": "2026-12-08T15:20",
+    "product": {
+     "product_id": "p_4",
+     "type": "store_card",
+     "card_last4": "4417",
+     "arrears": 148.9,
+     "days_late": 30,
+     "min_due": 25.5
+    }
+   },
+   "expect": 1,
+   "source": "5. Every product falls in one band by `days_late`: | 1 to 10 | A | the 12th business day after today | 1 | ... | 11 to 30 | B | the 9th business day after today | 2 | ... | 31 to 60 | C | the 7th business day after today | 3 | ... | 61 to 90 | D | the 5th business day after today | 4 | 11. A flat no ... moves the agent to the next step of the ladder below, as long as the band still has proposals left. Count every proposal made, the opening question included, against the band's total. Step 1: the full arrears on the last business day of the current week. Step 2: the full arrears on the deadline. Step 3: the floor on the deadline."
+  },
+  {
+   "id": "C5",
+   "rule": "R4",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-26T13:05",
+    "product": {
+     "product_id": "p_5",
+     "type": "personal_loan",
+     "arrears": 390.0,
+     "days_late": 20,
+     "monthly_repayment": 130.0
+    }
+   },
+   "expect": [
+    [
+     390.0,
+     "2026-12-10"
+    ]
+   ],
+   "source": "Business days are Monday to Friday, except two Marrow & Pike holidays: 2026-11-27 and 2026-12-21. 11. A flat no ... moves the agent to the next step of the ladder below, as long as the band still has proposals left. Count every proposal made, the opening question included, against the band's total. Step 1: the full arrears on the last business day of the current week. Step 2: the full arrears on the deadline. Step 3: the floor on the deadline. 12. The agent never makes the same proposal twice. A proposal is the same when both the amount and the date match one already made in this call, the opening question included. Skip such a step: it is not said and is not counted, and the agent goes on to the next step."
+  },
+  {
+   "id": "C6",
+   "rule": "R3",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-02T10:30",
+    "product": {
+     "product_id": "p_6",
+     "type": "store_card",
+     "card_last4": "4417",
+     "arrears": 333.3,
+     "days_late": 31,
+     "min_due": 48.6
+    }
+   },
+   "expect": [
+    [
+     333.3,
+     "2026-12-04"
+    ],
+    [
+     333.3,
+     "2026-12-11"
+    ]
+   ],
+   "source": "5. Every product falls in one band by `days_late`: | 1 to 10 | A | the 12th business day after today | 1 | ... | 11 to 30 | B | the 9th business day after today | 2 | ... | 31 to 60 | C | the 7th business day after today | 3 | ... | 61 to 90 | D | the 5th business day after today | 4 | 11. A flat no ... moves the agent to the next step of the ladder below, as long as the band still has proposals left. Count every proposal made, the opening question included, against the band's total. Step 1: the full arrears on the last business day of the current week. Step 2: the full arrears on the deadline. Step 3: the floor on the deadline."
+  },
+  {
+   "id": "C7",
+   "rule": "R2",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-18T16:45",
+    "product": {
+     "product_id": "p_7",
+     "type": "motor_loan",
+     "arrears": 902.0,
+     "days_late": 60,
+     "monthly_repayment": 300.5
+    }
+   },
+   "expect": 2,
+   "source": "5. Every product falls in one band by `days_late`: | 1 to 10 | A | the 12th business day after today | 1 | ... | 11 to 30 | B | the 9th business day after today | 2 | ... | 31 to 60 | C | the 7th business day after today | 3 | ... | 61 to 90 | D | the 5th business day after today | 4 | 11. A flat no ... moves the agent to the next step of the ladder below, as long as the band still has proposals left. Count every proposal made, the opening question included, against the band's total. Step 1: the full arrears on the last business day of the current week. Step 2: the full arrears on the deadline. Step 3: the floor on the deadline."
+  },
+  {
+   "id": "C8",
+   "rule": "R3",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-15T12:00",
+    "product": {
+     "product_id": "p_8",
+     "type": "personal_loan",
+     "arrears": 744.6,
+     "days_late": 61,
+     "monthly_repayment": 248.2
+    }
+   },
+   "expect": [
+    [
+     744.6,
+     "2026-12-18"
+    ],
+    [
+     744.6,
+     "2026-12-23"
+    ],
+    [
+     248.2,
+     "2026-12-23"
+    ]
+   ],
+   "source": "Business days are Monday to Friday, except two Marrow & Pike holidays: 2026-11-27 and 2026-12-21. 5. Every product falls in one band by `days_late`: | 1 to 10 | A | the 12th business day after today | 1 | ... | 11 to 30 | B | the 9th business day after today | 2 | ... | 31 to 60 | C | the 7th business day after today | 3 | ... | 61 to 90 | D | the 5th business day after today | 4 | 11. A flat no ... moves the agent to the next step of the ladder below, as long as the band still has proposals left. Count every proposal made, the opening question included, against the band's total. Step 1: the full arrears on the last business day of the current week. Step 2: the full arrears on the deadline. Step 3: the floor on the deadline."
+  },
+  {
+   "id": "C9",
+   "rule": "R4",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-04T09:10",
+    "product": {
+     "product_id": "p_9",
+     "type": "store_card",
+     "card_last4": "4417",
+     "arrears": 520.0,
+     "days_late": 90,
+     "min_due": 72.25
+    }
+   },
+   "expect": [
+    [
+     520.0,
+     "2026-12-11"
+    ],
+    [
+     72.25,
+     "2026-12-11"
+    ]
+   ],
+   "source": "11. A flat no ... moves the agent to the next step of the ladder below, as long as the band still has proposals left. Count every proposal made, the opening question included, against the band's total. Step 1: the full arrears on the last business day of the current week. Step 2: the full arrears on the deadline. Step 3: the floor on the deadline. 12. The agent never makes the same proposal twice. A proposal is the same when both the amount and the date match one already made in this call, the opening question included. Skip such a step: it is not said and is not counted, and the agent goes on to the next step. 13. When the band's total is reached, or the ladder has no steps left, stop proposing."
+  },
+  {
+   "id": "C10",
+   "rule": "R4",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-13T14:00",
+    "product": {
+     "product_id": "p_10",
+     "type": "motor_loan",
+     "arrears": 1180.0,
+     "days_late": 75,
+     "monthly_repayment": 393.4
+    }
+   },
+   "expect": 2,
+   "source": "11. A flat no ... moves the agent to the next step of the ladder below, as long as the band still has proposals left. Count every proposal made, the opening question included, against the band's total. Step 1: the full arrears on the last business day of the current week. Step 2: the full arrears on the deadline. Step 3: the floor on the deadline. 12. The agent never makes the same proposal twice. A proposal is the same when both the amount and the date match one already made in this call, the opening question included. Skip such a step: it is not said and is not counted, and the agent goes on to the next step. 13. When the band's total is reached, or the ladder has no steps left, stop proposing."
+  },
+  {
+   "id": "C11",
+   "rule": "R1",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-18T10:00",
+    "product": {
+     "product_id": "p_11",
+     "type": "store_card",
+     "card_last4": "4417",
+     "arrears": 99.8,
+     "days_late": 4,
+     "min_due": 20.0
+    }
+   },
+   "expect": "2026-12-07",
+   "source": "Business days are Monday to Friday, except two Marrow & Pike holidays: 2026-11-27 and 2026-12-21. 5. Every product falls in one band by `days_late`: | 1 to 10 | A | the 12th business day after today | 1 | ... | 11 to 30 | B | the 9th business day after today | 2 | ... | 31 to 60 | C | the 7th business day after today | 3 | ... | 61 to 90 | D | the 5th business day after today | 4 |"
+  },
+  {
+   "id": "C12",
+   "rule": "R1",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-15T11:30",
+    "product": {
+     "product_id": "p_12",
+     "type": "personal_loan",
+     "arrears": 410.0,
+     "days_late": 70,
+     "monthly_repayment": 136.7
+    }
+   },
+   "expect": "2026-12-23",
+   "source": "Business days are Monday to Friday, except two Marrow & Pike holidays: 2026-11-27 and 2026-12-21. 5. Every product falls in one band by `days_late`: | 1 to 10 | A | the 12th business day after today | 1 | ... | 11 to 30 | B | the 9th business day after today | 2 | ... | 31 to 60 | C | the 7th business day after today | 3 | ... | 61 to 90 | D | the 5th business day after today | 4 |"
+  },
+  {
+   "id": "C13",
+   "rule": "R1",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-23T17:10",
+    "product": {
+     "product_id": "p_13",
+     "type": "motor_loan",
+     "arrears": 655.0,
+     "days_late": 45,
+     "monthly_repayment": 218.35
+    }
+   },
+   "expect": "2026-12-03",
+   "source": "Business days are Monday to Friday, except two Marrow & Pike holidays: 2026-11-27 and 2026-12-21. 5. Every product falls in one band by `days_late`: | 1 to 10 | A | the 12th business day after today | 1 | ... | 11 to 30 | B | the 9th business day after today | 2 | ... | 31 to 60 | C | the 7th business day after today | 3 | ... | 61 to 90 | D | the 5th business day after today | 4 |"
+  },
+  {
+   "id": "C14",
+   "rule": "R5",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-09T10:00",
+    "product": {
+     "product_id": "p_14",
+     "type": "store_card",
+     "card_last4": "4417",
+     "arrears": 267.15,
+     "days_late": 22,
+     "min_due": 38.4
+    }
+   },
+   "expect": 38.4,
+   "source": "7. The **floor** is the record's `min_due` for a store card and its `monthly_repayment` for a personal loan or a motor loan."
+  },
+  {
+   "id": "C15",
+   "rule": "R5",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-10T10:00",
+    "product": {
+     "product_id": "p_15",
+     "type": "motor_loan",
+     "arrears": 870.0,
+     "days_late": 52,
+     "monthly_repayment": 290.45
+    }
+   },
+   "expect": 290.45,
+   "source": "7. The **floor** is the record's `min_due` for a store card and its `monthly_repayment` for a personal loan or a motor loan."
+  },
+  {
+   "id": "C16",
+   "rule": "R6",
+   "type": "close",
+   "input": {
+    "situation": "refused"
+   },
+   "expect": {
+    "outcome": "no_agreement",
+    "reason": "refused"
+   },
+   "source": "13. When the band's total is reached, or the ladder has no steps left, stop proposing. Close as `no_agreement` / `refused`."
+  }
+ ]
+}
