@@ -222,3 +222,20 @@ def test_roll_when_earlier_than_today_differs_from_roll_when_today():
     assert facts(spec, rec, "2026-11-30T10:00")["deadline"] == "2026-11-30"     # today is that day: stays
     b["deadline"] = {"kind": "last_business_day_of_month", "roll_if_not_after_today": True}
     assert facts(spec, rec, "2026-11-30T10:00")["deadline"] == "2026-12-31"     # today is that day: rolls
+
+
+def test_policy_values_name_a_sentence_that_is_really_in_the_materials():
+    from builder import extract
+    docs = "27. Never propose the same amount on the same date twice. If an attempt would repeat an earlier proposal " \
+           "exactly, skip it: it is not a proposal and the customer is not asked again."
+    spec = {"rules": {"skipped_repeat_counts": False, "ladder_repeat_last": False}, "products": {}, "identity": {},
+            "sources": {"rules.skipped_repeat_counts": "If an attempt would repeat an earlier proposal exactly, skip it: "
+                                                       "it is not a proposal"}}
+    bad, missing = extract.provenance(spec, docs)
+    assert bad == [] and missing == []                       # false values are values too: ladder_repeat_last is unset
+    spec["rules"]["promise_retries"] = 0
+    spec["sources"]["rules.promise_retries"] = "A failed promise is never retried."      # not in the materials
+    bad, missing = extract.provenance(spec, docs)
+    assert len(bad) == 1 and "promise_retries" in bad[0]
+    spec["rules"]["week_end_today"] = "today"
+    assert "rules.week_end_today" in extract.provenance(spec, docs)[1]

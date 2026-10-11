@@ -272,3 +272,9 @@ a rule with a nearby field value; list it here instead. The build reports every 
 November the code PAID is replaced by CLAIMED_PAID"): a list of {"event": "<event key>", "from": "YYYY-MM-DD",
 "set": {"outcome": "..."}}. The base `events` entry then holds the code BEFORE that date; the change applies to calls
 on or after it.
+
+`sources`: for every value you set under `rules`, for the amount rules (`products.floor_pct`, `floor_min`,
+`floor_round`, `step_round`, `promise_scale`, `promise_round`), for `identity.max_wrong` and for `event_changes`:
+{"<dotted path>": "<the sentence from the materials that decides it, copied word for word>"}, e.g.
+{"rules.skipped_repeat_counts": "If an attempt would repeat an earlier proposal exactly, skip it: it is not a
+proposal"}. The quote is checked against the materials; a value no sentence decides should not be set.
