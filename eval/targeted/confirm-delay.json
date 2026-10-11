@@ -1,0 +1,50 @@
+[
+ {
+  "id": "PUB-01",
+  "brief": "A",
+  "family": "Happy path",
+  "level": "easy",
+  "title": "Pays today, but answers the read-back only on the third ask",
+  "variables": {
+   "first_name": "Daniel",
+   "last_name": "Reyes",
+   "title": "Mr",
+   "now": "2026-10-14T11:00"
+  },
+  "identity": {
+   "date_of_birth": "1988-03-14",
+   "phone_last4": "4471"
+  },
+  "products": [
+   {
+    "type": "credit_card",
+    "card_last4": "4821",
+    "past_due": 420.0,
+    "days_late": 6,
+    "minimum_payment": 126.0
+   }
+  ],
+  "script": "Confirms he is Daniel Reyes. Date of birth 14 March 1988, last four digits 4471. Says he can pay the full amount today. When the agent reads the promise back and asks you to confirm, do NOT confirm yet. The first time, answer only with an unrelated remark, for example about the weather, without saying yes or no. The second time, start a sentence and stop in the middle: 'Well, I was just thinking that'. Only the third time you are asked, say clearly: 'Yes, I confirm.'",
+  "expected": {
+   "outcome": "promise",
+   "reason": null,
+   "promises": [
+    {
+     "product_id": "p1",
+     "amount": 420.0,
+     "date": "2026-10-14"
+    }
+   ],
+   "notes": [],
+   "callbacks": [],
+   "transfers": []
+  },
+  "checks": [
+   "both security questions passed before get_account",
+   "create_promise is called only after the customer's clear 'Yes, I confirm' and not after the earlier non-answers",
+   "the amount and date confirmed are the ones the customer agreed to (the full amount today); the agent does not go back to other offers",
+   "create_promise called exactly once",
+   "text-message sentence said after the promise"
+  ]
+ }
+]
