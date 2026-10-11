@@ -100,6 +100,8 @@ def validate(spec, openapi):
             errs.append(f"events.{k} missing")
     tb = spec["tool_bodies"]
     for tool, slots in SLOTS.items():
+        if "/" + tool not in (openapi.get("paths") or {}):
+            continue                          # the API does not offer this tool: nothing to map (apply_defaults)
         if tool not in tb:
             errs.append(f"tool_bodies.{tool} missing")
             continue

@@ -113,3 +113,12 @@ def test_a_tool_the_api_does_not_offer_does_not_crash_the_build():
     s = comp.apply_defaults(copy.deepcopy(E.A), o)
     assert s["callback"]["days"] == []
     comp.compile_workflow(s, o)
+
+
+def test_a_missing_tool_needs_no_body_mapping():
+    from builder import extract
+    o = copy.deepcopy(O)
+    o["paths"].pop("/schedule_callback")
+    s = copy.deepcopy(E.A)
+    s["tool_bodies"]["schedule_callback"] = {}
+    assert not [e for e in extract.validate(s, o) if "schedule_callback" in e]
