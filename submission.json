@@ -1,8 +1,13 @@
 {
   "team": "Emre",
-  "members": [{ "name": "Emre", "email": "<senin e-postan>" }],
+  "members": [
+    {
+      "name": "Emre",
+      "email": "<senin e-postan>"
+    }
+  ],
   "repo": "https://github.com/emrebarkind/freyahackathon",
-  "commit": "<final koşusunun commit'i>",
+  "commit": "074a588",
   "run_command": "python3 builder/build.py {case_folder} https://freyahackathon.emrebarkind.workers.dev",
   "workflow": "submission/final.workflow.json",
   "trace": "traces/final.log",
