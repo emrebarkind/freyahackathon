@@ -10,16 +10,36 @@ python3 builder/build.py kit/build-the-builder/briefs/brief-a.md kit/build-the-b
 python3 builder/build.py kit/build-the-builder/briefs/brief-a.md kit/build-the-builder/briefs/brief-b.md kit/build-the-builder/tools/openapi.json
 ```
 
-Needs Python 3.10+, `pip install -r requirements.txt` (Claude Agent SDK), a Claude login or `ANTHROPIC_API_KEY`,
-and `FREYA_API_KEY` (+ `FREYA_API_URL`). Output: the agent on Freya, `submission/<slot>.workflow.json` (export),
-`submission/<slot>.spec.json` (what the builder understood) and `traces/<slot>.trace.log` (the trace; everything is also printed, so `2>&1 | tee traces/<slot>.log` works too). A run takes
-about 1–3 minutes.
+Needs Python 3.10+, `pip install -r requirements.txt` (Claude Agent SDK, Pydantic), a Claude login or
+`ANTHROPIC_API_KEY` (the builder's own model calls), and `FREYA_API_KEY` (+ `FREYA_API_URL`, default staging).
+`FREYA_BANK_TEAM_KEY` is only for the practice bank (`run_cases.py`), not for a build. Output: the agent on Freya,
+`submission/<slot>.workflow.json` (export), `submission/<slot>.spec.json` (what the builder understood) and
+`traces/<slot>.trace.log` (the trace; everything is also printed, so `2>&1 | tee traces/<slot>.log` works too).
+The slot is the brief's file name (`hidden-1.md` -> `hidden-1`); the same slot updates the same workflow in place.
+A run takes about 3 minutes and about $1 of model calls (measured: docs/EXPERIMENTS.md, traces/rehearsal-p2.*).
 
-Final-day helper (same command, plus log capture and checks):
+## Final run (hidden briefs)
+
+The organisers' command, unchanged:
+
+```bash
+python3 builder/build.py briefs/hidden-1.md briefs/hidden-1.openapi.json 2>&1 | tee traces/hidden-1.log
+```
+
+or the same with checks (output files exist, no key in any trace) and a short summary:
 
 ```bash
 scripts/final_run.sh hidden-1 briefs/hidden-1.md briefs/hidden-1.openapi.json
 ```
+
+A messy brief that comes as several files: pass them all before the tool API file. Then commit `traces/hidden-N.*`
+and `submission/hidden-N.*` and send the form (`docs/SUBMISSION.md`). No manual step, no edit of the agent after the
+run, nothing from a hidden brief written into the builder.
+
+What the run does when the brief is unclear or outside what the engine can do: it never guesses a policy. The
+trace lists every assumption (`NOTE assumption:`) and every rule the engine cannot carry out as written
+(`NOTE UNSUPPORTED by the engine`), and the build stops before deploying a spec that is still malformed after the repair budget
+(3 rounds, none after 15 minutes).
 
 ## The idea: the weak model only listens, code decides
 
@@ -29,8 +49,9 @@ only what models are good at: understanding what the customer said.
 
 ```
 brief(s) + tool API ──► 1. Claude (Opus) reads them into a typed SPEC      builder/extract.py, builder/spec_doc.md
-                          · two independent readings, field-by-field diff,
-                            adjudication with quotes, validation against the tool API
+                          · one reading, then a targeted audit of the high-risk fields
+                            against the documents (quotes; answers with changes only),
+                            validation against the tool API
                             (fields, enums, required fields, placeholders, line roles) and a typed
                             Pydantic model (types, ranges, time/date formats, bands without gaps
                             or overlaps), repair loop
@@ -99,8 +120,22 @@ a type and amounts in pence, no transfers, notes only for some outcomes, one dat
 | `builder/compile.py` | spec → Freya workflow |
 | `builder/runtime/` | the code that runs inside the phone agent (engine + calendar/parsing) |
 | `builder/selftest.py`, `builder/trace.py` | self-tests and the trace |
+| `builder/extract_guidance.md` | general reading guidance found by a GEPA search on dev briefs (no bank's values) |
+| `eval/` | frozen evaluation packages, promptfoo comparison, GEPA search, contract check (docs/EXPERIMENTS.md) |
+| `docs/CANDIDATE.md`, `docs/SUBMISSION.md` | the submission candidate and the form |
 | `tests/` | local tests: the engine against the 13 public cases with a fake bank, parsing tests |
 | `specs/` | hand-written reference specs for briefs A and B (test oracles only, never read by the builder) |
 | `kit/build-the-builder/` | the official starter kit (Freya client, scorer, briefs, docs) |
 | `probes/` | scripts used to learn the platform's behaviour |
 | `submission/`, `traces/` | builder outputs |
+
+## Known limits (measured, not fixed)
+
+* The pence/cents path of `create_promise` is tested locally and on the compiled workflow, not on the platform:
+  practice sessions only take the public cases, whose API is in pounds. On the platform we saw the pounds path
+  (`create_promise {"amount": 420, ...}`).
+* An integer amount field in the tool API is declared `number` on the workflow node (the node format has no
+  integer type); the engine sends whole values there.
+* Extraction accuracy was measured on three frozen packages with 2 runs per mode (docs/EXPERIMENTS.md): a small
+  sample. The one rule both extractors missed (a brief counting the opening ask as attempt 1) is now a spec option
+  (`rules.opening_is_attempt`); it was checked on a separate small package, eval/holdout/q1.
