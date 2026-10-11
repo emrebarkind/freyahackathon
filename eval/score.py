@@ -53,6 +53,7 @@ def offers(spec, now, rec):
         p["used"] = 0
         if (spec.get("rules") or {}).get("opening_is_attempt"):
             p["used"] = 1                       # the opening ask already used attempt 1 (as the engine does on refusal)
+            p["made"] = 1
             p["refused_offers"].append([round(p["full"], 2), engine.iso(engine.today_of(V))])
         engine.start_product(V, s, p)
         for _ in range(12):

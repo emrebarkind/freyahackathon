@@ -107,7 +107,8 @@
   }
  ],
  "rules": {
-  "refuse_deadline_is_refusal": true
+  "refuse_deadline_is_refusal": true,
+  "week_end_today": "next_week"
  },
  "notes": {
   "enabled": true

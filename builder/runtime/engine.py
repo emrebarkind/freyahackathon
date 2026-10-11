@@ -268,7 +268,7 @@ def product_facts(V, raw):
     if b is None:                                 # no band and no rule for it: no offer is made for this product
         ev_ = (S.get("bands_outside") or dict()).get("event") or "service_error"
         return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
-                    band="", deadline=iso(today), attempts=0, ladder=None, used=0, too_much=False, floor_offered=False,
+                    band="", deadline=iso(today), attempts=0, ladder=None, used=0, made=0, too_much=False, floor_offered=False,
                     vague_asked=False, offer=None, agreed=None, status=ev_, reason="no_band", refused_offers=[])
     rule = (b.get("deadline_by_type") or dict()).get(typ) or b["deadline"]   # a product type with its own deadline
     deadline = band_deadline(today, rule)
@@ -276,7 +276,7 @@ def product_facts(V, raw):
         deadline = band_deadline(end_of_month(today) + datetime.timedelta(days=1), rule, today)
     return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
                 band=b.get("name", ""), deadline=iso(deadline), attempts=int(b.get("attempts", 1)), ladder=b.get("ladder") or None,
-                used=0, too_much=False, floor_offered=False, vague_asked=False, offer=None,
+                used=0, made=0, too_much=False, floor_offered=False, vague_asked=False, offer=None,
                 agreed=None, status="open", reason="", refused_offers=[])
 
 
@@ -308,9 +308,11 @@ def ladder_date(today, which, p):
         return datetime.date.fromisoformat(p["deadline"])
     if which == "last_business_day_this_week":
         d = last_business_day_of_week(today, 0)
-        if d is None or d <= today:
+        if d is None or d < today:                   # this week has no business day left
             d = last_business_day_of_week(today, 1)
-        return d
+        elif d == today and S.get("rules", dict()).get("week_end_today") == "next_week":
+            d = last_business_day_of_week(today, 1)  # only when the brief says so (brief A: "if today is that day...")
+        return d                                     # otherwise literally today: a repeat of the opening ask is skipped
     if which == "last_business_day_next_week":
         return last_business_day_of_week(today, 1)
     if which.startswith("business_days_after:"):
@@ -1045,7 +1047,7 @@ def start_product(V, s, p, pre=""):
     """The first proposal for product p after the opening ask. With rules.opening_is_attempt the opening ask has
     already used attempt 1 (see the today-phase branch), so the next proposal is step used+1, and a product whose
     attempts are all used ends here."""
-    if p.get("used", 0) > 0 and p["used"] >= p["attempts"]:
+    if p.get("made", 0) > 0 and p["made"] >= p["attempts"]:
         p["status"] = "refused"
         p["offer"] = None
         return advance(V, s, pre)
@@ -1081,13 +1083,14 @@ def make_offer(V, s, p, step_idx, pre=""):
     offer = [round(amt, 2), iso(d)]
     repeat_ok = step_idx > len(ladder) and S.get("rules", dict()).get("ladder_repeat_last")   # the brief says so
     if offer in p["refused_offers"] and not repeat_ok:
-        if step_idx < p["attempts"]:
+        if step_idx < len(ladder):          # a skipped repeat is not a proposal: it uses no attempt
             return make_offer(V, s, p, step_idx + 1, pre)
         p["used"] = step_idx                 # rule: never repeat an offer the customer already refused
         p["status"] = "refused"
         p["offer"] = None
         return advance(V, s, pre)
-    p["used"] = step_idx
+    p["used"] = step_idx                     # position in the ladder
+    p["made"] = p.get("made", 0) + 1         # proposals made: what the band's attempts limit
     p["offer"] = offer
     s["unclear_n"] = 0
     floor_first = amt == p["floor"] and amt < p["full"] and not p.get("floor_note_said")
@@ -1107,7 +1110,7 @@ def refusal(V, s, p, pre=""):
         p["status"] = "hardship"
         p["offer"] = None
         return advance(V, s, pre)
-    if p["used"] < p["attempts"]:
+    if p.get("made", 0) < p["attempts"]:
         return make_offer(V, s, p, p["used"] + 1, pre)
     p["status"] = "refused"
     p["offer"] = None
@@ -1456,6 +1459,7 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
                 for q in prods:                                           # a flat no is step 1 for every open product
                     if q["status"] == "open" and q.get("used", 0) == 0:
                         q["used"] = 1
+                        q["made"] = 1
                         q["refused_offers"].append([round(q["full"], 2), iso(today_of(V))])
                 p = cur(s) or p
             return start_product(V, s, p, intro)
@@ -1768,15 +1772,28 @@ def record_next(V, s):
         return finish(V, s, " ".join(lines))
     pid = q[0]
     p = [x for x in s["products"] if x["id"] == pid][0]
+    if not promise_representable(p):
+        # the API cannot take this amount (whole units, no rounding rule in the brief): no write call with a value we
+        # know is invalid, and no silent change of what the customer agreed. The product ends as not recorded.
+        s["rec_queue"] = q[1:]
+        p["status"] = "service_error"
+        p["reason"] = "unrepresentable_amount"
+        return record_next(V, s)
     s["rec_try"] = s.get("rec_try", 0)
     return call(V, s, "api_promise", p_product=p["id"], p_amount=promise_amount(p), p_date=p["agreed"][1])
+
+
+def promise_representable(p):
+    a = promise_amount(p)
+    return isinstance(a, int) or not (S["products"].get("promise_integer") or
+                                      float(S["products"].get("promise_scale") or S["products"].get("amount_scale") or 1) != 1)
 
 
 def promise_amount(p):
     """The amount sent to create_promise, in the unit the tool API takes (promise_scale, else amount_scale). Minor units
     and integer fields take whole numbers. A value that is not whole after conversion is never cut silently: the brief's
-    rounding rule (products.promise_round) applies, and without one the value is sent as is, so the bank's refusal ends
-    on the service_error path instead of recording an amount nobody agreed."""
+    rounding rule (products.promise_round) applies; without one the fraction is returned unchanged and record_next
+    does not send it (promise_representable)."""
     scale = float(S["products"].get("promise_scale") or S["products"].get("amount_scale") or 1)
     a = p["agreed"][0] * scale
     if not (S["products"].get("promise_integer") or scale != 1):

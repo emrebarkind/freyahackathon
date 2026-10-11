@@ -190,9 +190,14 @@ class Spec(Loose):
 
 
 def normalise(spec):
-    """Lossless format fixes, in place: H:MM / H.MM -> HH:MM. Anything ambiguous is left for the checks."""
+    """Lossless format fixes, in place: H:MM / H.MM -> HH:MM; no callback window on any of the 7 weekdays is the same
+    policy as no callback day (days: []). Anything ambiguous is left for the checks."""
     cb = spec.get("callback") if isinstance(spec, dict) else None
     if isinstance(cb, dict):
+        w = cb.get("windows")
+        if isinstance(w, dict) and sorted(w) == [str(i) for i in range(7)] and not any(w.values()):
+            cb["days"] = []
+            cb.pop("windows")
         for k in ("start", "end"):
             m = re.fullmatch(r"\s*(\d{1,2})[:.](\d{2})\s*", str(cb.get(k, "")))
             if m and int(m.group(1)) <= 23 and int(m.group(2)) <= 59:
@@ -239,7 +244,13 @@ def unsupported(spec):
         if P_.get("promise_integer") and float(P_.get("promise_scale") or P_.get("amount_scale") or 1) == 1 \
                 and P_.get("promise_round") not in ("up", "down", "nearest"):
             out.append("create_promise takes whole units and the brief gives no rounding rule (products.promise_round): "
-                       "an amount with a fraction is sent as is and the bank may refuse it")
+                       "a promise with a fraction of a unit is not sent; that product ends as not recorded (service_error)")
+        steps = list(spec.get("ladder") or []) + [x for b in bs for x in (b.get("ladder") or [])]
+        if any(str(x.get("date")) == "last_business_day_this_week" for x in steps) and \
+                not (spec.get("rules") or {}).get("week_end_today"):
+            out.append("a ladder step uses the last business day of this week and the brief does not say what happens "
+                       "when today is that day: read literally (today; a step equal to an earlier proposal is skipped), "
+                       "not moved to next week")
         if not (spec.get("callback") or {}).get("days", ["x"]):
             out.append("no callback day is allowed: every callback request closes as no_callback")
     except Exception as e:

@@ -350,6 +350,10 @@ def run_all(spec, openapi):
             prom = [(p[idf], sent(p[spec["products"].get("amount_field", "past_due")]), first_for(p)) for p in multi]
             scenarios.append(("several products, all paid today", [C] + answers + [dict(k="yes"), dict(k="yes")], multi,
                               expected(spec, "promise", promises=prom)))
+        if not cb.get("days"):                     # the brief allows no callback: a third party never gets one booked
+            scenarios = [sc for sc in scenarios if sc[0] != "the callback booking fails once, then works"]
+            scenarios = [(n, t, pr, expected(spec, "no_callback"), *rest) if n == "someone else answers, books a callback"
+                         else (n, t, pr, e, *rest) for n, t, pr, e, *rest in scenarios]
         for sc in scenarios:
             name, turns, prods, exp = sc[:4]
             try:

@@ -72,3 +72,18 @@ def test_unstated_rounding_for_whole_units_is_reported():
     assert any("no rounding rule" in r for r in spec_model.unsupported(s))
     s["products"]["promise_round"] = "down"
     assert not any("no rounding rule" in r for r in spec_model.unsupported(s))
+
+
+def test_an_amount_the_api_cannot_take_is_never_sent(monkeypatch):
+    from sim import run_case
+    o = integer_api()                                  # create_promise takes whole pounds
+    spec = copy.deepcopy(E.A)
+    spec["products"]["promise_scale"] = 1              # stated unit, no rounding rule in the brief
+    case = copy.deepcopy(E.CASES["PUB-01"])
+    case["products"][0]["past_due"] = 412.37
+    led, tr = run_case(spec, case, E.ids("PUB-01") + [dict(k="yes"), dict(k="yes")], openapi=o)
+    assert not any(c["tool"] == "create_promise" for c in led["calls"]), led["calls"]
+    assert led["promises"] == [] and led["outcome"] == spec["events"]["service_error"]["outcome"], E.agent_lines(tr)
+    case["products"][0]["past_due"] = 412.0            # a whole amount is recorded as usual
+    led, _ = run_case(spec, case, E.ids("PUB-01") + [dict(k="yes"), dict(k="yes")], openapi=o)
+    assert [p["amount"] for p in led["promises"]] == [412.0]
