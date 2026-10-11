@@ -283,6 +283,8 @@ def finish(trace, spec, chk):
     from builder import spec_model
     gaps = spec_model.critical(spec) + [f"local scenario fails: {n}" for n in chk.get("failed", [])] + \
         [f"spec problem left after the repairs: {e}" for e in chk.get("api", [])]
+    for d in (spec.get("oracle_report") or {}).get("disagreements") or []:
+        trace.note("UNCERTAIN (the independent reading disagrees; the materials were not decided either way): " + d)
     if gaps:
         trace.note("RESULT: INCOMPLETE -- the agent does not meet these:" + "".join("\n  - " + g for g in gaps))
         trace.end()

@@ -1,0 +1,676 @@
+{
+ "f1": [
+  {
+   "id": "C1",
+   "type": "identity_fields",
+   "input": {},
+   "expect": [
+    "phone_last4",
+    "date_of_birth"
+   ],
+   "source": "C.1 Ask the last four digits of the phone number on file first, then the date of birth, one question at a time, and pass each answer to `verify_identity`."
+  },
+  {
+   "id": "C2",
+   "type": "identity_max_wrong",
+   "input": {},
+   "expect": 2,
+   "source": "C.2 The second wrong answer, counted across both questions, ends verification: give no account details, suggest the branch or the app, and close `not_verified` / `failed`."
+  },
+  {
+   "id": "C3",
+   "type": "id_answer",
+   "input": {
+    "field": "date_of_birth",
+    "value": "1984-03-07"
+   },
+   "expect": "1984-03-07",
+   "source": "Dates of birth are sent as `YYYY-MM-DD`; a spoken all-numeric date is read day, month, year."
+  },
+  {
+   "id": "C4",
+   "type": "promise_amount",
+   "input": {
+    "amount": 123.45
+   },
+   "expect": 12345,
+   "source": "E.3 `create_promise` takes the amount in euro cents, as a whole number (EUR 45.10 is 4510)."
+  },
+  {
+   "id": "C5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-10-20T10:00",
+    "product": {
+     "product_id": "P-OD1",
+     "kind": "overdraft",
+     "overdue_eur": 300,
+     "days_past_due": 1
+    }
+   },
+   "expect": "2026-10-29",
+   "source": "| Tier 1 | 1 to 20 | the 6th business day after today (today itself is never counted) | 2 proposals | ... D.4 Business days are Monday to Friday, except these bank holidays: 2026-10-26, 2026-12-24, 2026-12-25, 2026-12-28, 2027-01-01, 2027-03-17."
+  },
+  {
+   "id": "C6",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-18T10:00",
+    "product": {
+     "product_id": "P-CC1",
+     "kind": "card",
+     "card_last4": "1234",
+     "overdue_eur": 180,
+     "days_past_due": 20,
+     "min_due_eur": 40
+    }
+   },
+   "expect": "2026-12-31",
+   "source": "| Tier 1 | 1 to 20 | the 6th business day after today (today itself is never counted) | 2 proposals | ... D.4 Business days are Monday to Friday, except these bank holidays: 2026-10-26, 2026-12-24, 2026-12-25, 2026-12-28, 2027-01-01, 2027-03-17."
+  },
+  {
+   "id": "C7",
+   "type": "deadline",
+   "input": {
+    "now": "2026-10-14T10:00",
+    "product": {
+     "product_id": "P-LN1",
+     "kind": "loan",
+     "overdue_eur": 500,
+     "days_past_due": 21,
+     "monthly_instalment_eur": 250
+    }
+   },
+   "expect": "2026-10-15",
+   "source": "| Tier 2 | 21 to 60 | the 15th of the month (see D.3) | 3 proposals | D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead."
+  },
+  {
+   "id": "C8",
+   "type": "deadline",
+   "input": {
+    "now": "2026-10-15T10:00",
+    "product": {
+     "product_id": "P-LN2",
+     "kind": "loan",
+     "overdue_eur": 500,
+     "days_past_due": 60,
+     "monthly_instalment_eur": 250
+    }
+   },
+   "expect": "2026-10-15",
+   "source": "D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day. (So when today is the 15th, the deadline is today.)"
+  },
+  {
+   "id": "C9",
+   "type": "deadline",
+   "input": {
+    "now": "2026-10-16T10:00",
+    "product": {
+     "product_id": "P-OD2",
+     "kind": "overdraft",
+     "overdue_eur": 400,
+     "days_past_due": 40
+    }
+   },
+   "expect": "2026-11-16",
+   "source": "D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day."
+  },
+  {
+   "id": "C10",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-16T10:00",
+    "product": {
+     "product_id": "P-OD3",
+     "kind": "overdraft",
+     "overdue_eur": 400,
+     "days_past_due": 30
+    }
+   },
+   "expect": "2026-12-15",
+   "source": "D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day."
+  },
+  {
+   "id": "C11",
+   "type": "floor",
+   "input": {
+    "now": "2026-10-20T10:00",
+    "product": {
+     "product_id": "P-OD4",
+     "kind": "overdraft",
+     "overdue_eur": 410.2,
+     "days_past_due": 12
+    }
+   },
+   "expect": 103,
+   "source": "overdraft: one quarter of `overdue_eur`, rounded up to the next whole euro (a whole-euro result stays as it is). If `overdue_eur` is below 100, the floor is the whole overdue amount."
+  },
+  {
+   "id": "C12",
+   "type": "floor",
+   "input": {
+    "now": "2026-10-20T10:00",
+    "product": {
+     "product_id": "P-OD5",
+     "kind": "overdraft",
+     "overdue_eur": 85.4,
+     "days_past_due": 12
+    }
+   },
+   "expect": 85.4,
+   "source": "If `overdue_eur` is below 100, the floor is the whole overdue amount."
+  },
+  {
+   "id": "C13",
+   "type": "floor",
+   "input": {
+    "now": "2026-10-20T10:00",
+    "product": {
+     "product_id": "P-LN3",
+     "kind": "loan",
+     "overdue_eur": 640,
+     "days_past_due": 25,
+     "monthly_instalment_eur": 212.5
+    }
+   },
+   "expect": 212.5,
+   "source": "personal loan: `monthly_instalment_eur`;"
+  },
+  {
+   "id": "C14",
+   "type": "attempts",
+   "input": {
+    "now": "2026-10-20T10:00",
+    "product": {
+     "product_id": "P-CC2",
+     "kind": "card",
+     "card_last4": "4321",
+     "overdue_eur": 240,
+     "days_past_due": 10,
+     "min_due_eur": 50
+    }
+   },
+   "expect": 1,
+   "source": "F.1 For each product, the first thing the agent asks is: \"Can you pay the full overdue amount of EUR {amount} today?\" This opening question is proposal 1 and counts towards the product's persuasion limit. | Tier 1 | 1 to 20 | ... | 2 proposals |"
+  },
+  {
+   "id": "C15",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-04T10:00",
+    "product": {
+     "product_id": "P-LN4",
+     "kind": "loan",
+     "overdue_eur": 600,
+     "days_past_due": 35,
+     "monthly_instalment_eur": 200
+    }
+   },
+   "expect": [
+    [
+     600,
+     "2026-11-16"
+    ],
+    [
+     300,
+     "2026-11-16"
+    ]
+   ],
+   "source": "F.2 Each flat refusal (a no with no date and no amount) moves to the next step of the ladder: 1. the full overdue amount on the deadline; 2. half the overdue amount, rounded up to the next whole euro (a whole-euro result stays), on the deadline; if that is below the floor, the floor instead; 3. the floor on the deadline. F.4 Stop proposing when the product's persuasion limit is reached or the ladder has no steps left, whichever comes first."
+  },
+  {
+   "id": "C16",
+   "type": "offers",
+   "input": {
+    "now": "2026-10-15T10:00",
+    "product": {
+     "product_id": "P-OD6",
+     "kind": "overdraft",
+     "overdue_eur": 251.3,
+     "days_past_due": 30
+    }
+   },
+   "expect": [
+    [
+     126,
+     "2026-10-15"
+    ],
+    [
+     63,
+     "2026-10-15"
+    ]
+   ],
+   "source": "F.3 Never make the same proposal twice in a call. A step whose amount and date are both identical to a proposal already made for that product (the opening question included) is skipped. A skipped step is not a proposal and does not count towards the limit; go straight to the next step. (So when today is the 15th, the deadline is today.)"
+  },
+  {
+   "id": "C17",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-16T10:00",
+    "product": {
+     "product_id": "P-CC3",
+     "kind": "card",
+     "card_last4": "5678",
+     "overdue_eur": 120,
+     "days_past_due": 45,
+     "min_due_eur": 70
+    }
+   },
+   "expect": [
+    [
+     120,
+     "2027-01-15"
+    ],
+    [
+     70,
+     "2027-01-15"
+    ]
+   ],
+   "source": "2. half the overdue amount, rounded up to the next whole euro (a whole-euro result stays), on the deadline; if that is below the floor, the floor instead; 3. the floor on the deadline. F.3 ... A step whose amount and date are both identical to a proposal already made for that product (the opening question included) is skipped. F.4 Stop proposing when the product's persuasion limit is reached or the ladder has no steps left, whichever comes first."
+  },
+  {
+   "id": "C18",
+   "type": "close",
+   "input": {
+    "situation": "hardship",
+    "now": "2026-11-03T11:00"
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "hardship"
+   },
+   "source": "1. For calls made on or after 4 November 2026, the `close_call` reason `hardship` is replaced by `financial_difficulty` (outcome stays `no_promise`). Calls before that date keep `hardship`."
+  },
+  {
+   "id": "C19",
+   "type": "close",
+   "input": {
+    "situation": "hardship",
+    "now": "2026-11-04T11:00"
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "financial_difficulty"
+   },
+   "source": "1. For calls made on or after 4 November 2026, the `close_call` reason `hardship` is replaced by `financial_difficulty` (outcome stays `no_promise`). Calls before that date keep `hardship`."
+  },
+  {
+   "id": "C20",
+   "type": "close",
+   "input": {
+    "situation": "hardship",
+    "now": "2026-11-05T11:00"
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "financial_difficulty"
+   },
+   "source": "1. For calls made on or after 4 November 2026, the `close_call` reason `hardship` is replaced by `financial_difficulty` (outcome stays `no_promise`). Calls before that date keep `hardship`."
+  },
+  {
+   "id": "C21",
+   "type": "transfer",
+   "input": {
+    "situation": "transfer_restructuring"
+   },
+   "expect": "restructuring",
+   "source": "G.4 Asks for a repayment plan or lower instalments: `transfer_to_agent` queue `restructuring`, close `transferred` / `restructuring`."
+  },
+  {
+   "id": "C22",
+   "type": "close",
+   "input": {
+    "situation": "refused"
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "refused"
+   },
+   "source": "| `no_promise` | `refused` | no promise recorded and at least one product refused (F.4), the rest disputed or paid |"
+  }
+ ],
+ "h2": [
+  {
+   "id": "C1",
+   "type": "deadline",
+   "input": {
+    "now": "2026-10-29T11:00",
+    "product": {
+     "ref": "CC-1001",
+     "product_type": "credit_card",
+     "last4": "4421",
+     "arrears": 300,
+     "days_overdue": 5
+    }
+   },
+   "expect": "2026-11-09",
+   "source": "| A | 1 to 20 | the 7th business day after today | 3 | ... \"The Nth business day after today\" never counts today itself. ... Items 1, 2 and 4 apply from today. [memo dated 30 October 2026]"
+  },
+  {
+   "id": "C2",
+   "type": "deadline",
+   "input": {
+    "now": "2026-10-30T11:00",
+    "product": {
+     "ref": "CC-1002",
+     "product_type": "credit_card",
+     "last4": "4421",
+     "arrears": 300,
+     "days_overdue": 5
+    }
+   },
+   "expect": "2026-11-06",
+   "source": "Items 1, 2 and 4 apply from today. 1. Band A deadline is now the 5th business day after today (it was the 7th)."
+  },
+  {
+   "id": "C3",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-06T11:00",
+    "product": {
+     "ref": "CC-1003",
+     "product_type": "credit_card",
+     "last4": "7710",
+     "arrears": 250,
+     "days_overdue": 20
+    }
+   },
+   "expect": "2026-11-13",
+   "source": "| A | 1 to 20 | ... 1. Band A deadline is now the 5th business day after today (it was the 7th). 2. Closure days: 2026-11-13 is no longer a closure day (the office move is postponed)."
+  },
+  {
+   "id": "C4",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-26T11:00",
+    "product": {
+     "ref": "CC-1004",
+     "product_type": "credit_card",
+     "last4": "3302",
+     "arrears": 480,
+     "days_overdue": 21
+    }
+   },
+   "expect": "2026-11-27",
+   "source": "| B | 21 to 60 | the last business day of the current calendar month | 4 | ... 2026-11-30 (Monday) is added as a closure day for the year-end systems switch."
+  },
+  {
+   "id": "C5",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-27T11:00",
+    "product": {
+     "ref": "OD-2001",
+     "product_type": "overdraft",
+     "arrears": 600,
+     "days_overdue": 60
+    }
+   },
+   "expect": "2026-12-30",
+   "source": "Band B: if today is itself the last business day of the month (or later), the deadline is the last business day of the following month. ... except Ferncliff closure days ... 2026-12-31 ... 2026-11-30 (Monday) is added as a closure day"
+  },
+  {
+   "id": "C6",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-23T11:00",
+    "product": {
+     "ref": "PL-3001",
+     "product_type": "personal_loan",
+     "arrears": 300,
+     "days_overdue": 61,
+     "instalment": 100
+    }
+   },
+   "expect": "2026-12-30",
+   "source": "| C | 61 or more | the 2nd business day after today | 3 | ... Monday to Friday, except Ferncliff closure days 2026-11-13, 2026-12-24, 2026-12-25, 2026-12-28, 2026-12-31 and 2027-01-01."
+  },
+  {
+   "id": "C7",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-02T11:00",
+    "product": {
+     "ref": "CC-1005",
+     "product_type": "credit_card",
+     "last4": "9081",
+     "arrears": 412,
+     "days_overdue": 10
+    }
+   },
+   "expect": 65,
+   "source": "Credit card: 15% of the arrears, rounded up to the next whole multiple of \u00a35 (an exact multiple stays as it is), with a minimum of \u00a330."
+  },
+  {
+   "id": "C8",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-02T11:00",
+    "product": {
+     "ref": "CC-1006",
+     "product_type": "credit_card",
+     "last4": "5550",
+     "arrears": 25,
+     "days_overdue": 10
+    }
+   },
+   "expect": 25,
+   "source": "with a minimum of \u00a330. The floor is never more than the arrears; if the formula gives more, use the arrears."
+  },
+  {
+   "id": "C9",
+   "type": "floor",
+   "input": {
+    "now": "2026-10-29T11:00",
+    "product": {
+     "ref": "OD-2002",
+     "product_type": "overdraft",
+     "arrears": 500,
+     "days_overdue": 10
+    }
+   },
+   "expect": 130,
+   "source": "Overdraft: 25% of the arrears, rounded up to the next whole multiple of \u00a310, minimum \u00a350, never more than the arrears. ... Items 1, 2 and 4 apply from today. [memo dated 30 October 2026]"
+  },
+  {
+   "id": "C10",
+   "type": "floor",
+   "input": {
+    "now": "2026-10-30T11:00",
+    "product": {
+     "ref": "OD-2003",
+     "product_type": "overdraft",
+     "arrears": 180,
+     "days_overdue": 10
+    }
+   },
+   "expect": 50,
+   "source": "4. Overdraft floor: 20% of the arrears instead of 25%. Rounding and minimum are unchanged. / Overdraft: ... rounded up to the next whole multiple of \u00a310, minimum \u00a350, never more than the arrears."
+  },
+  {
+   "id": "C11",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-04T11:00",
+    "product": {
+     "ref": "PL-3002",
+     "product_type": "personal_loan",
+     "arrears": 642.5,
+     "days_overdue": 90,
+     "instalment": 210
+    }
+   },
+   "expect": 642.5,
+   "source": "Personal loan: the monthly instalment in bands A and B. In band C the floor is the full arrears."
+  },
+  {
+   "id": "C12",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-02T11:00",
+    "product": {
+     "ref": "CC-1007",
+     "product_type": "credit_card",
+     "last4": "9081",
+     "arrears": 412,
+     "days_overdue": 10
+    }
+   },
+   "expect": [
+    [
+     412,
+     "2026-11-04"
+    ],
+    [
+     412,
+     "2026-11-09"
+    ]
+   ],
+   "source": "Counting: the opening \"everything today\" question counts as attempt 1 for every product, even though it is asked only once. Each step offered is one more attempt. ... When the attempt limit of the band is reached, or the steps run out, the product ends without a promise"
+  },
+  {
+   "id": "C13",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-26T11:00",
+    "product": {
+     "ref": "PL-3003",
+     "product_type": "personal_loan",
+     "arrears": 380,
+     "days_overdue": 45,
+     "instalment": 190
+    }
+   },
+   "expect": [
+    [
+     380,
+     "2026-11-27"
+    ],
+    [
+     190,
+     "2026-11-27"
+    ]
+   ],
+   "source": "Any step whose date is after the product's deadline uses the deadline instead. ... A step that would repeat, with the same amount and the same date, an offer already made for that product is not said out loud, but it **still uses up one attempt**."
+  },
+  {
+   "id": "C14",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-02T11:00",
+    "product": {
+     "ref": "CC-1008",
+     "product_type": "credit_card",
+     "last4": "1209",
+     "arrears": 412,
+     "days_overdue": 75
+    }
+   },
+   "expect": [
+    [
+     412,
+     "2026-12-04"
+    ]
+   ],
+   "source": "| C | 61 or more | the 2nd business day after today | 3 | ... A step that would repeat, with the same amount and the same date, an offer already made for that product is not said out loud, but it **still uses up one attempt**. When the attempt limit of the band is reached, or the steps run out, the product ends without a promise and gets a refusal note."
+  },
+  {
+   "id": "C15",
+   "type": "note",
+   "input": {
+    "now": "2026-11-17T11:00",
+    "situation": "dispute",
+    "product": {
+     "ref": "CC-1009",
+     "product_type": "credit_card",
+     "last4": "6630",
+     "arrears": 220,
+     "days_overdue": 30
+    }
+   },
+   "expect": "NC-DSP",
+   "source": "| dispute | NO-DSP | NC-DSP | NL-DSP | ... 3. From 18 November 2026 (calls on that day included), the overdraft and credit card dispute codes NO-DSP and NC-DSP are retired and both are replaced by `NX-QRY`."
+  },
+  {
+   "id": "C16",
+   "type": "note",
+   "input": {
+    "now": "2026-11-18T11:00",
+    "situation": "dispute",
+    "product": {
+     "ref": "OD-2004",
+     "product_type": "overdraft",
+     "arrears": 220,
+     "days_overdue": 30
+    }
+   },
+   "expect": "NX-QRY",
+   "source": "3. From 18 November 2026 (calls on that day included), the overdraft and credit card dispute codes NO-DSP and NC-DSP are retired and both are replaced by `NX-QRY`."
+  },
+  {
+   "id": "C17",
+   "type": "note",
+   "input": {
+    "now": "2026-11-19T11:00",
+    "situation": "dispute",
+    "product": {
+     "ref": "CC-1010",
+     "product_type": "credit_card",
+     "last4": "6630",
+     "arrears": 220,
+     "days_overdue": 30
+    }
+   },
+   "expect": "NX-QRY",
+   "source": "3. From 18 November 2026 (calls on that day included), the overdraft and credit card dispute codes NO-DSP and NC-DSP are retired and both are replaced by `NX-QRY`."
+  },
+  {
+   "id": "C18",
+   "type": "close",
+   "input": {
+    "situation": "hardship"
+   },
+   "expect": {
+    "outcome": "handed_over",
+    "reason": "hardship"
+   },
+   "source": "Hardship. Transfer to the Care queue at once, whatever has been agreed so far. ... Transfers close as `handed_over` with reason `hardship`, `plans` or `general`."
+  },
+  {
+   "id": "C19",
+   "type": "identity_fields",
+   "input": {},
+   "expect": [
+    "postcode",
+    "birth_year"
+   ],
+   "source": "Ask for the postcode first, then the year of birth."
+  },
+  {
+   "id": "C20",
+   "type": "identity_max_wrong",
+   "input": {},
+   "expect": 2,
+   "source": "The identity check has failed at the second wrong answer in total, across both questions."
+  },
+  {
+   "id": "C21",
+   "type": "id_answer",
+   "input": {
+    "field": "postcode",
+    "value": "SW1A1AA"
+   },
+   "expect": "SW1A 1AA",
+   "source": "Send the postcode in capital letters with exactly one space before the last three characters (for example `LS6 2QT`)."
+  },
+  {
+   "id": "C22",
+   "type": "promise_amount",
+   "input": {
+    "amount": 194.83
+   },
+   "expect": 19483,
+   "source": "Promised amount in whole pence (integer). \u00a3194.83 is sent as 19483. Values in pounds are rejected."
+  }
+ ]
+}

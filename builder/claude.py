@@ -13,13 +13,14 @@ _SCRATCH = tempfile.mkdtemp(prefix="builder-claude-")
 MODEL = os.environ.get("BUILDER_MODEL", "claude-opus-5-5")
 
 
-async def _ask(prompt, system, model, effort):
+async def _ask(prompt, system, model, effort, schema=None):
     # No tools are allowed; a few turns of headroom so a refused tool attempt does not end the call in an error.
     # tools=[] removes every built-in tool (allowed_tools=[] only means "none pre-approved"); the call runs in an
     # empty scratch folder, not in the repository that holds env.sh, and without MCP servers or skills.
     opts = ClaudeAgentOptions(model=model, system_prompt=system, allowed_tools=[], tools=[], max_turns=4,
                               permission_mode="dontAsk", setting_sources=[], effort=effort,
-                              cwd=_SCRATCH, strict_mcp_config=True)
+                              cwd=_SCRATCH, strict_mcp_config=True,
+                              output_format={"type": "json_schema", "schema": schema} if schema else None)
     turns, cost = [], 0.0
     try:
         async for m in query(prompt=prompt, options=opts):
@@ -29,6 +30,8 @@ async def _ask(prompt, system, model, effort):
                     turns.append(t)
             elif isinstance(m, ResultMessage):
                 cost = m.total_cost_usd or 0.0
+                if schema is not None and m.structured_output is not None:
+                    turns = [json.dumps(m.structured_output)]       # schema-checked by the API; parsed by the caller
                 if m.result and not turns:
                     turns = [m.result]
     except Exception:
@@ -49,24 +52,41 @@ def ask(prompt, system, purpose, trace, model=MODEL, effort="high"):
     return out
 
 
+def ask_json(prompt, system, purpose, trace, schema, model=MODEL, effort="high"):
+    """A call whose answer must match `schema` (native structured output). Returns the parsed object."""
+    return json.loads(ask_schema(prompt, system, purpose, trace, schema, model, effort) or "null")
+
+
+def ask_schema(prompt, system, purpose, trace, schema, model=MODEL, effort="high"):
+    t0 = time.time()
+    try:
+        out, cost = asyncio.run(_ask(prompt, system, model, effort, schema))
+    except Exception as e:
+        trace.note(f"model call failed ({type(e).__name__}: {str(e)[:200]}); retrying once")
+        out, cost = asyncio.run(_ask(prompt, system, model, effort, schema))
+    trace.model_call(model, purpose, time.time() - t0, cost)
+    return out
+
+
 def ask_many(jobs, trace, model=MODEL, effort="high"):
-    """jobs: list of (prompt, system, purpose). Runs them concurrently."""
-    async def one(p, s):
+    """jobs: list of (prompt, system, purpose) or (prompt, system, purpose, schema). Runs them concurrently; a job
+    with a schema returns the JSON text of its structured output."""
+    async def one(p, s, schema=None):
         try:
-            return await _ask(p, s, model, effort)
+            return await _ask(p, s, model, effort, schema)
         except Exception as e:
             trace.note(f"model call failed ({type(e).__name__}: {str(e)[:200]}); retrying once")
             try:
-                return await _ask(p, s, model, effort)
+                return await _ask(p, s, model, effort, schema)
             except Exception as e2:
                 trace.note(f"model call failed again ({type(e2).__name__}); continuing without it")
                 return "", 0.0
 
     async def run():
         t0 = time.time()
-        res = await asyncio.gather(*[one(p, s) for p, s, _ in jobs])
-        for (p, s, purpose), (_, cost) in zip(jobs, res):
-            trace.model_call(model, purpose, time.time() - t0, cost)
+        res = await asyncio.gather(*[one(j[0], j[1], j[3] if len(j) > 3 else None) for j in jobs])
+        for j, (_, cost) in zip(jobs, res):
+            trace.model_call(model, j[2], time.time() - t0, cost)
         return [r[0] for r in res]
     return asyncio.run(run())
 

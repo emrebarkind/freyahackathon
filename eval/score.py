@@ -120,7 +120,11 @@ def answer(spec, c):
         e = ev(i["situation"])
         return {"outcome": e.get("outcome"), "reason": e.get("reason") or ""}
     if t == "note":
-        return blank(ev(i["situation"]).get("note"))
+        n = ev(i["situation"]).get("note")
+        if isinstance(n, dict):                        # one code per product type: the input's product decides
+            typ = str((i.get("product") or {}).get((spec.get("products") or {}).get("type_field", "type"), ""))
+            n = engine.only_type(n, typ) if typ else n
+        return blank(n)
     if t == "transfer":
         return blank(ev(i["situation"]).get("queue"))
     if t == "identity_fields":

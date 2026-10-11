@@ -90,7 +90,7 @@ def embed_json(obj):
 
 # keys the engine never reads: build-time evidence and notes stay out of the production code node
 ENGINE_UNUSED = ("assumptions", "tool_bodies", "intents", "system_prompt", "test_variables", "policy", "policy_audit",
-                 "unsupported_rules", "code_tables", "sources")
+                 "unsupported_rules", "code_tables", "sources", "oracle_report")
 _B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 LZW_DECODER = """def _lzw(a, s):
     B = dict((c, i) for i, c in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"))
