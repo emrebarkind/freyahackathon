@@ -26,6 +26,7 @@ CRITICAL = {
     "rules.too_much_skips_full": (False, "attempts"),
     "rules.too_much_floor": ("attempt_1", "attempts"),
     "rules.ladder_repeat_last": (False, "attempts"),
+    "rules.non_answer_counts": (False, "attempts"),
     "rules.refuse_deadline_is_refusal": (True, "attempts"),
     "rules.promise_retries": (1, "retries"),
     "rules.hardship_transfer": ("ask_first", "transfers"),

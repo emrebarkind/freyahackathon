@@ -1504,7 +1504,7 @@ def stage_nego(V, s, k, t, dtxt, a, scope):
             if q is not cur(s) and q["status"] == "open" and not q.get("used"):
                 q["offer"] = None
     if k in ("unclear", "none") and not dtxt and a is None and not (pv is not None and pv.get("vague_pending")):
-        if s.get("unclear_n", 0) < S.get("max_unclear", 3) and s.get("unclear_total", 0) < 8:
+        if (s.get("unclear_n", 0) < S.get("max_unclear", 3) and s.get("unclear_total", 0) < 8) or not counts_as_non_answer(V):
             s["unclear_n"] = s.get("unclear_n", 0) + 1     # small talk / a fragment is not an answer yet: re-ask the open question
             s["unclear_total"] = s.get("unclear_total", 0) + 1
             s["reask"] = True
@@ -2196,6 +2196,23 @@ def handle_result(V, s, aw):
 
 
 GO_ON_MAX = 4          # content-free "please go on" lines in one call; after that a cut-off message gets the question again
+STALL_MAX = 12         # customer turns in a row with nothing in them (negotiation / read-back) before the call is ended
+
+
+def counts_as_non_answer(V):
+    """A complete message that answers nothing counts against the customer only when the brief says a non-answer
+    does (rules.non_answer_counts). A cut-off fragment is an unfinished answer, never a non-answer."""
+    return bool((S.get("rules") or dict()).get("non_answer_counts")) and V.get("_cut") != "yes"
+
+
+def stalled_out(V, s):
+    """STALL_MAX empty turns in a row. With the brief's non-answer rule the remaining attempts are spent: products
+    without a confirmed promise end as refused (the brief's close for used-up attempts), nothing is recorded."""
+    for p in s.get("products", []):
+        if p["status"] in ("open", "agreed"):
+            p["status"] = "refused"
+            p["offer"] = None
+    return finish(V, s, L("stall_close") or "I am sorry, I cannot hear an answer, so I will end the call here.")
 
 
 def run_turn(V, s, stage):
@@ -2207,6 +2224,11 @@ def run_turn(V, s, stage):
     if V.get("_cut") != "yes" and t and k in ("too_much", "no", "cannot", "unclear", "none") and not dtxt and a is None and \
             not re.search(r"[.?!]\s*$", t) and re.search(r"\b(to|like|want|mean|i|the|a|an|on|and|but|because|would|can|pay|just|so|my)\s*$", t.lower()):
         V["_cut"] = "yes"                              # text backup: the message ends on an unfinished phrase
+    if stage in ("nego", "confirm"):                  # turns that bring nothing (fragments, small talk), over the call
+        empty = k in ("unclear", "none") and not dtxt and a is None
+        s["stall"] = s.get("stall", 0) + 1 if empty else 0
+        if empty and s["stall"] >= STALL_MAX and (S.get("rules") or dict()).get("non_answer_counts"):
+            return stalled_out(V, s)
     if V.get("_cut") == "yes" and stage in ("open", "tp", "id", "nego", "confirm", "hardship") and not dtxt and a is None \
             and k in ("unclear", "none", "too_much", "cannot") \
             and s.get("cut_waits", 0) < 2 and s.get("go_on_total", 0) < GO_ON_MAX \
@@ -2239,8 +2261,8 @@ def run_turn(V, s, stage):
     if V.get("_cut") != "yes":
         s["cut_value_waited"] = False
     s["cut_waits"] = 0
-    if s.get("same", 0) >= 2 and stage == "nego" \
-            and k in ("unclear", "none", "question", "asks_amount", "proposes", "details", "robot", "scam") and not dtxt and a is None:
+    if s.get("same", 0) >= 2 and stage == "nego" and not dtxt and a is None \
+            and (k in ("question", "asks_amount", "proposes", "details", "robot", "scam") or (k in ("unclear", "none") and counts_as_non_answer(V))):
         k, scope = "no", "none"     # the same line three times and still nothing new: stop looping, count a non-answer
     prev = V.get("say", "")
     dispatch(V, s, stage, k, t, dtxt, a, scope)

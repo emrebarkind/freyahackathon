@@ -123,6 +123,9 @@ use the default shown and record it in `assumptions`.
                                                    // date just asked, no attempt used), or "refuse" (only if the brief says
                                                    // "too much" counts as a refusal of the proposal on the table)
            "ladder_repeat_last": false,            // true only if the brief says the last step is repeated for further attempts
+           "non_answer_counts": false,            // true only if the brief says a non-answer (a reply that answers nothing)
+                                                   // counts like a refusal / uses a persuasion attempt; unstated: false, and
+                                                   // silence never becomes a refusal (a cut-off fragment never counts)
            "notes_before_transfer": false,        // true only if the brief says to note each product before that direct
                                                    // transfer (otherwise a transfer writes no notes)
            "hardship_transfer": null,             // "direct" only if the brief says: sympathy, then transfer, no question
@@ -324,11 +327,11 @@ November the code PAID is replaced by CLAIMED_PAID"): a list of {"event": "<even
 on or after it.
 
 `policy`: the evidence for every critical policy, keyed by dotted path. Critical paths: rules.skipped_repeat_counts,
-opening_is_attempt, opening_blocks_repeat, too_much_skips_full, too_much_floor, ladder_repeat_last,
+opening_is_attempt, opening_blocks_repeat, too_much_skips_full, too_much_floor, ladder_repeat_last, non_answer_counts,
 refuse_deadline_is_refusal, promise_retries, hardship_transfer, notes_before_transfer, deadline_adjust, first_ask, week_end_today;
 products.floor_pct, floor_min, floor_full_below, floor_round, step_round, promise_scale, promise_round; multi.outcome_priority, multi.order; event_changes; changes. A path you
 leave unset still has a value (the engine default: skipped_repeat_counts true, opening_is_attempt false,
-opening_blocks_repeat false, too_much_skips_full false, too_much_floor "attempt_1", ladder_repeat_last false,
+opening_blocks_repeat false, too_much_skips_full false, too_much_floor "attempt_1", ladder_repeat_last false, non_answer_counts false,
 refuse_deadline_is_refusal true, promise_retries 1, hardship_transfer "ask_first", deadline_adjust
 "previous_business_day", first_ask "today", week_end_today "literal", floor_round / step_round "cents",
 promise_scale = amount_scale), so record it too whenever the materials say anything about it. One record per path:

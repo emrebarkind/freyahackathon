@@ -288,6 +288,7 @@ def validate(spec, openapi, docs_text=""):
                           ("rules.promise_retries", (0, 1, 2, 3)),
                           ("rules.hardship_transfer", ("direct", "ask_first")),
                           ("rules.notes_before_transfer", (True, False)),
+                          ("rules.non_answer_counts", (True, False)),
                           ("rules.opening_blocks_repeat", (True, False)),
                           ("rules.too_much_skips_full", (True, False)),
                           ("products.promise_round", ("up", "down", "nearest"))):

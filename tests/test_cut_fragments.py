@@ -35,3 +35,49 @@ def test_go_on_is_bounded_over_the_call():
     assert sum("please go on" in x.lower() for x in said) == 4
     _, said = run([FRAG] * 30, [])
     assert sum("please go on" in x.lower() for x in said) == 4
+
+
+def with_rule(value):
+    s = json.loads(json.dumps(SPEC))
+    s.setdefault("rules", {})["non_answer_counts"] = value
+    return s
+
+
+def run_spec(spec, nego, after):
+    global SPEC
+    keep, SPEC = SPEC, spec
+    try:
+        return run(nego, after)
+    finally:
+        SPEC = keep
+
+
+SMALL_TALK = dict(k="unclear", t="Traffic was terrible this morning, the office is chaos.", d="", a="", f="none", side="none", cut="no")
+NO = dict(k="no", t="No, I can't.", d="", a="", f="none", side="none", cut="no")
+YES = dict(k="yes", t="Yes, I confirm.", d="", a="", f="none", side="none", cut="no")
+
+
+def test_silence_is_not_a_refusal_unless_the_brief_says_so():
+    led, said = run_spec(with_rule(False), [SMALL_TALK] * 30, [])
+    assert led["notes"] == [] and led["outcome"] is None and led["promises"] == []   # nothing invented
+    assert "close_call" not in led["calls"]
+
+
+def test_with_the_briefs_rule_empty_turns_end_the_call_as_used_up_attempts():
+    led, said = run_spec(with_rule(True), [SMALL_TALK] * 30, [])
+    assert led["outcome"] == "no_promise" and led["promises"] == []
+    assert sorted(led["notes"]) == [("p1", "refused"), ("p2", "refused")]
+    assert led["calls"].count("close_call") == 1
+    assert len(said) <= 3 + 12 + 2                                # bounded: greeting, identity, at most 12 empty turns
+
+
+def test_with_the_briefs_rule_an_unconfirmed_plan_is_never_recorded():
+    led, said = run_spec(with_rule(True), BOTH_30, [FRAG] * 30)
+    assert led["promises"] == [] and led["outcome"] == "no_promise"
+    led, said = run_spec(with_rule(True), BOTH_30, [FRAG] * 10 + [YES])
+    assert sorted(led["promises"]) == [("p1", 300.0, "2026-10-30"), ("p2", 900.0, "2026-10-23")]
+
+
+def test_an_explicit_no_is_still_a_refusal_and_a_question_is_not():
+    led, _ = run_spec(with_rule(False), [NO] * 6, [])
+    assert led["outcome"] == "no_promise" and ("p1", "refused") in led["notes"]
