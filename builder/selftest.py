@@ -328,8 +328,9 @@ def run_all(spec, openapi):
         def notes_for(event, pids=("p1",)):
             n = event_at(spec, event).get("note")
             if isinstance(n, dict):                    # one code per product type: p1 is types[0], p2 types[1], ...
-                return [(p, engine.by_type(n, types[int(p[1:]) - 1] if int(p[1:]) - 1 < len(types) else types[0]))
-                        for p in pids] if notes_on else []
+                got = [(p, engine.only_type(n, types[int(p[1:]) - 1] if int(p[1:]) - 1 < len(types) else types[0]))
+                       for p in pids]
+                return [(p, c) for p, c in got if c] if notes_on else []         # "" or no entry: no note for that type
             return [(p, n) for p in pids] if notes_on and n else []
         spoken = [dict(k="answer", t=spoken_form(q, ident[q["field"]])) for q in spec["identity"]["questions"]]
         P_ = spec["products"]
@@ -428,6 +429,9 @@ def every_band(spec, openapi, today, types):
                         p = engine.product_facts(V, raw)
                     except Exception as e:
                         return (name, False, f"band {b.get('name')}, {typ}, {d}: {type(e).__name__}: {e}")
+                    fixed_ = [r.get("value") for r in [b.get("deadline") or {}] if r.get("kind") == "fixed_date"]
+                    if fixed_ and d.isoformat() > fixed_[0]:
+                        continue                   # a fixed calendar date is past once the day has gone by
                     if p["status"] == "open" and p["deadline"] < d.isoformat():
                         return (name, False, f"band {b.get('name')}, {typ}, {d}: deadline {p['deadline']} is before today")
         return (name, True, "")

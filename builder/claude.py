@@ -4,17 +4,22 @@ import asyncio
 import json
 import os
 import re
+import tempfile
 import time
 
 from claude_agent_sdk import AssistantMessage, ClaudeAgentOptions, ResultMessage, TextBlock, query
 
+_SCRATCH = tempfile.mkdtemp(prefix="builder-claude-")
 MODEL = os.environ.get("BUILDER_MODEL", "claude-opus-5-5")
 
 
 async def _ask(prompt, system, model, effort):
     # No tools are allowed; a few turns of headroom so a refused tool attempt does not end the call in an error.
-    opts = ClaudeAgentOptions(model=model, system_prompt=system, allowed_tools=[], max_turns=4,
-                              permission_mode="dontAsk", setting_sources=[], effort=effort)
+    # tools=[] removes every built-in tool (allowed_tools=[] only means "none pre-approved"); the call runs in an
+    # empty scratch folder, not in the repository that holds env.sh, and without MCP servers or skills.
+    opts = ClaudeAgentOptions(model=model, system_prompt=system, allowed_tools=[], tools=[], max_turns=4,
+                              permission_mode="dontAsk", setting_sources=[], effort=effort,
+                              cwd=_SCRATCH, strict_mcp_config=True)
     turns, cost = [], 0.0
     try:
         async for m in query(prompt=prompt, options=opts):

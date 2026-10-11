@@ -12,7 +12,7 @@ readings and the adjudication are for. The engine itself never imports this (the
 """
 import datetime
 import re
-from typing import Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
@@ -177,6 +177,17 @@ class Spec(Loose):
     tool_bodies: Dict[str, Dict[str, str]]
     lines: Dict[str, str]
     max_not_talk: int = Field(default=2, ge=1)
+    policy: Optional[Dict[str, Dict[str, Any]]] = None                       # evidence record per critical policy path
+    code_tables: Optional[Dict[str, Union[List[str], Dict[str, List[str]]]]] = None
+
+    @field_validator("policy")
+    @classmethod
+    def _policy(cls, v):
+        for path, r in (v or {}).items():
+            q = r.get("quotes")
+            if q is not None and (not isinstance(q, list) or not all(isinstance(x, str) for x in q)):
+                raise ValueError(f"policy.{path}.quotes must be a list of strings, one per quoted passage")
+        return v
 
     @field_validator("confirm")
     @classmethod

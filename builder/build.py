@@ -48,6 +48,8 @@ def finalize(spec, openapi):
     """Lossless normalisation + what the tool API file decides (response fields, success flags, record shape)."""
     from builder import spec_model
     spec_model.normalise(spec)
+    for k in ("system_prompt", "test_variables"):         # model output must never become the live agent's prompt
+        spec.pop(k, None)
     return comp.apply_defaults(spec, openapi)
 
 
@@ -122,6 +124,8 @@ def main():
     ap.add_argument("--no-chat", action="store_true")
     ap.add_argument("--no-deploy", action="store_true")
     a = ap.parse_args()
+    if not a.no_deploy and not os.environ.get("FREYA_API_KEY"):
+        sys.exit("FREYA_API_KEY is not set: nothing would be deployed (source env.sh first, or use --no-deploy)")
     tool_api = [f for f in a.files if f.endswith(".json")]
     briefs = [f for f in a.files if not f.endswith(".json")]
     if len(tool_api) != 1 or not briefs:
@@ -131,7 +135,7 @@ def main():
     trace.note(f"briefs={briefs} tool_api={tool_api[0]} slot={slot}")
     openapi = json.load(open(tool_api[0]))
     docs = [(pathlib.Path(b).name, pathlib.Path(b).read_text(errors="ignore")) for b in briefs]
-    DOCS_TEXT[0] = "\n".join(text for _, text in docs) + "\n" + json.dumps(openapi)
+    DOCS_TEXT[0] = "\n".join(text for _, text in docs) + "\n" + json.dumps(openapi, ensure_ascii=False)
 
     # One budget for the whole pipeline: every repair round anywhere (validation repairs during extraction,
     # repairs after the local checks) takes one unit, and no repair starts after REPAIR_SECONDS.
@@ -176,7 +180,12 @@ def main():
     trace.note(f"repair budget used: {budget.used}/{budget.total}")
 
     trace.step("3. compile workflow")
-    wf = comp.compile_workflow(spec, openapi)
+    try:
+        wf = comp.compile_workflow(spec, openapi)
+    except Exception as e:                    # e.g. the engine code is over the code-node budget
+        trace.note(f"STOP: the workflow could not be compiled ({type(e).__name__}: {e}); nothing deployed")
+        trace.end()
+        sys.exit(f"workflow compile failed: {e}")
     n_tools = sum(len(n.get("pre_actions", [])) for n in wf["nodes"].values())
     trace.note(f"workflow: {len(wf['nodes'])} nodes, {n_tools} engine-run calls, {len(json.dumps(wf))} bytes")
     (out_dir / f"{slot}.compiled.json").write_text(json.dumps(wf, indent=1))

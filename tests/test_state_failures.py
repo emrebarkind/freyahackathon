@@ -136,3 +136,39 @@ def test_note_codes_and_floor_rounding_per_product_type():
         assert [e for e in spec_model.check(S) if "floor_round" in e]
     finally:
         S = saved
+
+
+def test_an_engine_crash_during_negotiation_is_a_service_error_not_a_refusal():
+    from builder.runtime import engine, cal
+    s = copy.deepcopy(S)
+    engine.S = s
+    cal.P = dict(workdays=s["calendar"]["workdays"], holidays=s["calendar"]["holidays"])
+    saved = engine.run
+    engine.run = lambda V: 1 / 0
+    try:
+        V = {"now": "2026-10-14T11:00", "_state": json.dumps(
+            {"stage": "nego", "ci": 0, "products": [{"id": "p1", "type": "credit_card", "status": "open"}]})}
+        engine.main(V)
+        assert json.loads(V["_state"])["products"][0]["status"] == "service_error"
+        V = {"now": "2026-10-14T11:00", "_state": json.dumps({"stage": "id", "qi": 0})}
+        engine.main(V)
+        assert (V["c_outcome"], V["c_reason"]) == (s["events"]["service_error"]["outcome"], s["events"]["service_error"]["reason"] or "")
+    finally:
+        engine.run = saved
+
+
+def test_a_rule_for_one_product_type_does_not_apply_to_the_other_types():
+    from builder.runtime import engine
+    global S
+    saved = S
+    try:
+        S = copy.deepcopy(saved)
+        S["events"]["refused"]["note"] = {"credit_card": "CARD_REFUSED"}
+        led, _ = run([{"k": "no"}] * 8)
+        assert sorted(led["notes"]) == [("p1", "CARD_REFUSED")]                  # the loan gets no note
+        S["products"].update(floor_field={}, floor_pct=15, floor_full_below={"credit_card": 400}, floor_round="up_unit")
+        engine.S = S
+        f = lambda typ: engine.product_facts({"now": "2026-10-14T11:00"}, {"product_id": "x", "type": typ, "past_due": 312.34, "days_late": 5})["floor"]
+        assert (f("credit_card"), f("personal_loan")) == (312.34, 47.0)
+    finally:
+        S = saved

@@ -264,6 +264,11 @@ def by_type(m, typ, default=None):
     return default
 
 
+def only_type(m, typ):
+    """A rule stated for some product types applies to those types (or '*'), never to the others."""
+    return (m or dict()).get(typ, (m or dict()).get("*"))
+
+
 def product_facts(V, raw):
     today = today_of(V)
     typ = raw.get("type")
@@ -278,18 +283,18 @@ def product_facts(V, raw):
     ff = by_type(S["products"].get("floor_field"), typ)
     floor = num(raw.get(ff)) / scale if ff and num(raw.get(ff)) is not None else None
     pct = S["products"].get("floor_pct")
-    pct = by_type(pct, typ) if isinstance(pct, dict) else pct          # one percentage, or one per product type
+    pct = only_type(pct, typ) if isinstance(pct, dict) else pct          # one percentage, or one per product type
     if floor is None and pct is not None:
         fr = S["products"].get("floor_round")
-        floor = round_rule(full * float(pct) / 100.0, by_type(fr, typ) if isinstance(fr, dict) else fr)
+        floor = round_rule(full * float(pct) / 100.0, only_type(fr, typ) if isinstance(fr, dict) else fr)
     if floor is None:
         floor = full
     fmin = S["products"].get("floor_min")
-    fmin = by_type(fmin, typ) if isinstance(fmin, dict) else fmin
+    fmin = only_type(fmin, typ) if isinstance(fmin, dict) else fmin
     if fmin is not None:
         floor = max(floor, float(fmin))           # "never below X" (and the full amount when that is below X)
     fbelow = S["products"].get("floor_full_below")
-    fbelow = by_type(fbelow, typ) if isinstance(fbelow, dict) else fbelow
+    fbelow = only_type(fbelow, typ) if isinstance(fbelow, dict) else fbelow
     if fbelow is not None and full < float(fbelow):
         floor = full                              # "below X the whole amount is due": only when the brief says so
     dl = int(num(raw.get(S["products"].get("days_field", "days_late"))) or 0)
@@ -487,7 +492,7 @@ def finish(V, s, pre=""):
                 p["noted"] = True
                 note_reason = ev(stt).get("note")
                 if isinstance(note_reason, dict):      # the brief keeps one code per product type
-                    note_reason = by_type(note_reason, p.get("type", ""))
+                    note_reason = only_type(note_reason, p.get("type", ""))
                 if not note_reason:            # the brief keeps no note for this outcome
                     continue
                 return call(V, s, "api_note", n_product=p["id"], n_reason=note_reason)
@@ -2268,10 +2273,13 @@ def main(V):
             return
         if s.get("products"):
             try:
+                for q in s["products"]:                 # a crash is a service failure, not the customer's refusal
+                    if q.get("status") in ("open", "agreed"):
+                        q["status"] = "service_error"
                 return finish(V, s, L("no_info"))
             except Exception:
                 pass
-        e_ = S.get("events", dict()).get("service_error") or S.get("events", dict()).get("refused", dict())
+        e_ = ev("service_error") or ev("refused")
         V["c_outcome"] = e_.get("outcome", "")          # a technical failure is a service error, not a refusal
         V["c_reason"] = e_.get("reason", "") or ""
         say(V, L("goodbye"))

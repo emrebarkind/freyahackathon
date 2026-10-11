@@ -65,17 +65,23 @@ def get(d, path):
 def effective(spec, path):
     """(value, is_default)"""
     v = get(spec, path)
+    if path == "products.promise_scale" and v in (None, ""):          # the engine: promise_scale or amount_scale or 1
+        return float(get(spec, "products.amount_scale") or 1), True
     if v in (None, "") or (path in ("event_changes", "multi.outcome_priority") and not v):
         return CRITICAL[path][0], True
     return v, False
 
 
 def norm(t):
-    return re.sub(r"\s+", " ", re.sub(r"[`*_\"“”‘’'|]", "", str(t).lower())).strip()
+    t = re.sub(r"(?m)^[ \t]*>[ \t]?", " ", str(t))                 # a quoted (blockquote) paragraph keeps its words
+    return re.sub(r"\s+", " ", re.sub(r"[`*_\"“”‘’'|]", "", t.lower())).strip()
 
 
 def quote_found(q, text_n):
-    parts = [x.strip() for x in re.split(r"\.\.\.|…|\[\.\.\.\]", norm(q)) if len(x.strip()) >= 12]
+    n = norm(q)
+    if n and n in text_n:
+        return True                                                # a short sentence ("Retry once.") is matched whole
+    parts = [x.strip() for x in re.split(r"\.\.\.|…|\[\.\.\.\]", n) if len(x.strip()) >= 12]
     return bool(parts) and all(x in text_n for x in parts)
 
 
@@ -84,9 +90,11 @@ def records(spec):
     for p, q in (spec.get("sources") or {}).items():          # the older form: one sentence = explicit
         if q:
             out[p] = {"kind": "explicit", "quotes": q if isinstance(q, list) else [q]}
-    for p, r in (spec.get("policy") or {}).items():
+    pol = spec.get("policy")
+    for p, r in (pol.items() if isinstance(pol, dict) else []):
         if isinstance(r, dict):
-            out[p] = r
+            out[p] = dict(r, quotes=[x for x in (r.get("quotes") if isinstance(r.get("quotes"), list) else
+                                                  [r.get("quotes")] if r.get("quotes") else []) if isinstance(x, str)])
     return out
 
 
@@ -172,7 +180,7 @@ def check_codes(spec, openapi, docs_text, enum_of_slot):
     code is in the materials. With neither an enum nor a table for a field nothing is restricted; a code that is in
     no document is then only reported (warnings). Returns (errors, warnings)."""
     errs, warns = [], []
-    tables = spec.get("code_tables") or {}
+    tables = spec.get("code_tables") if isinstance(spec.get("code_tables"), dict) else {}
     toks = _tokens(docs_text)
     events = spec.get("events") or {}
 

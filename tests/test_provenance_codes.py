@@ -264,3 +264,65 @@ def test_week_deadlines_roll_by_a_week_and_next_month_days_are_not_capped_at_28(
     s["bands"][0]["deadline"] = {"kind": "end_of_week", "roll_if_not_after_today": True}
     assert engine.product_facts({"now": "2026-10-16T11:00"}, raw)["deadline"] == "2026-10-23"   # Friday: next Friday
     assert cal.deadline(datetime.date(2026, 10, 31), {"kind": "day_of_next_month", "n": 30}) == datetime.date(2026, 11, 30)
+
+
+# ---------------------------------------------------------------- K1 (adversarial review): audit records and verdicts
+
+def test_the_audit_record_lands_in_the_flat_policy_key_and_is_quote_checked():
+    spec = base()
+    spec["policy"] = {"rules.too_much_floor": {"kind": "unspecified", "assumption": "attempt 1"}}
+    memo = "MEMO: the floor is offered only on the asked date."
+    fixed = extract.apply_audit(spec, {"changes": {"rules.too_much_floor": "asked_date",
+                                                   "policy.rules.too_much_floor": {"kind": "explicit", "quotes": [memo]}},
+                                       "verdicts": {"rules.too_much_floor": "contradicted"}}, T())
+    assert policy.records(fixed)["rules.too_much_floor"]["kind"] == "explicit" and "rules" not in fixed["policy"]
+    assert policy.check(fixed, memo)[0] == []
+    fixed["policy"]["rules.too_much_floor"]["quotes"] = ["a made-up sentence nobody wrote"]
+    assert policy.check(fixed, memo)[0]                                    # now it is read, and it is wrong
+
+
+def test_verdict_keys_with_a_policy_prefix_and_missing_verdicts_are_not_silent():
+    s = {"rules": {"opening_is_attempt": True}}
+    f = extract.apply_audit(copy.deepcopy(s), {"changes": {}, "verdicts": {"policy.rules.opening_is_attempt": "contradicted"}}, T())
+    assert any("opening_is_attempt" in g for g in spec_model.critical(f))
+    f = extract.apply_audit(copy.deepcopy(s), {"changes": {}}, T())            # no ruling at all
+    assert any("no ruling" in g for g in spec_model.critical(f))
+
+
+def test_a_repair_cannot_clear_an_unresolved_item_by_echoing_the_audit_back():
+    old = {"rules": {"opening_is_attempt": True}}
+    old = extract.apply_audit(old, {"changes": {}, "verdicts": {"rules.opening_is_attempt": "contradicted",
+                                                                 "rules.first_ask": "supported"}}, T())
+    echoed = copy.deepcopy(old)
+    echoed["policy_audit"] = {"verdicts": {}, "unresolved": []}
+    assert spec_model.critical(extract.carry_audit(old, echoed))
+    changed = copy.deepcopy(old)
+    changed["rules"]["opening_is_attempt"] = False                              # the value itself was corrected
+    assert not spec_model.critical(extract.carry_audit(old, changed))
+
+
+def test_exact_quotes_are_found_in_blockquotes_unicode_and_when_short():
+    brief = "> 7. The retry rule: failed writes\n> are tried again once.\nAmount in pence. £194.83 is sent as 19483.\n8. Retry once."
+    docs = brief + "\n" + json.dumps({"description": "£194.83"}, ensure_ascii=False)
+    text = policy.norm(docs)
+    assert policy.quote_found("The retry rule: failed writes are tried again once.", text)
+    assert policy.quote_found("£194.83 is sent as 19483.", text)
+    assert policy.quote_found("Retry once.", text) and not policy.quote_found("Never retry.", text)
+
+
+def test_the_audit_shows_the_real_promise_scale_default():
+    s = base()
+    s["products"]["amount_scale"] = 100
+    assert policy.effective(s, "products.promise_scale") == (100.0, True)    # the engine sends minor units here
+    s["products"]["promise_scale"] = 1
+    assert policy.effective(s, "products.promise_scale") == (1, False)
+
+
+def test_a_repair_cannot_hide_code_errors_by_deleting_the_code_tables_or_dated_changes():
+    old = {"code_tables": {"reason": {"no_promise": ["refused"]}},
+           "event_changes": [{"event": "paid", "from": "2026-11-02", "set": {"note": "X"}}]}
+    for key in ("code_tables", "event_changes"):
+        new = copy.deepcopy(old)
+        new.pop(key)
+        ok, lost = extract.progress(old, new, ["a code error"], [])
+        assert not ok and lost

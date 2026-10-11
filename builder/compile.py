@@ -88,7 +88,9 @@ def embed_json(obj):
     return "json.loads(bytes.fromhex('" + t.encode().hex() + "').decode())"
 
 
-ENGINE_UNUSED = ("assumptions", "tool_bodies", "intents", "system_prompt", "test_variables")
+# keys the engine never reads: build-time evidence and notes stay out of the production code node
+ENGINE_UNUSED = ("assumptions", "tool_bodies", "intents", "system_prompt", "test_variables", "policy", "policy_audit",
+                 "unsupported_rules", "code_tables", "sources")
 _B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 LZW_DECODER = """def _lzw(a, s):
     B = dict((c, i) for i, c in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"))
@@ -527,7 +529,7 @@ def compile_workflow(spec, openapi):
     stages = ["open", "tp", "id", "nego", "hardship", "confirm", "after"]
     for st in stages:
         nodes["talk_" + st] = talk_node(st, spec)
-    first = spec["lines"]["opening"] + " " + spec["lines"]["confirm_ask"]
+    first = (spec["lines"]["opening"] + " " + spec["lines"]["confirm_ask"]).replace("{{", "{").replace("}}", "}")
     for v in ["title", "first_name", "last_name"] + [x for x in spec.get("call_variables", []) or [] if x != "now"]:
         first = first.replace("{" + v + "}", "{{" + v + "}}")
     first = re.sub(r"(?<!\{)\{[a-z_0-9]+\}(?!\})", "", first)       # never speak an unfilled placeholder
@@ -589,7 +591,7 @@ def compile_workflow(spec, openapi):
                         "parameters": {"type": "object", "properties": {"message_mode": {"type": "string", "default": "none"}}}}}}
     return {
         "initial_node": "talk_open",
-        "system_prompt": spec.get("system_prompt", "You are a bank's digital assistant on a phone call. Speak English."),
+        "system_prompt": "You are a bank's digital assistant on a phone call. Speak English.",   # never model output
         "nodes": nodes,
         "global_nodes": {},
         "test_variables": spec.get("test_variables", {"customer_id": "c_test", "first_name": "Daniel", "last_name": "Reyes",

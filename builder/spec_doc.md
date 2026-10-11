@@ -64,8 +64,11 @@ use the default shown and record it in `assumptions`.
                                                    // an amount ("under 100 the full amount is due"): a number or {"<type>": n}
    "floor_names": {"<product type>": "<what the brief calls the floor, e.g. minimum payment>"},
    "amount_scale": 1,                              // 100 only if get_account gives amounts in cents/pence (minor units)
-   "promise_scale": null,                          // only if create_promise takes another unit than get_account gives:
-                                                   // 100 when get_account is in pounds/euros but create_promise wants pence/cents
+   "promise_scale": null,                          // create_promise units per currency unit (absolute, not relative to
+                                                   // get_account). Unset = the same as amount_scale. Set it only if
+                                                   // create_promise takes another unit than get_account gives, e.g. 100
+                                                   // when get_account is in pounds/euros but create_promise wants pence/cents,
+                                                   // or 1 when get_account is in pence but create_promise takes whole pounds
    "promise_round": null,                          // only if the brief says how to round a promise to the unit create_promise
                                                    // takes: "up", "down" or "nearest"; never invent one
    "floor_round": null,                            // with floor_pct only: "up_unit", "nearest_unit", or a step: "up:0.05",
@@ -312,7 +315,7 @@ leave unset still has a value (the engine default: skipped_repeat_counts true, o
 opening_blocks_repeat false, too_much_skips_full false, too_much_floor "attempt_1", ladder_repeat_last false,
 refuse_deadline_is_refusal true, promise_retries 1, hardship_transfer "ask_first", deadline_adjust
 "previous_business_day", first_ask "today", week_end_today "literal", floor_round / step_round "cents",
-promise_scale 1), so record it too whenever the materials say anything about it. One record per path:
+promise_scale = amount_scale), so record it too whenever the materials say anything about it. One record per path:
   {"kind": "explicit", "quotes": ["<the sentence that states it, word for word>"]}
   {"kind": "derived", "quotes": ["<passage>", "<passage>"], "derivation": "<how they give the value>"}
   {"kind": "unspecified", "assumption": "<what the agent then does>"}        (the materials are silent; leave the
