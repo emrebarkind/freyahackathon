@@ -1,0 +1,124 @@
+[    0.0s] START 2026-10-11T15:07:18+0000
+[    0.0s] NOTE briefs=['eval/stress/s3-conv/brief.md'] tool_api=eval/stress/s3-conv/openapi.json slot=stress-s3-conv
+[    0.0s] STEP 1. spec extraction
+[    0.9s] NOTE extraction mode B
+[   94.2s] MODEL CALL #1 model=claude-opus-5-5 seconds=93.3 cost_usd=0.365 purpose: read the brief and tool API into a spec (single reading, effort high)
+[   94.2s] MODEL CALL #2 model=claude-opus-5-5 seconds=93.3 cost_usd=0.192 purpose: independent reading: behaviour checks from the materials only (oracle)
+[   94.2s] NOTE oracle: 22 independent checks
+[  140.7s] MODEL CALL #3 model=claude-opus-5-5 seconds=46.5 cost_usd=0.328 purpose: audit the high-risk fields and the critical policies of the reading against the source documents
+[  140.7s] NOTE audit: **Field audit**
+[  140.7s] 
+[  140.7s] - **calendar**: supported. "Business days are Monday to Friday, except bank holidays 2026-11-11, 2026-11-26, 2026-11-27, 2026-12-24, 2026-12-25, 2026-12-31 and 2027-01-01." Workdays are 0 to 4, and all seven holidays are listed.
+[  140.7s] - **date_rules**: not decided. The brief says nothing about "next Friday", so the default is an assumption and is recorded.
+[  140.7s] - **confirm**: not decided. The brief is silent, so the default max_asks 2 is recorded.
+[  140.7s] - **callback**: not decided. The brief has no callback rule, so the defaults are recorded in assumptions.
+[  140.7s] - **identity.questions**: supported. "Ask for the date of birth first (`date_of_birth`, sent as `YYYY-MM-DD`), then the last four digits of the phone number on file (`phone_last4`)." Order, format %Y-%m-%d, digits and length 4 all match. The API enum is the same.
+[  140.7s] - **identity.max_wrong**: supported. "Three wrong answers in total end the check: close as `not_verified` / `failed`." Value 3, counted in total.
+[  140.7s] - **identity.hints**: supported. The API hint enum is `day_month_swapped`, and the line suits it.
+[  140.7s] - **identity (response, rejects)**: supported. The API says "An unreadable value is rejected with ok=false and is not counted as a wrong answer." This is carried by `ok`. date_order is null, which is correct because the format is YYYY-MM-DD.
+[  140.7s] - **products.amount_field**: supported. The API field is `past_due`, and the brief says "the full past-due amount".
+[  140.7s] - **products.floor_field**: supported. "Credit card: `minimum_payment`. Personal loan: `instalment_amount`."
+[  140.7s] - **products.floor_pct**: supported. "Overdraft: 25% of the `past_due`"
+[  140.7s] - **products (floor_round, floor_min)**: supported. "rounded up to the next whole dollar (a whole-dollar result stays as it is), with a minimum of $25; if the past-due amount is below $25, the floor is the whole past-due amount."
+[  140.7s]   - up_unit is applied first, then the minimum of 25, then the debt below 25 becomes its own floor.
+[  140.7s]   - Check by hand: 101 gives 25.25, rounded to 26. 100 gives 25. 60 gives 15, raised to 25. 20 gives 20.
+[  140.7s]   - promise_scale is null, which is correct: "Amounts are in US dollars, in the tool API as well as on the phone."
+[  140.7s] - **bands**: supported. The table gives early 1 to 30 with "the 7th business day after today" and 2 attempts, and late 31 to 90 with "the 3rd business day after today" and 2 attempts. "Never counts today itself" is the meaning of business_days_after.
+[  140.7s] - **ladder**: supported. "Step 1: the full past-due amount on the deadline. Step 2: the floor on the deadline."
+[  140.7s] - **notes**: supported. Notes `NO_PAY`, `DISPUTED`, `CLAIMS_PAID` and `SYS_FAIL` are required, so enabled is true.
+[  140.7s] - **events**: supported where the brief decides the codes, assumed elsewhere.
+[  140.7s]   - Promise: "At least one promise recorded: `promise` (no reason)."
+[  140.7s]   - Paid: "Every product noted `CLAIMS_PAID`: `paid` (no reason)."
+[  140.7s]   - Refused, dispute, service error: "`refused` (note `NO_PAY`), `dispute` (note `DISPUTED`) or `service_error` (note `SYS_FAIL`)."
+[  140.7s]   - Transfers: "`transferred` / `support`", "`transferred` / `restructuring`", and "transfer to `general`; close as `transferred` / `human`".
+[  140.7s]   - Identity failure: `not_verified` / `failed`.
+[  140.7s]   - Hardship is transferred/support with no note, per rule 20.
+[  140.7s]   - The other reasons are assumptions and are recorded.
+[  140.7s] - **tool_bodies**: supported. All required API fields are mapped.
+[  140.7s] - **multi**: supported.
+[  140.7s]   - Order: "Always handle the overdraft(s) first, then the credit card(s), then the personal loan(s)." and "the one with the larger `past_due` goes first".
+[  140.7s]   - Single date: "a product whose deadline is earlier takes its own deadline. Say so in the read-back." This gives clamp_single_date and clamped_note.
+[  140.7s]   - Continue after paid or dispute: "Neither ends the call."
+[  140.7s] - **human**: supported. "ask once whether you can help; if they insist, transfer to `general`"
+[  140.7s] - **max_not_talk**: not decided. The brief is silent, so the default is recorded.
+[  140.7s] - **rules**: see the policy rows below.
+[  140.7s] - **lines**:
+[  140.7s]   - ask_today and
+[  140.7s] NOTE audit changed: nothing
+[  140.7s] NOTE policy verdicts: changes=supported, event_changes=supported, multi.order=supported, multi.outcome_priority=supported, products.floor_full_below=supported, products.floor_min=supported, products.floor_pct=supported, products.floor_round=supported, products.promise_round=not_decided, products.promise_scale=supported, products.step_round=not_decided, rules.deadline_adjust=not_decided, rules.first_ask=supported, rules.hardship_transfer=supported, rules.ladder_repeat_last=supported, rules.non_answer_counts=supported, rules.notes_before_transfer=supported, rules.opening_blocks_repeat=not_decided, rules.opening_is_attempt=supported, rules.promise_retries=supported, rules.refuse_deadline_is_refusal=supported, rules.skipped_repeat_counts=not_decided, rules.too_much_floor=not_decided, rules.too_much_skips_full=not_decided, rules.week_end_today=not_decided
+[  140.8s] NOTE critical policies:
+[  140.8s]   - rules.opening_is_attempt: explicit: false
+[  140.8s]   - rules.first_ask: explicit: "today"
+[  140.8s]   - rules.opening_blocks_repeat: unspecified: false
+[  140.8s]   - rules.skipped_repeat_counts: unspecified: true (engine default)
+[  140.8s]   - rules.too_much_skips_full: unspecified: false
+[  140.8s]   - rules.too_much_floor: unspecified: "attempt_1"
+[  140.8s]   - rules.ladder_repeat_last: derived: false
+[  140.8s]   - rules.non_answer_counts: derived: false
+[  140.8s]   - rules.refuse_deadline_is_refusal: derived: true
+[  140.8s]   - rules.promise_retries: explicit: 1
+[  140.8s]   - rules.hardship_transfer: explicit: "direct"
+[  140.8s]   - rules.notes_before_transfer: explicit: false
+[  140.8s]   - rules.deadline_adjust: unspecified: "previous_business_day"
+[  140.8s]   - rules.week_end_today: unspecified: "literal" (engine default)
+[  140.8s]   - products.floor_pct: explicit: {"overdraft": 25}
+[  140.8s]   - products.floor_round: explicit: {"overdraft": "up_unit"}
+[  140.8s]   - products.floor_min: explicit: {"overdraft": 25}
+[  140.8s]   - products.floor_full_below: derived: null (engine default)
+[  140.8s]   - products.step_round: unspecified: "cents" (engine default)
+[  140.8s]   - products.promise_scale: derived: 1.0 (engine default)
+[  140.8s]   - products.promise_round: unspecified: null (engine default)
+[  140.8s]   - multi.order: explicit: [{"by": "type", "rank": ["overdraft", "credit_card", "personal_loan"]}, {"by": "amount", "desc": true}]
+[  140.8s]   - multi.outcome_priority: explicit: [] (engine default)
+[  140.8s]   - event_changes: unspecified: [] (engine default)
+[  140.8s]   - changes: unspecified: [] (engine default)
+[  140.8s] NOTE code warning: events.id_declined.reason: code 'declined' appears in no supplied document and the materials give no code table for reason
+[  140.8s] NOTE code warning: events.no_callback.reason: code 'no_callback' appears in no supplied document and the materials give no code table for reason
+[  140.8s] NOTE code warning: events.wrong_number.reason: code 'wrong_number' appears in no supplied document and the materials give no code table for reason
+[  140.8s] NOTE code warning: events.deceased.reason: code 'deceased' appears in no supplied document and the materials give no code table for reason
+[  140.8s] NOTE code warning: events.unclear.reason: code 'unclear' appears in no supplied document and the materials give no code table for reason
+[  140.8s] NOTE validation round 1: 0 problem(s)
+[  140.8s] NOTE oracle: 22 agree, 0 disagree, 0 unusable
+[  140.8s] NOTE assumption: Overdraft floor = ceil(25% of past_due) to a whole dollar, then at least 25, with a past_due below 25 giving the whole past_due as floor. Worked examples: 100 -> 25; 101 -> 25.25 -> 26; 60 -> 15 -> 25; 20 -> 20.
+[  140.8s] NOTE assumption: Both bands have 2 persuasion attempts after the opening question: step 1 is the full past_due on the deadline, step 2 is the floor on the deadline.
+[  140.8s] NOTE assumption: The brief does not cover callbacks when someone else answers. The default callback settings are used (today or the next business day, 10:00 to 19:00, two asks).
+[  140.8s] NOTE assumption: Event reasons for id_declined, callback, no_callback, wrong_number, deceased and unclear are not given in the brief. The API requires a reason, so these were chosen: not_verified/declined, not_reached/callback, not_reached/no_callback, not_reached/wrong_number, not_reached/deceased, not_reached/unclear.
+[  140.8s] NOTE assumption: The hardship event uses transferred/support with no note, because hardship transfers straight to support and rule 20 forbids notes on transfers.
+[  140.8s] NOTE assumption: The confirm max_asks, max_not_talk, max_unclear and next_weekday interpretation are not stated in the brief. Defaults are used.
+[  140.8s] NOTE assumption: A days_late value outside 1 to 90 is in no band. The brief is silent, so the default (service_error) applies.
+[  140.8s] NOTE assumption: date_order is left null. The tool takes YYYY-MM-DD, and callers say dates in words.
+[  140.8s] NOTE assumption: The brief does not say what happens to the remainder after a floor payment, so offer_floor_date does not mention it.
+[  140.8s] NOTE assumption: No line is required after a recorded promise (sms_line is empty).
+[  140.8s] NOTE assumption: Rule 12: for products still to come after a dispute or 'already paid', the opening question counts as already refused. This is treated as the standard per-product ladder flow, with no repeat of the opening ask.
+[  140.8s] STEP 2. local checks: structure, tool API, engine self-test on synthetic customers
+[  141.6s] TEST PASS local happy path, pays in full today
+[  141.6s] TEST PASS local someone else answers, books a callback
+[  141.6s] TEST PASS local wrong number
+[  141.6s] TEST PASS local identity fails
+[  141.6s] TEST PASS local identity answered the way people speak
+[  141.6s] TEST PASS local already paid
+[  141.6s] TEST PASS local dispute
+[  141.6s] TEST PASS local hardship, accepts support
+[  141.6s] TEST PASS local restructuring request
+[  141.6s] TEST PASS local flat refusals
+[  141.6s] TEST PASS local the bank fails to record the promise twice
+[  141.6s] TEST PASS local the callback booking fails once, then works
+[  141.6s] TEST PASS local several products, all paid today
+[  141.6s] TEST PASS local every band and product type gives a deadline and a floor
+[  141.6s] NOTE local checks: structural 0, tool API 0, self-test 14/14
+[  141.6s] NOTE assumption (engine default, the brief is silent): the brief does not say whether a ladder step skipped as a repeat of an earlier proposal uses one of the band's proposals: it does
+[  141.6s] NOTE assumption (recorded as unspecified by the materials): rules.opening_blocks_repeat: The brief does not say whether a ladder step equal to the opening ask is a repeat. The ladder steps are on the deadline, which is always a later business day than today, so they never equal the opening ask. The default (false) is kept.
+[  141.6s] NOTE assumption (recorded as unspecified by the materials): rules.skipped_repeat_counts: The brief does not say how a skipped repeated step counts. The engine default applies.
+[  141.6s] NOTE assumption (recorded as unspecified by the materials): rules.too_much_skips_full: The brief does not address 'too much'. The default (false) applies.
+[  141.6s] NOTE assumption (recorded as unspecified by the materials): rules.too_much_floor: The brief does not address 'the full amount is too much'. The default applies: the floor is offered as the next attempt.
+[  141.6s] NOTE assumption (recorded as unspecified by the materials): rules.deadline_adjust: Deadlines are the Nth business day after today, so they always fall on a business day. The default previous_business_day applies to any other date.
+[  141.6s] NOTE assumption (recorded as unspecified by the materials): rules.week_end_today: No week-based steps are used. The engine default applies.
+[  141.6s] NOTE assumption (recorded as unspecified by the materials): products.step_round: There are no percentage ladder steps.
+[  141.6s] NOTE assumption (recorded as unspecified by the materials): products.promise_round: The brief gives no rounding rule for promises. None is applied.
+[  141.6s] NOTE assumption (recorded as unspecified by the materials): event_changes: There are no dated code changes.
+[  141.6s] NOTE assumption (recorded as unspecified by the materials): changes: There are no dated value changes.
+[  141.6s] NOTE repair budget used: 0/3
+[  141.6s] STEP 3. compile workflow
+[  141.7s] NOTE workflow: 25 nodes, 16 engine-run calls, 195827 bytes
+[  141.7s] NOTE RESULT: COMPLETE -- every rule carried, every local scenario passes
+[  141.7s] END 2026-10-11T15:09:39+0000 total_seconds=141.7 model_calls=3 model_cost_usd=0.89

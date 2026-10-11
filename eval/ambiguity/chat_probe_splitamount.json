@@ -1,0 +1,222 @@
+{
+ "confirm-ambiguity": {
+  "call_id": "85bbf31a-c293-4850-8dd2-393bf62a428f",
+  "turns": [
+   {
+    "user": "Hello?",
+    "agent": "Hello?",
+    "s": 3.9
+   },
+   {
+    "user": "Yes, this is Daniel Reyes.",
+    "agent": "Before we go on, I need to ask you two security questions. Could you please tell me your date of birth?",
+    "s": 5.0
+   },
+   {
+    "user": "14 March 1988.",
+    "agent": "What are the last four digits of the phone number we have on file for you?",
+    "s": 7.0
+   },
+   {
+    "user": "4471.",
+    "agent": "Thank you. I am calling from the collections team about a late payment. Your credit card ending 4821 has 420 dollars past due, and it is 6 days late. Can you make this payment today?",
+    "s": 24.4
+   },
+   {
+    "user": "I can pay the full amount today.",
+    "agent": "Let me read that back to you. Your credit card ending 4821: 420 dollars on Wednesday 14 October. Do you confirm?",
+    "s": 7.3
+   },
+   {
+    "user": "uh...",
+    "agent": "Sorry, please go on.",
+    "s": 4.5
+   },
+   {
+    "user": "I was thinking...",
+    "agent": "Sorry, please go on.",
+    "s": 13.4
+   },
+   {
+    "user": "Yes, I confirm.",
+    "agent": "Thank you, your promise is recorded. You will receive a text message confirming this promise. Is there anything else I can help you with?",
+    "s": 7.4
+   },
+   {
+    "user": "No, that's all.",
+    "agent": "Thank you for your time. Goodbye.",
+    "s": 8.6
+   }
+  ],
+  "extracted": [
+   [
+    "nego_date",
+    "today",
+    "I can pay the full amount today."
+   ],
+   [
+    "nego_kind",
+    "yes",
+    "I can pay the full amount today."
+   ],
+   [
+    "nego_cut",
+    "no",
+    "I can pay the full amount today."
+   ],
+   [
+    "confirm_kind",
+    "unclear",
+    "uh..."
+   ],
+   [
+    "confirm_cut",
+    "yes",
+    "uh..."
+   ],
+   [
+    "confirm_kind",
+    "unclear",
+    "I was thinking..."
+   ],
+   [
+    "confirm_cut",
+    "yes",
+    "I was thinking..."
+   ],
+   [
+    "confirm_kind",
+    "yes",
+    "Yes, I confirm."
+   ],
+   [
+    "confirm_cut",
+    "no",
+    "Yes, I confirm."
+   ]
+  ],
+  "ledger": [
+   [
+    "verify_identity",
+    {
+     "field": "date_of_birth",
+     "answer": "1988-03-14"
+    },
+    {
+     "ok": true,
+     "verified": true,
+     "wrong_answers_left": 3,
+     "all_verified": false
+    }
+   ],
+   [
+    "verify_identity",
+    {
+     "field": "phone_last4",
+     "answer": "4471"
+    },
+    {
+     "ok": true,
+     "verified": true,
+     "wrong_answers_left": 3,
+     "all_verified": true
+    }
+   ],
+   [
+    "get_account",
+    {},
+    {
+     "ok": true,
+     "products": [
+      {
+       "product_id": "p1",
+       "type": "credit_card",
+       "card_last4": "4821",
+       "past_due": 420,
+       "days_late": 6,
+       "minimum_payment": 126
+      }
+     ]
+    }
+   ],
+   [
+    "create_promise",
+    {
+     "date": "2026-10-14",
+     "amount": 420,
+     "product_id": "p1"
+    },
+    {
+     "ok": true,
+     "promise_id": "pr1"
+    }
+   ],
+   [
+    "close_call",
+    {
+     "outcome": "promise"
+    },
+    {
+     "ok": true
+    }
+   ]
+  ]
+ },
+ "correction-and-noise": {
+  "call_id": "eb92676b-8800-4cf2-840d-7623a7b342b8",
+  "turns": [
+   {
+    "user": "Hello?",
+    "agent": "Hello?",
+    "s": 3.5
+   },
+   {
+    "user": "Yes, this is Daniel Reyes.",
+    "agent": "Before we go on, I need to ask you two security questions. Could you please tell me your date of birth?",
+    "s": 12.3
+   },
+   {
+    "user": "14 March 1988.",
+    "agent": "What are the last four digits of the phone number we have on file for you?",
+    "s": 18.5
+   },
+   {
+    "user": "4471.",
+    "error": "POST /api/v2/chat/message -> 504: error code: 504\n"
+   }
+  ],
+  "extracted": [],
+  "ledger": [
+   [
+    "verify_identity",
+    {
+     "field": "date_of_birth",
+     "answer": "1988-03-14"
+    },
+    {
+     "ok": true,
+     "verified": true,
+     "wrong_answers_left": 3,
+     "all_verified": false
+    }
+   ]
+  ]
+ },
+ "fragmented-amount": {
+  "call_id": null,
+  "turns": [
+   {
+    "user": "Hello?",
+    "error": "POST /api/v2/chat/message -> 504: error code: 504\n"
+   }
+  ],
+  "extracted": [
+   [
+    "error",
+    "GET /api/v2/call/None -> 400: {\"success\":false,\"data\":{\"message\":\"Validation failed\",\"result\":{\"error\":\"Validation failed\",\"details\":[{\"field\":\"callId\",\"message\":\"Call ID must be a valid UUID\"}]}}}",
+    ""
+   ]
+  ],
+  "ledger": []
+ }
+}

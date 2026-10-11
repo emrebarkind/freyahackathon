@@ -1,0 +1,36 @@
+{
+ "correction-and-noise": {
+  "call_id": null,
+  "turns": [
+   {
+    "user": "Hello?",
+    "error": "POST /api/v2/chat/message -> 504: error code: 504\n"
+   }
+  ],
+  "extracted": [
+   [
+    "error",
+    "GET /api/v2/call/None -> 400: {\"success\":false,\"data\":{\"message\":\"Validation failed\",\"result\":{\"error\":\"Validation failed\",\"details\":[{\"field\":\"callId\",\"message\":\"Call ID must be a valid UUID\"}]}}}",
+    ""
+   ]
+  ],
+  "ledger": []
+ },
+ "fragmented-amount": {
+  "call_id": null,
+  "turns": [
+   {
+    "user": "Hello?",
+    "error": "POST /api/v2/chat/message -> 504: error code: 504\n"
+   }
+  ],
+  "extracted": [
+   [
+    "error",
+    "GET /api/v2/call/None -> 400: {\"success\":false,\"data\":{\"message\":\"Validation failed\",\"result\":{\"error\":\"Validation failed\",\"details\":[{\"field\":\"callId\",\"message\":\"Call ID must be a valid UUID\"}]}}}",
+    ""
+   ]
+  ],
+  "ledger": []
+ }
+}

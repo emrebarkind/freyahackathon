@@ -1,0 +1,111 @@
+[    0.0s] START 2026-10-11T15:07:18+0000
+[    0.0s] NOTE briefs=['eval/stress/s1-docs/brief.md'] tool_api=eval/stress/s1-docs/openapi.json slot=stress-s1-docs
+[    0.0s] STEP 1. spec extraction
+[    0.9s] NOTE extraction mode B
+[  110.4s] MODEL CALL #1 model=claude-opus-5-5 seconds=109.6 cost_usd=0.414 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  110.4s] MODEL CALL #2 model=claude-opus-5-5 seconds=109.6 cost_usd=0.218 purpose: independent reading: behaviour checks from the materials only (oracle)
+[  110.4s] NOTE oracle: 22 independent checks
+[  158.0s] MODEL CALL #3 model=claude-opus-5-5 seconds=47.6 cost_usd=0.341 purpose: audit the high-risk fields and the critical policies of the reading against the source documents
+[  158.0s] NOTE audit: **Field audit**
+[  158.0s] 
+[  158.0s] - **calendar**: supported. Quote: "Monday to Friday, except the credit union holidays 2026-11-11, 2026-11-26, 2026-11-27, 2026-12-25 and 2027-01-01." Rhea's Christmas Eve point does not apply: "Rhea's email of 14 October 2026 … is **withdrawn in full**… 2026-12-24 is a normal business day". The workdays and the five holidays match.
+[  158.0s] - **date_rules**: not decided. The brief never defines "next Friday", so the default "following_week" is an assumption, and the spec records it.
+[  158.0s] - **confirm**: not decided. The materials give no limit, so the default of 2 asks applies.
+[  158.0s] - **callback**: not decided. The brief has no callback window or days. The defaults are used and recorded in assumptions.
+[  158.0s] - **identity.questions**: supported. Quote: "first the last four digits of the phone number on file (`phone_last4`), then the date of birth (`date_of_birth`). Send the date of birth as `YYYY-MM-DD`." The API also says "For phone_last4: four digits". So digits with length 4, then a date in %Y-%m-%d, is correct.
+[  158.0s] - **identity.max_wrong**: supported. Quote: "The identity check has failed at the third wrong answer in total, across both questions." So 3 in total, and per-question counting stays null, which is correct.
+[  158.0s] - **identity.hints**: supported. The API's hint enum is ["day_month_swapped"], and the line re-asks the date.
+[  158.0s] - **identity (response, reject_values)**: supported. Quote: "An unreadable value is rejected with ok=false and is not counted". Rejection is signalled through `ok`, not through a value of `verified`, so reject_values stays empty.
+[  158.0s] - **products.amount_field / days_field**: supported. Quote: "state each late product (name, past-due amount, days late)". The API fields are past_due and days_late.
+[  158.0s] - **products.floor_field**: supported. Quote: "`minimum_payment` for a credit card and `instalment_amount` for a personal loan, in both bands." The email's "full past-due" floor for late loans was withdrawn ("late-band personal loans keep the instalment as their floor").
+[  158.0s] - **products.floor_pct**: supported (null). The floor is an account field.
+[  158.0s] - **products (scales)**: supported. Quotes: "Amounts are in US dollars." and "amount in dollars as stated". So amount_scale 1 and promise_scale unset are correct.
+[  158.0s] - **bands**: supported. Quote: the table rows "early | 1 to 30 | the 10th business day after today | 2" and "late | 31 to 90 | the last business day of the current calendar month | 2", plus "if today is the last business day of the month, the deadline is the last business day of the following month".
+[  158.0s]   - The roll flag is roll_if_not_after_today. That correctly includes the day that is today.
+[  158.0s] - **changes (AM-2)**: supported. Quote: "From 2 November 2026 (calls on that day included), for **credit cards in the early band only**, the deadline is the 5th business day after today". It is carried as bands.0.deadline_by_type.credit_card from 2026-11-02.
+[  158.0s] - **ladder**: supported. Quotes: "1. the full past-due amount on the last business day of this week…" and "2. the floor on the deadline." The rule "Any step whose date is after the product's deadline uses the deadline instead" is built-in behaviour.
+[  158.0s] - **notes**: supported (enabled). Quote: "When the attempts are used up the product ends without a promise and gets a refusal note."
+[  158.0s] - **events**: supported. Every code matches Table N-4 and §2.8/2.9:
+[  158.0s]   - care is routed to member_care.
+[  158.0s]   - restructuring is routed to the restructuring queue, because the email was withdrawn.
+[  158.0s]   - human is routed to general.
+[  158.0s]   - dispute uses DSP, not DISP.
+[  158.0s]   - unclear (not_reached / no_callback) is an assumption, and the spec records it.
+[  158.0s] - **tool_bodies**: supported. All required fields map to the API names: field, answer, product_id, amount, date, reason, date, time, queue and outcome.
+[  158.0s] - **multi**: supported. Quote: "Handle the products in the order `get_account` returns them." and "the reason from table N-4 for the first product (in handling order) that did not end paid."
+[  158.0s] - **human**: supported. Quote: "ask onc
+[  158.0s] NOTE audit changed: nothing
+[  158.0s] NOTE policy verdicts: changes=supported, event_changes=supported, multi.order=supported, multi.outcome_priority=supported, products.floor_full_below=not_decided, products.floor_min=not_decided, products.floor_pct=supported, products.floor_round=not_decided, products.promise_round=not_decided, products.promise_scale=supported, products.step_round=not_decided, rules.deadline_adjust=quote_does_not_support, rules.first_ask=supported, rules.hardship_transfer=supported, rules.ladder_repeat_last=not_decided, rules.non_answer_counts=supported, rules.notes_before_transfer=supported, rules.opening_blocks_repeat=supported, rules.opening_is_attempt=supported, rules.promise_retries=supported, rules.refuse_deadline_is_refusal=supported, rules.skipped_repeat_counts=not_decided, rules.too_much_floor=not_decided, rules.too_much_skips_full=not_decided, rules.week_end_today=supported
+[  158.0s] NOTE critical policies:
+[  158.0s]   - rules.opening_is_attempt: explicit: false
+[  158.0s]   - rules.opening_blocks_repeat: derived: false
+[  158.0s]   - rules.skipped_repeat_counts: unspecified: true (engine default)
+[  158.0s]   - rules.too_much_skips_full: unspecified: false
+[  158.0s]   - rules.too_much_floor: unspecified: "attempt_1"
+[  158.0s]   - rules.ladder_repeat_last: unspecified: false
+[  158.0s]   - rules.non_answer_counts: derived: false
+[  158.0s]   - rules.refuse_deadline_is_refusal: derived: true
+[  158.0s]   - rules.promise_retries: explicit: 1
+[  158.0s]   - rules.hardship_transfer: explicit: "ask_first" (engine default)
+[  158.0s]   - rules.notes_before_transfer: explicit: false
+[  158.0s]   - rules.deadline_adjust: derived: "previous_business_day"
+[  158.0s]   - rules.first_ask: explicit: "today"
+[  158.0s]   - rules.week_end_today: derived: "next_week"
+[  158.0s]   - products.floor_pct: derived: null (engine default)
+[  158.0s]   - products.floor_min: unspecified: null (engine default)
+[  158.0s]   - products.floor_full_below: unspecified: null (engine default)
+[  158.0s]   - products.floor_round: unspecified: "cents" (engine default)
+[  158.0s]   - products.step_round: unspecified: "cents" (engine default)
+[  158.0s]   - products.promise_scale: explicit: 1.0 (engine default)
+[  158.0s]   - products.promise_round: unspecified: null (engine default)
+[  158.0s]   - multi.order: explicit: [] (engine default)
+[  158.0s]   - multi.outcome_priority: explicit: [] (engine default)
+[  158.0s]   - event_changes: derived: [] (engine default)
+[  158.0s]   - changes: derived: [{"from": "2026-11-02", "set": {"bands.0.deadline_by_type": {"credit_card": {"kind": "business_days_after", "n": 5}}}}]
+[  158.0s] NOTE validation round 1: 0 problem(s)
+[  158.0s] NOTE oracle: 22 agree, 0 disagree, 0 unusable
+[  158.0s] NOTE assumption: Rhea Okonkwo's email of 14 October 2026 is withdrawn in full by the memo of 21 October 2026 and never took effect: late-band personal loans keep instalment_amount as floor, 2026-12-24 is a normal business day (not a holiday), restructuring transfers go to the 'restructuring' queue.
+[  158.0s] NOTE assumption: Amendment AM-2 applies from 2026-11-02 (calls that day included) only to credit cards in the early band: deadline becomes the 5th business day after today; modelled in 'changes' as bands.0.deadline_by_type.credit_card.
+[  158.0s] NOTE assumption: Late band roll: 'if today is the last business day of the month, the deadline is the last business day of the following month' is modelled with roll_if_not_after_today (also rolls if the month's last business day is already past, e.g. on a weekend call after it).
+[  158.0s] NOTE assumption: Step dates after the product's deadline use the deadline (built-in behaviour).
+[  158.0s] NOTE assumption: The brief says nothing about callbacks when someone else answers; defaults used (today or next business day, 10:00-19:00, later than now, 2 asks).
+[  158.0s] NOTE assumption: The brief gives no code for an unclear identity confirmation; it is closed as not_reached / no_callback.
+[  158.0s] NOTE assumption: Confirmation question asked up to 2 times (default); 'next <weekday>' read as the following calendar week (default).
+[  158.0s] NOTE assumption: No rule for days_late outside 1-90; such a product gets no offer and ends with the default service_error handling.
+[  158.0s] NOTE assumption: The brief does not say how often an unclear answer is repeated; max_unclear left to the engine default.
+[  158.0s] NOTE assumption: Asking what the call is about instead of answering a security question counts as declining (default).
+[  158.0s] NOTE assumption: No SMS or other sentence required after a recorded promise; sms_line is empty.
+[  158.0s] NOTE assumption: The brief says nothing about changing a recorded promise; the agent says it cannot be changed on this call.
+[  158.0s] NOTE assumption: Weekend-call policy is not stated; deadlines and steps are computed as usual.
+[  158.0s] STEP 2. local checks: structure, tool API, engine self-test on synthetic customers
+[  158.9s] TEST PASS local happy path, pays in full today
+[  158.9s] TEST PASS local someone else answers, books a callback
+[  158.9s] TEST PASS local wrong number
+[  158.9s] TEST PASS local identity fails
+[  158.9s] TEST PASS local identity answered the way people speak
+[  158.9s] TEST PASS local already paid
+[  158.9s] TEST PASS local dispute
+[  158.9s] TEST PASS local hardship, accepts support
+[  158.9s] TEST PASS local restructuring request
+[  158.9s] TEST PASS local flat refusals
+[  158.9s] TEST PASS local the bank fails to record the promise twice
+[  158.9s] TEST PASS local the callback booking fails once, then works
+[  158.9s] TEST PASS local several products, all paid today
+[  158.9s] TEST PASS local every band and product type gives a deadline and a floor
+[  158.9s] NOTE local checks: structural 0, tool API 0, self-test 14/14
+[  158.9s] NOTE assumption (engine default, the brief is silent): the brief does not say whether a ladder step skipped as a repeat of an earlier proposal uses one of the band's proposals: it does
+[  158.9s] NOTE assumption (recorded as unspecified by the materials): rules.skipped_repeat_counts: The brief does not say whether a skipped repeat step uses an attempt; engine default applies.
+[  158.9s] NOTE assumption (recorded as unspecified by the materials): rules.too_much_skips_full: Brief silent; default false.
+[  158.9s] NOTE assumption (recorded as unspecified by the materials): rules.too_much_floor: Brief silent on 'the full amount is too much'; default attempt_1 (floor offered next as an attempt).
+[  158.9s] NOTE assumption (recorded as unspecified by the materials): rules.ladder_repeat_last: Brief lists exactly two steps for two attempts; no repetition.
+[  158.9s] NOTE assumption (recorded as unspecified by the materials): products.floor_min: No minimum floor stated.
+[  158.9s] NOTE assumption (recorded as unspecified by the materials): products.floor_full_below: No threshold below which the full amount is the floor.
+[  158.9s] NOTE assumption (recorded as unspecified by the materials): products.floor_round: Floors are taken from account fields; no rounding stated.
+[  158.9s] NOTE assumption (recorded as unspecified by the materials): products.step_round: No percentage steps; no rounding stated.
+[  158.9s] NOTE assumption (recorded as unspecified by the materials): products.promise_round: No rounding rule for promises; amount sent as stated.
+[  158.9s] NOTE repair budget used: 0/3
+[  158.9s] STEP 3. compile workflow
+[  158.9s] NOTE workflow: 25 nodes, 16 engine-run calls, 195789 bytes
+[  158.9s] NOTE RESULT: INCOMPLETE -- the agent does not meet these:
+[  158.9s]   - policy not verified: rules.deadline_adjust: "previous_business_day" is set but no passage of the materials supports it (quoted: 'Promises may only fall on a business day')
+[  158.9s] END 2026-10-11T15:09:57+0000 total_seconds=158.9 model_calls=3 model_cost_usd=0.97

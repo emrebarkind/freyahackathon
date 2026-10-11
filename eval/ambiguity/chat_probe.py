@@ -1,7 +1,7 @@
 """A few ambiguous turns through the platform's real extraction path (chat route, candidate 8 brief-A workflow),
 against a real practice-bank session. Prints, per customer turn, the extracted variables and the agent's reply,
 then the bank ledger. Not a simulation run.
-    python3 eval/ambiguity/chat_probe.py <workflow_id> <out.json>"""
+    python3 eval/ambiguity/chat_probe.py <workflow_id> <out.json> [script,script]"""
 import json, pathlib, sys, time
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "kit/build-the-builder")); sys.path.insert(0, str(ROOT / "kit/build-the-builder/tools"))
@@ -18,7 +18,8 @@ SCRIPTS = {
                        "I can pay three hundred and", "fifty dollars on Friday.", "aaa...", "Yes, I confirm.", "No."],
 }
 res = {}
-for name, msgs in SCRIPTS.items():
+ONLY = sys.argv[3].split(',') if len(sys.argv) > 3 else list(SCRIPTS)
+for name, msgs in [(n, m) for n, m in SCRIPTS.items() if n in ONLY]:
     sess = http("/v1/practice/sessions", {"case": "PUB-01"})["variables"]
     cid, turns = None, []
     for m in msgs:
