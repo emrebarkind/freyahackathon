@@ -32,8 +32,8 @@ SCHEMA = {
                                                 "type": {"type": "string", "enum": ["string", "number", "integer", "boolean"]},
                                                 "fill": {"type": "string"}, "description": {"type": "string"}}}}}}},
         "endings": {"type": "array", "items": {"type": "object", "additionalProperties": False,
-                    "required": ["name", "when"],
-                    "properties": {"name": {"type": "string"}, "when": {"type": "string"}}}},
+                    "required": ["name", "when", "farewell"],
+                    "properties": {"name": {"type": "string"}, "when": {"type": "string"}, "farewell": {"type": "string"}}}},
         "decisions": {"type": "array", "items": {"type": "object", "additionalProperties": False,
                       "required": ["topic", "decision", "sources", "conflict"],
                       "properties": {"topic": {"type": "string"}, "decision": {"type": "string"},
@@ -68,7 +68,9 @@ Rules for the design:
   {"data": {"customerNo": ...}, "call": {"lang": ...}} gives the fields "data.customerNo" and "call.lang"); "fill" is "var:<call variable name>" when a call variable gives the value, "const:<value>" for
   a fixed value the documents require, or "agent" when the agent fills it from the conversation or an earlier tool
   result (then "description" says exactly where the value comes from and its format). "source": the document and section.
-- "endings": the ways a call ends (name in snake_case, e.g. completed, transferred_to_agent; "when": the condition).
+- "endings": the ways a call ends (name in snake_case, e.g. completed, transferred_to_agent; "when": the condition;
+  "farewell": the exact last sentence the agent says for that ending, as the materials require it, in the call's
+  language; it is spoken by the end node itself, so the flow must not repeat it).
 - Do not invent services, fields, codes or rules the materials do not give.
 """
 
@@ -137,7 +139,10 @@ def compile_agent(d, base):
         nodes[n] = {"name": n, "node_type": "end_call", "on_enter": {"type": "silent"}, "disable_inactivity_monitor": True,
                     "transitions": [],
                     "terminal": {"type": "function", "function": {"name": _snake(e["name"]), "handler": "__function__:end_call",
-                                 "parameters": {"type": "object", "properties": {"message_mode": {"type": "string", "default": "none"}}}}}}
+                                 "parameters": {"type": "object", "properties": (
+                                     {"message_mode": {"type": "string", "default": "custom"},
+                                      "spoken_message": {"type": "string", "default": e["farewell"]}} if str(e.get("farewell") or "").strip()
+                                     else {"message_mode": {"type": "string", "default": "none"}})}}}}
     return {"initial_node": "assist", "system_prompt": d["system_prompt"],
             "test_variables": {v["name"]: v["example"] for v in d["variables"]}, "global_nodes": {}, "nodes": nodes}
 
