@@ -1,0 +1,480 @@
+{
+ "openapi": "3.0.3",
+ "info": {
+  "title": "Brackenridge Finance collections tools",
+  "version": "2.1",
+  "description": "Mock of Brackenridge Finance's collections systems. Every call is written to the ledger the scorer reads. The service does not enforce the brief: it accepts a promise on a holiday, past a deadline or below a floor. Money read from get_account is in pounds with pence; money sent to create_promise is in integer pence."
+ },
+ "servers": [
+  {
+   "url": "https://brackenridge-mock.example/v2"
+  }
+ ],
+ "components": {},
+ "paths": {
+  "/verify_identity": {
+   "post": {
+    "summary": "Check one security answer. The service counts wrong answers per call.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "customer_ref": {
+          "type": "string",
+          "description": "The call's customer reference, from the call variables. Pass it to every tool."
+         },
+         "question": {
+          "type": "string",
+          "enum": [
+           "birth_date",
+           "home_postcode"
+          ]
+         },
+         "response": {
+          "type": "string",
+          "description": "birth_date: eight digits DDMMYYYY, no separators (7 March 1984 is 07031984). home_postcode: capital letters and digits, no spaces. A value in the wrong format is rejected with ok=false and is not counted as a wrong answer."
+         }
+        },
+        "required": [
+         "customer_ref",
+         "question",
+         "response"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out; `error` then says why.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          },
+          "correct": {
+           "type": "boolean"
+          },
+          "attempts_remaining": {
+           "type": "integer",
+           "description": "Wrong answers still allowed before the check fails."
+          },
+          "identity_passed": {
+           "type": "boolean",
+           "description": "true once both questions are answered correctly"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. For create_promise the promise may or may not have reached the ledger; the brief says what to do. For other tools nothing was recorded."
+     }
+    }
+   }
+  },
+  "/get_account": {
+   "post": {
+    "summary": "The customer's late products, in working order. Refused until identity_passed.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "customer_ref": {
+          "type": "string",
+          "description": "The call's customer reference, from the call variables. Pass it to every tool."
+         }
+        },
+        "required": [
+         "customer_ref"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out; `error` then says why.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          },
+          "products": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "product_ref": {
+              "type": "string"
+             },
+             "kind": {
+              "type": "string",
+              "enum": [
+               "CARD",
+               "PLOAN",
+               "MOTOR"
+              ],
+              "description": "CARD credit card, PLOAN personal loan, MOTOR motor finance"
+             },
+             "card_ending": {
+              "type": "string",
+              "description": "CARD only: last four digits of the card"
+             },
+             "arrears_gbp": {
+              "type": "number",
+              "description": "Past-due amount in pounds with pence, e.g. 437.80"
+             },
+             "days_overdue": {
+              "type": "integer"
+             },
+             "contractual_payment_gbp": {
+              "type": "number",
+              "description": "PLOAN and MOTOR only: contractual monthly payment in pounds with pence"
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. For create_promise the promise may or may not have reached the ledger; the brief says what to do. For other tools nothing was recorded."
+     }
+    }
+   }
+  },
+  "/create_promise": {
+   "post": {
+    "summary": "Record one payment promise for one product.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "customer_ref": {
+          "type": "string",
+          "description": "The call's customer reference, from the call variables. Pass it to every tool."
+         },
+         "product_ref": {
+          "type": "string"
+         },
+         "amount_pence": {
+          "type": "integer",
+          "description": "Promised amount in integer pence: £194.83 is 19483. Pounds are rejected."
+         },
+         "pay_on": {
+          "type": "string",
+          "format": "date",
+          "description": "YYYY-MM-DD"
+         }
+        },
+        "required": [
+         "customer_ref",
+         "product_ref",
+         "amount_pence",
+         "pay_on"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out; `error` then says why.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          },
+          "promise_ref": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. For create_promise the promise may or may not have reached the ledger; the brief says what to do. For other tools nothing was recorded."
+     }
+    }
+   }
+  },
+  "/add_note": {
+   "post": {
+    "summary": "Record why one product ended the call without a promise.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "customer_ref": {
+          "type": "string",
+          "description": "The call's customer reference, from the call variables. Pass it to every tool."
+         },
+         "product_ref": {
+          "type": "string"
+         },
+         "note_code": {
+          "type": "string",
+          "enum": [
+           "N-REF",
+           "N-DISP",
+           "N-PAID",
+           "N-SYS",
+           "N-HARD",
+           "N-DSP"
+          ],
+          "description": "See the code list in the brief."
+         },
+         "free_text": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "customer_ref",
+         "product_ref",
+         "note_code"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out; `error` then says why.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. For create_promise the promise may or may not have reached the ledger; the brief says what to do. For other tools nothing was recorded."
+     }
+    }
+   }
+  },
+  "/schedule_callback": {
+   "post": {
+    "summary": "Book a callback when someone other than the customer answered.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "customer_ref": {
+          "type": "string",
+          "description": "The call's customer reference, from the call variables. Pass it to every tool."
+         },
+         "callback_date": {
+          "type": "string",
+          "format": "date",
+          "description": "YYYY-MM-DD"
+         },
+         "callback_time": {
+          "type": "string",
+          "description": "HH:MM, 24-hour, UK local time"
+         }
+        },
+        "required": [
+         "customer_ref",
+         "callback_date",
+         "callback_time"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out; `error` then says why.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. For create_promise the promise may or may not have reached the ledger; the brief says what to do. For other tools nothing was recorded."
+     }
+    }
+   }
+  },
+  "/transfer_to_agent": {
+   "post": {
+    "summary": "Hand the call to a person in a queue.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "customer_ref": {
+          "type": "string",
+          "description": "The call's customer reference, from the call variables. Pass it to every tool."
+         },
+         "queue_code": {
+          "type": "string",
+          "enum": [
+           "Q-RESTR",
+           "Q-GEN",
+           "Q-VULN"
+          ]
+         }
+        },
+        "required": [
+         "customer_ref",
+         "queue_code"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out; `error` then says why.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. For create_promise the promise may or may not have reached the ledger; the brief says what to do. For other tools nothing was recorded."
+     }
+    }
+   }
+  },
+  "/close_call": {
+   "post": {
+    "summary": "End the call. Always the last tool call; nothing is accepted after it.",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "customer_ref": {
+          "type": "string",
+          "description": "The call's customer reference, from the call variables. Pass it to every tool."
+         },
+         "result": {
+          "type": "string",
+          "enum": [
+           "PTP",
+           "PAID",
+           "CLAIMED_PAID",
+           "XFER",
+           "NOPTP",
+           "IDFAIL",
+           "NOCONTACT"
+          ],
+          "description": "Outcome code. The brief's code list and memos decide which codes are current."
+         },
+         "result_reason": {
+          "type": "string",
+          "description": "Reason code for XFER, NOPTP, IDFAIL and NOCONTACT; omit for the others."
+         }
+        },
+        "required": [
+         "customer_ref",
+         "result"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "`ok` is false when the action was not carried out; `error` then says why.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "ok": {
+           "type": "boolean"
+          },
+          "error": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "The service failed. For create_promise the promise may or may not have reached the ledger; the brief says what to do. For other tools nothing was recorded."
+     }
+    }
+   }
+  }
+ }
+}

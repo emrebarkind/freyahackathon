@@ -1,0 +1,929 @@
+{
+ "package": "h1",
+ "rules": {
+  "FLOOR": "Floor per product type: CARD 12% of arrears rounded up to the next £5, minimum £25, capped at the arrears (Priya's correction); PLOAN contractual payment; MOTOR contractual payment, full arrears in band 3.",
+  "DEADLINE": "Deadline per band and product type, counted in business days after today; MOTOR band 2 is the 3rd business day (memo CO-26-14); holidays include 2026-11-27 but not 2026-12-07 (CO-26-15).",
+  "BDAY": "Business days are Monday to Friday minus the holiday list as amended by both memos.",
+  "CALLBACK": "Callback today or next business day, after now, Mon-Thu 09:00-20:00, Fri 09:00-16:00 (corrected).",
+  "LADDER": "Three-step ladder per product; attempts by band; opening ask not counted; last business day of this week (next week's if today is it); clamp to deadline; repeated steps skipped and not counted.",
+  "IDENTITY": "Date of birth then postcode; DOB as DDMMYYYY; the third wrong answer ends it (corrected).",
+  "AMOUNT": "create_promise takes integer pence.",
+  "CODES": "Codes per code list and memos: CLAIMED_PAID replaces PAID; N-DISP not the deprecated N-DSP; hardship goes to Q-VULN.",
+  "SWITCH": "An answer about another product is handled for that product, the open offer is repeated without using an attempt.",
+  "TOOMUCH": "'Too much' re-offers the same step with the floor; later steps use the floor; repeats are skipped.",
+  "AFTERDL": "A date after the deadline gets a counter-offer on the deadline with the named amount.",
+  "READBACK": "A change at the read-back is re-validated (holiday moved to the next business day) and read back again.",
+  "FAIL": "A failed create_promise is never retried; the product is noted N-SYS; others stay.",
+  "DISPUTE": "A dispute on one product is noted N-DISP and the call continues.",
+  "PAIDALL": "All products already paid: notes N-PAID, outcome CLAIMED_PAID.",
+  "RESTR": "Restructuring transfers; agreed but unrecorded promises are dropped; no notes."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-26T10:30",
+    "product": {
+     "product_ref": "BR-C-71820",
+     "kind": "CARD",
+     "card_ending": "4471",
+     "arrears_gbp": 437.8,
+     "days_overdue": 21
+    }
+   },
+   "expect": 55.0,
+   "source": "Card floor: 12% of the arrears, not 10%, and the minimum is £25, not £20. The £5 step is right: always round up to the next whole multiple of £5, and a figure that is already a multiple of £5 stays as it is."
+  },
+  {
+   "id": "C2",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-17T11:00",
+    "product": {
+     "product_ref": "BR-C-80233",
+     "kind": "CARD",
+     "card_ending": "9102",
+     "arrears_gbp": 150.0,
+     "days_overdue": 50
+    }
+   },
+   "expect": 25.0,
+   "source": "Card floor: 12% of the arrears, not 10%, and the minimum is £25, not £20. The £5 step is right: always round up to the next whole multiple of £5, and a figure that is already a multiple of £5 stays as it is. / The minimum applies after rounding."
+  },
+  {
+   "id": "C3",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-02T09:15",
+    "product": {
+     "product_ref": "BR-C-11907",
+     "kind": "CARD",
+     "card_ending": "0386",
+     "arrears_gbp": 22.5,
+     "days_overdue": 6
+    }
+   },
+   "expect": 22.5,
+   "source": "Card floor: 12% of the arrears, not 10%, and the minimum is £25, not £20. The £5 step is right: always round up to the next whole multiple of £5, and a figure that is already a multiple of £5 stays as it is. / The card floor is never more than the arrears: if the formula gives more than the arrears, the floor is the arrears."
+  },
+  {
+   "id": "C4",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-12-04T14:00",
+    "product": {
+     "product_ref": "BR-M-60118",
+     "kind": "MOTOR",
+     "arrears_gbp": 1180.52,
+     "days_overdue": 58,
+     "contractual_payment_gbp": 295.13
+    }
+   },
+   "expect": 1180.52,
+   "source": "(c) `MOTOR`: the contractual monthly payment in bands 1 and 2. In band 3 the floor is the full arrears."
+  },
+  {
+   "id": "C5",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-26T10:30",
+    "product": {
+     "product_ref": "BR-L-90412",
+     "kind": "PLOAN",
+     "arrears_gbp": 845.2,
+     "days_overdue": 33,
+     "contractual_payment_gbp": 281.74
+    }
+   },
+   "expect": "2026-12-07",
+   "source": "| 2 | 15 to 44 | the 5th business day after today | 2 | / \"The Nth business day after today\" counts business days after today only. Today is never counted, even when it is a business day. / 2. Ledger migration: 2026-11-27 (Friday) and 2026-12-07 (Monday) are added to the Brackenridge holidays. / 1. Item 2 of CO-26-14 is withdrawn for 2026-12-07 only. The second migration weekend has been moved, and 7 December 2026 is a normal business day. 2026-11-27 remains a Brackenridge holiday."
+  },
+  {
+   "id": "C6",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-26T10:30",
+    "product": {
+     "product_ref": "BR-M-55210",
+     "kind": "MOTOR",
+     "arrears_gbp": 389.66,
+     "days_overdue": 27,
+     "contractual_payment_gbp": 194.83
+    }
+   },
+   "expect": "2026-12-03",
+   "source": "1. Motor finance, band 2: the deadline becomes the 3rd business day after today (it was the 5th). / 2. Item 1 of CO-26-14 stands. / \"The Nth business day after today\" counts business days after today only. Today is never counted, even when it is a business day. / 1. Item 2 of CO-26-14 is withdrawn for 2026-12-07 only. The second migration weekend has been moved, and 7 December 2026 is a normal business day. 2026-11-27 remains a Brackenridge holiday."
+  },
+  {
+   "id": "C7",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-23T16:00",
+    "product": {
+     "product_ref": "BR-L-30944",
+     "kind": "PLOAN",
+     "arrears_gbp": 612.4,
+     "days_overdue": 9,
+     "contractual_payment_gbp": 204.15
+    }
+   },
+   "expect": "2026-12-07",
+   "source": "| 1 | 1 to 14 | the 8th business day after today | 1 | / Business days are Monday to Friday, except Brackenridge holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2027-01-01 and 2027-01-04. / 2. Ledger migration: 2026-11-27 (Friday) and 2026-12-07 (Monday) are added to the Brackenridge holidays. / 1. Item 2 of CO-26-14 is withdrawn for 2026-12-07 only. The second migration weekend has been moved, and 7 December 2026 is a normal business day. 2026-11-27 remains a Brackenridge holiday."
+  },
+  {
+   "id": "C8",
+   "rule": "DEADLINE",
+   "type": "deadline",
+   "input": {
+    "now": "2026-12-17T11:00",
+    "product": {
+     "product_ref": "BR-L-30944",
+     "kind": "PLOAN",
+     "arrears_gbp": 612.4,
+     "days_overdue": 9,
+     "contractual_payment_gbp": 204.15
+    }
+   },
+   "expect": "2026-12-31",
+   "source": "| 1 | 1 to 14 | the 8th business day after today | 1 | / Business days are Monday to Friday, except Brackenridge holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2027-01-01 and 2027-01-04. / \"The Nth business day after today\" counts business days after today only. Today is never counted, even when it is a business day."
+  },
+  {
+   "id": "C9",
+   "rule": "BDAY",
+   "type": "business_day",
+   "input": {
+    "date": "2026-11-27"
+   },
+   "expect": false,
+   "source": "2. Ledger migration: 2026-11-27 (Friday) and 2026-12-07 (Monday) are added to the Brackenridge holidays. / 1. Item 2 of CO-26-14 is withdrawn for 2026-12-07 only. The second migration weekend has been moved, and 7 December 2026 is a normal business day. 2026-11-27 remains a Brackenridge holiday."
+  },
+  {
+   "id": "C10",
+   "rule": "BDAY",
+   "type": "business_day",
+   "input": {
+    "date": "2026-12-07"
+   },
+   "expect": true,
+   "source": "2. Ledger migration: 2026-11-27 (Friday) and 2026-12-07 (Monday) are added to the Brackenridge holidays. / 1. Item 2 of CO-26-14 is withdrawn for 2026-12-07 only. The second migration weekend has been moved, and 7 December 2026 is a normal business day. 2026-11-27 remains a Brackenridge holiday."
+  },
+  {
+   "id": "C11",
+   "rule": "CALLBACK",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-12-04T14:00",
+    "date": "2026-12-04",
+    "time": "16:30"
+   },
+   "expect": false,
+   "source": "When someone other than the customer answers, we can book a callback for today or the next business day, and never for a time earlier than the current time. / - Callback window: Monday to Thursday 09:00 to 20:00, Friday 09:00 to 17:00. Both ends included. / - Callback window: Monday to Thursday is right. Friday closes at 16:00, not 17:00 (16:00 itself is fine)."
+  },
+  {
+   "id": "C12",
+   "rule": "CALLBACK",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-12-04T14:00",
+    "date": "2026-12-07",
+    "time": "19:30"
+   },
+   "expect": true,
+   "source": "When someone other than the customer answers, we can book a callback for today or the next business day, and never for a time earlier than the current time. / - Callback window: Monday to Thursday 09:00 to 20:00, Friday 09:00 to 17:00. Both ends included. / 1. Item 2 of CO-26-14 is withdrawn for 2026-12-07 only. The second migration weekend has been moved, and 7 December 2026 is a normal business day. 2026-11-27 remains a Brackenridge holiday."
+  },
+  {
+   "id": "C13",
+   "rule": "CALLBACK",
+   "type": "callback_ok",
+   "input": {
+    "now": "2026-11-26T15:00",
+    "date": "2026-11-27",
+    "time": "10:00"
+   },
+   "expect": false,
+   "source": "When someone other than the customer answers, we can book a callback for today or the next business day, and never for a time earlier than the current time. / 2. Ledger migration: 2026-11-27 (Friday) and 2026-12-07 (Monday) are added to the Brackenridge holidays. / 1. Item 2 of CO-26-14 is withdrawn for 2026-12-07 only. The second migration weekend has been moved, and 7 December 2026 is a normal business day. 2026-11-27 remains a Brackenridge holiday."
+  },
+  {
+   "id": "C14",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-26T10:30",
+    "product": {
+     "product_ref": "BR-L-90412",
+     "kind": "PLOAN",
+     "arrears_gbp": 845.2,
+     "days_overdue": 33,
+     "contractual_payment_gbp": 281.74
+    }
+   },
+   "expect": [
+    [
+     845.2,
+     "2026-12-04"
+    ],
+    [
+     281.74,
+     "2026-12-04"
+    ]
+   ],
+   "source": "- Step 1: the full arrears on the last business day of this week.\n- Step 2: the floor on the last business day of this week.\n- Step 3: the floor on the deadline. / If today is the last business day of this week, steps 1 and 2 use the last business day of next week instead. If a step's date is after the product's deadline, the step uses the deadline. / 2. Ledger migration: 2026-11-27 (Friday) and 2026-12-07 (Monday) are added to the Brackenridge holidays. / 1. Item 2 of CO-26-14 is withdrawn for 2026-12-07 only. The second migration weekend has been moved, and 7 December 2026 is a normal business day. 2026-11-27 remains a Brackenridge holiday. / The opening ask is not an attempt."
+  },
+  {
+   "id": "C15",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-04T14:00",
+    "product": {
+     "product_ref": "BR-M-60118",
+     "kind": "MOTOR",
+     "arrears_gbp": 1180.52,
+     "days_overdue": 58,
+     "contractual_payment_gbp": 295.13
+    }
+   },
+   "expect": [
+    [
+     1180.52,
+     "2026-12-08"
+    ]
+   ],
+   "source": "- Step 1: the full arrears on the last business day of this week.\n- Step 2: the floor on the last business day of this week.\n- Step 3: the floor on the deadline. / If today is the last business day of this week, steps 1 and 2 use the last business day of next week instead. If a step's date is after the product's deadline, the step uses the deadline. / A step that would repeat an offer already made for that product, with the same amount and the same date, is skipped. A skipped step does not use an attempt: go straight to the next step. When the product's attempts are used up, or no steps are left, stop: the product ends without a promise and is noted N-REF. / (c) `MOTOR`: the contractual monthly payment in bands 1 and 2. In band 3 the floor is the full arrears."
+  },
+  {
+   "id": "C16",
+   "rule": "LADDER",
+   "type": "attempts",
+   "input": {
+    "now": "2026-11-02T09:15",
+    "product": {
+     "product_ref": "BR-C-80233",
+     "kind": "CARD",
+     "card_ending": "9102",
+     "arrears_gbp": 150.0,
+     "days_overdue": 50
+    }
+   },
+   "expect": 2,
+   "source": "| 3 | 45 to 90 | the 2nd business day after today | 3 | / If today is the last business day of this week, steps 1 and 2 use the last business day of next week instead. If a step's date is after the product's deadline, the step uses the deadline. / A step that would repeat an offer already made for that product, with the same amount and the same date, is skipped. A skipped step does not use an attempt: go straight to the next step. When the product's attempts are used up, or no steps are left, stop: the product ends without a promise and is noted N-REF."
+  },
+  {
+   "id": "C17",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-12-17T11:00",
+    "product": {
+     "product_ref": "BR-C-80233",
+     "kind": "CARD",
+     "card_ending": "9102",
+     "arrears_gbp": 150.0,
+     "days_overdue": 50
+    }
+   },
+   "expect": [
+    [
+     150.0,
+     "2026-12-18"
+    ],
+    [
+     25.0,
+     "2026-12-18"
+    ],
+    [
+     25.0,
+     "2026-12-21"
+    ]
+   ],
+   "source": "| 3 | 45 to 90 | the 2nd business day after today | 3 | / - Step 1: the full arrears on the last business day of this week.\n- Step 2: the floor on the last business day of this week.\n- Step 3: the floor on the deadline. / If today is the last business day of this week, steps 1 and 2 use the last business day of next week instead. If a step's date is after the product's deadline, the step uses the deadline. / Card floor: 12% of the arrears, not 10%, and the minimum is £25, not £20. The £5 step is right: always round up to the next whole multiple of £5, and a figure that is already a multiple of £5 stays as it is. / The minimum applies after rounding."
+  },
+  {
+   "id": "C18",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-23T16:00",
+    "product": {
+     "product_ref": "BR-M-55210",
+     "kind": "MOTOR",
+     "arrears_gbp": 389.66,
+     "days_overdue": 27,
+     "contractual_payment_gbp": 194.83
+    }
+   },
+   "expect": [
+    [
+     389.66,
+     "2026-11-26"
+    ],
+    [
+     194.83,
+     "2026-11-26"
+    ]
+   ],
+   "source": "1. Motor finance, band 2: the deadline becomes the 3rd business day after today (it was the 5th). / 2. Ledger migration: 2026-11-27 (Friday) and 2026-12-07 (Monday) are added to the Brackenridge holidays. / 1. Item 2 of CO-26-14 is withdrawn for 2026-12-07 only. The second migration weekend has been moved, and 7 December 2026 is a normal business day. 2026-11-27 remains a Brackenridge holiday. / - Step 1: the full arrears on the last business day of this week.\n- Step 2: the floor on the last business day of this week.\n- Step 3: the floor on the deadline. / If today is the last business day of this week, steps 1 and 2 use the last business day of next week instead. If a step's date is after the product's deadline, the step uses the deadline. / A step that would repeat an offer already made for that product, with the same amount and the same date, is skipped. A skipped step does not use an attempt: go straight to the next step. When the product's attempts are used up, or no steps are left, stop: the product ends without a promise and is noted N-REF."
+  },
+  {
+   "id": "C19",
+   "rule": "IDENTITY",
+   "type": "identity_fields",
+   "input": {},
+   "expect": [
+    "birth_date",
+    "home_postcode"
+   ],
+   "source": "Two security questions, one at a time: date of birth first, then the postcode of the home address. / \"question\": {\"type\": \"string\", \"enum\": [\"birth_date\", \"home_postcode\"]}"
+  },
+  {
+   "id": "C20",
+   "rule": "IDENTITY",
+   "type": "identity_max_wrong",
+   "input": {},
+   "expect": 3,
+   "source": "- Wrong answers: two wrong answers and the identity check has failed. / - Wrong answers: the third wrong answer ends it, whichever question it was on."
+  },
+  {
+   "id": "C21",
+   "rule": "IDENTITY",
+   "type": "id_answer",
+   "input": {
+    "field": "birth_date",
+    "value": "1979-11-04"
+   },
+   "expect": "04111979",
+   "source": "The date of birth goes into the system as eight digits, day then month then year, with no separators, so 7 March 1984 is 07031984."
+  },
+  {
+   "id": "C22",
+   "rule": "AMOUNT",
+   "type": "promise_amount",
+   "input": {
+    "amount": 194.83
+   },
+   "expect": 19483,
+   "source": "Promised amount in integer pence: £194.83 is 19483. Pounds are rejected."
+  },
+  {
+   "id": "C23",
+   "rule": "CODES",
+   "type": "close",
+   "input": {
+    "situation": "paid"
+   },
+   "expect": {
+    "outcome": "CLAIMED_PAID",
+    "reason": ""
+   },
+   "source": "if every product was noted N-PAID, close with the paid outcome and no reason / 3. For calls closed from 2 November 2026, the outcome code PAID is replaced by CLAIMED_PAID. The ledger rejects PAID from that date."
+  },
+  {
+   "id": "C24",
+   "rule": "CODES",
+   "type": "note",
+   "input": {
+    "situation": "dispute"
+   },
+   "expect": "N-DISP",
+   "source": "(b) A dispute on a product (\"not mine\", \"closed years ago\"): do not argue. Note that product with the dispute note code and continue with the others. / N-DSP | dispute (old code). DEPRECATED from 1 September 2026: the ledger still accepts it but reporting drops it. Use N-DISP."
+  },
+  {
+   "id": "C25",
+   "rule": "CODES",
+   "type": "transfer",
+   "input": {
+    "situation": "hardship"
+   },
+   "expect": "Q-VULN",
+   "source": "(c) Financial hardship (illness, bereavement, job loss): one sentence of sympathy, then transfer to the Customer Care queue. Do not ask further questions. / | Q-VULN | Customer Care (hardship and vulnerability) |"
+  },
+  {
+   "id": "C26",
+   "rule": "SWITCH",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-17T11:00",
+    "products": [
+     {
+      "product_ref": "BR-L-30944",
+      "kind": "PLOAN",
+      "arrears_gbp": 612.4,
+      "days_overdue": 9,
+      "contractual_payment_gbp": 204.15
+     },
+     {
+      "product_ref": "BR-C-71820",
+      "kind": "CARD",
+      "card_ending": "4471",
+      "arrears_gbp": 437.8,
+      "days_overdue": 21
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "proposes",
+      "product": "CARD",
+      "date": "2026-12-22",
+      "amount": 100.0
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "PTP",
+    "reason": "",
+    "promises": [
+     [
+      "BR-C-71820",
+      10000,
+      "2026-12-22"
+     ]
+    ],
+    "notes": [
+     [
+      "BR-L-30944",
+      "N-REF"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "(g) An answer about a product other than the one being discussed: handle it for that product under this rule, then repeat the offer that was on the table for the product being discussed. That repetition is not a new step and uses no attempt. When the assistant reaches a product that is already agreed, it moves on. / | 1 | 1 to 14 | the 8th business day after today | 1 | / A step that would repeat an offer already made for that product, with the same amount and the same date, is skipped. A skipped step does not use an attempt: go straight to the next step. When the product's attempts are used up, or no steps are left, stop: the product ends without a promise and is noted N-REF. / | 2 | 15 to 44 | the 5th business day after today | 2 | / After a clear yes, call `create_promise` once per agreed product, in `get_account` order."
+  },
+  {
+   "id": "C27",
+   "rule": "TOOMUCH",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-26T10:30",
+    "products": [
+     {
+      "product_ref": "BR-C-71820",
+      "kind": "CARD",
+      "card_ending": "4471",
+      "arrears_gbp": 437.8,
+      "days_overdue": 21
+     },
+     {
+      "product_ref": "BR-M-60118",
+      "kind": "MOTOR",
+      "arrears_gbp": 1180.52,
+      "days_overdue": 58,
+      "contractual_payment_gbp": 295.13
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "too_much"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "PTP",
+    "reason": "",
+    "promises": [
+     [
+      "BR-C-71820",
+      5500,
+      "2026-12-07"
+     ]
+    ],
+    "notes": [
+     [
+      "BR-M-60118",
+      "N-REF"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Offer the same step again with the floor in place of the full arrears. From then on, every step for that product uses the floor in place of the full arrears. / A step that would repeat an offer already made for that product, with the same amount and the same date, is skipped. A skipped step does not use an attempt: go straight to the next step. When the product's attempts are used up, or no steps are left, stop: the product ends without a promise and is noted N-REF. / If today is the last business day of this week, steps 1 and 2 use the last business day of next week instead. If a step's date is after the product's deadline, the step uses the deadline. / Card floor: 12% of the arrears, not 10%, and the minimum is £25, not £20. The £5 step is right: always round up to the next whole multiple of £5, and a figure that is already a multiple of £5 stays as it is. / 2. Ledger migration: 2026-11-27 (Friday) and 2026-12-07 (Monday) are added to the Brackenridge holidays. / 1. Item 2 of CO-26-14 is withdrawn for 2026-12-07 only. The second migration weekend has been moved, and 7 December 2026 is a normal business day. 2026-11-27 remains a Brackenridge holiday. / (c) `MOTOR`: the contractual monthly payment in bands 1 and 2. In band 3 the floor is the full arrears."
+  },
+  {
+   "id": "C28",
+   "rule": "AFTERDL",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-23T16:00",
+    "products": [
+     {
+      "product_ref": "BR-L-90412",
+      "kind": "PLOAN",
+      "arrears_gbp": 845.2,
+      "days_overdue": 33,
+      "contractual_payment_gbp": 281.74
+     },
+     {
+      "product_ref": "BR-M-55210",
+      "kind": "MOTOR",
+      "arrears_gbp": 389.66,
+      "days_overdue": 27,
+      "contractual_payment_gbp": 194.83
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "proposes",
+      "date": "2026-12-01"
+     },
+     {
+      "k": "proposes",
+      "date": "2026-12-01",
+      "amount": 200.0
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "PTP",
+    "reason": "",
+    "promises": [
+     [
+      "BR-L-90412",
+      84520,
+      "2026-12-01"
+     ],
+     [
+      "BR-M-55210",
+      20000,
+      "2026-11-26"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "A date with no amount takes the amount of the offer on the table (the full arrears, for the opening ask). / (e) A date after the deadline: say the latest date you can record is the deadline and offer the deadline, with the amount the customer named (or the amount on the table if they named none). / 1. Motor finance, band 2: the deadline becomes the 3rd business day after today (it was the 5th). / 2. Ledger migration: 2026-11-27 (Friday) and 2026-12-07 (Monday) are added to the Brackenridge holidays. / If today is the last business day of this week, steps 1 and 2 use the last business day of next week instead. If a step's date is after the product's deadline, the step uses the deadline. / Promised amount in integer pence: £194.83 is 19483. Pounds are rejected."
+  },
+  {
+   "id": "C29",
+   "rule": "READBACK",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-26T10:30",
+    "products": [
+     {
+      "product_ref": "BR-C-42655",
+      "kind": "CARD",
+      "card_ending": "7719",
+      "arrears_gbp": 250.0,
+      "days_overdue": 12
+     },
+     {
+      "product_ref": "BR-L-90412",
+      "kind": "PLOAN",
+      "arrears_gbp": 845.2,
+      "days_overdue": 33,
+      "contractual_payment_gbp": 281.74
+     }
+    ],
+    "script": [
+     {
+      "k": "proposes",
+      "product": "all",
+      "date": "2026-12-09"
+     },
+     {
+      "k": "proposes",
+      "product": "PLOAN",
+      "date": "2026-11-30",
+      "amount": 300.0
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "PTP",
+    "reason": "",
+    "promises": [
+     [
+      "BR-C-42655",
+      25000,
+      "2026-12-09"
+     ],
+     [
+      "BR-L-90412",
+      30000,
+      "2026-12-01"
+     ]
+    ],
+    "notes": [],
+    "transfers": []
+   },
+   "source": "(f) One date for all products: each product takes that date, except that a product whose deadline is earlier takes its own deadline. / A date with no amount takes the amount of the offer on the table (the full arrears, for the opening ask). / If the customer changes a date or an amount at this point, apply 7.9 to the change and then read everything back again. / (d) A weekend day or a holiday that is not after the deadline: offer the next business day. / Business days are Monday to Friday, except Brackenridge holidays: 2026-11-30, 2026-12-25, 2026-12-28, 2027-01-01 and 2027-01-04. / 1. Item 2 of CO-26-14 is withdrawn for 2026-12-07 only. The second migration weekend has been moved, and 7 December 2026 is a normal business day. 2026-11-27 remains a Brackenridge holiday."
+  },
+  {
+   "id": "C30",
+   "rule": "FAIL",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-04T14:00",
+    "products": [
+     {
+      "product_ref": "BR-C-80233",
+      "kind": "CARD",
+      "card_ending": "9102",
+      "arrears_gbp": 150.0,
+      "days_overdue": 50
+     },
+     {
+      "product_ref": "BR-L-30944",
+      "kind": "PLOAN",
+      "arrears_gbp": 612.4,
+      "days_overdue": 9,
+      "contractual_payment_gbp": 204.15
+     }
+    ],
+    "script": [
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ],
+    "faults": {
+     "create_promise": 1
+    }
+   },
+   "expect": {
+    "outcome": "PTP",
+    "reason": "",
+    "promises": [
+     [
+      "BR-L-30944",
+      61240,
+      "2026-12-04"
+     ]
+    ],
+    "notes": [
+     [
+      "BR-C-80233",
+      "N-SYS"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "If create_promise fails, for whatever reason, do NOT try it again. The ledger sometimes records a promise even when the call comes back with an error, and a duplicate sends the customer two direct-debit letters. Note that product with N-SYS and carry on with the rest of the call as normal. The promises that did go through stay. / After a clear yes, call `create_promise` once per agreed product, in `get_account` order. / With at least one promise recorded and no transfer, close as a promise."
+  },
+  {
+   "id": "C31",
+   "rule": "DISPUTE",
+   "type": "conversation",
+   "input": {
+    "now": "2026-12-17T11:00",
+    "products": [
+     {
+      "product_ref": "BR-L-90412",
+      "kind": "PLOAN",
+      "arrears_gbp": 845.2,
+      "days_overdue": 33,
+      "contractual_payment_gbp": 281.74
+     },
+     {
+      "product_ref": "BR-M-55210",
+      "kind": "MOTOR",
+      "arrears_gbp": 389.66,
+      "days_overdue": 27,
+      "contractual_payment_gbp": 194.83
+     },
+     {
+      "product_ref": "BR-C-11907",
+      "kind": "CARD",
+      "card_ending": "0386",
+      "arrears_gbp": 22.5,
+      "days_overdue": 6
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "dispute",
+      "product": "MOTOR"
+     },
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "PTP",
+    "reason": "",
+    "promises": [
+     [
+      "BR-L-90412",
+      28174,
+      "2026-12-18"
+     ]
+    ],
+    "notes": [
+     [
+      "BR-M-55210",
+      "N-DISP"
+     ],
+     [
+      "BR-C-11907",
+      "N-REF"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "(b) A dispute on a product (\"not mine\", \"closed years ago\"): do not argue. Note that product with the dispute note code and continue with the others. / N-DSP | dispute (old code). DEPRECATED from 1 September 2026: the ledger still accepts it but reporting drops it. Use N-DISP. / - Step 1: the full arrears on the last business day of this week.\n- Step 2: the floor on the last business day of this week.\n- Step 3: the floor on the deadline. / | 1 | 1 to 14 | the 8th business day after today | 1 | / The card floor is never more than the arrears: if the formula gives more than the arrears, the floor is the arrears."
+  },
+  {
+   "id": "C32",
+   "rule": "PAIDALL",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-02T09:15",
+    "products": [
+     {
+      "product_ref": "BR-C-71820",
+      "kind": "CARD",
+      "card_ending": "4471",
+      "arrears_gbp": 437.8,
+      "days_overdue": 21
+     },
+     {
+      "product_ref": "BR-L-90412",
+      "kind": "PLOAN",
+      "arrears_gbp": 845.2,
+      "days_overdue": 33,
+      "contractual_payment_gbp": 281.74
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "already_paid",
+      "product": "CARD"
+     },
+     {
+      "k": "already_paid",
+      "product": "PLOAN"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "CLAIMED_PAID",
+    "reason": "",
+    "promises": [],
+    "notes": [
+     [
+      "BR-C-71820",
+      "N-PAID"
+     ],
+     [
+      "BR-L-90412",
+      "N-PAID"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "if every product was noted N-PAID, close with the paid outcome and no reason / 3. For calls closed from 2 November 2026, the outcome code PAID is replaced by CLAIMED_PAID. The ledger rejects PAID from that date."
+  },
+  {
+   "id": "C33",
+   "rule": "RESTR",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-23T16:00",
+    "products": [
+     {
+      "product_ref": "BR-L-30944",
+      "kind": "PLOAN",
+      "arrears_gbp": 612.4,
+      "days_overdue": 9,
+      "contractual_payment_gbp": 204.15
+     },
+     {
+      "product_ref": "BR-M-55210",
+      "kind": "MOTOR",
+      "arrears_gbp": 389.66,
+      "days_overdue": 27,
+      "contractual_payment_gbp": 194.83
+     }
+    ],
+    "script": [
+     {
+      "k": "no"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "restructure"
+     }
+    ]
+   },
+   "expect": {
+    "outcome": "XFER",
+    "reason": "RESTR",
+    "promises": [],
+    "notes": [],
+    "transfers": [
+     "Q-RESTR"
+    ]
+   },
+   "source": "(d) A request for a payment plan or reduced payments: transfer to the restructuring queue. / (f) On any transfer: promises already recorded stay; promises agreed but not yet recorded are not recorded; write no notes at all, before or after the transfer."
+  },
+  {
+   "id": "C34",
+   "rule": "FAIL",
+   "type": "conversation",
+   "input": {
+    "now": "2026-11-02T09:15",
+    "products": [
+     {
+      "product_ref": "BR-M-60118",
+      "kind": "MOTOR",
+      "arrears_gbp": 1180.52,
+      "days_overdue": 58,
+      "contractual_payment_gbp": 295.13
+     }
+    ],
+    "script": [
+     {
+      "k": "too_much"
+     },
+     {
+      "k": "yes"
+     },
+     {
+      "k": "yes"
+     }
+    ],
+    "faults": {
+     "create_promise": 1
+    }
+   },
+   "expect": {
+    "outcome": "NOPTP",
+    "reason": "SYSTEM",
+    "promises": [],
+    "notes": [
+     [
+      "BR-M-60118",
+      "N-SYS"
+     ]
+    ],
+    "transfers": []
+   },
+   "source": "Said in answer to the opening ask, it applies to every product, and each product starts at step 1 with the floor. / (c) `MOTOR`: the contractual monthly payment in bands 1 and 2. In band 3 the floor is the full arrears. / If today is the last business day of this week, steps 1 and 2 use the last business day of next week instead. If a step's date is after the product's deadline, the step uses the deadline. / If create_promise fails, for whatever reason, do NOT try it again. The ledger sometimes records a promise even when the call comes back with an error, and a duplicate sends the customer two direct-debit letters. Note that product with N-SYS and carry on with the rest of the call as normal. The promises that did go through stay. / otherwise close as no promise, with the reason that matches the note of the first product, in `get_account` order, whose note is not N-PAID (N-REF gives REFUSED, N-DISP gives DISPUTE, N-SYS gives SYSTEM)."
+  }
+ ]
+}
