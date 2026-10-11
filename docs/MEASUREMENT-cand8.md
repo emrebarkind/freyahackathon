@@ -53,7 +53,72 @@ was 7–14 s.
   Their evidence is local only (tests and replays).
 * **One talkative run is not a rate.** On candidate 7, 1 of 3 talkative PUB-13 calls in this style passed.
 
-## Decision against the agreed criteria
+## Brief A on candidate 8 (regression check for `non_answer_counts`)
+* **Clean build at 9cb2300** (`eval/clean-runs/cand8-a/record.json`):
+  * Brief A only: COMPLETE, agent `0a63e696-de73-4f10-ac0a-c63c3afa29ce`.
+  * `rules.non_answer_counts`: explicit true, quoting rule 30.
+* **Default style, 3 reps:** simulations `783dd760`, `6fe2c7fa`, `62726386`.
+
+| customer | rep1 | rep2 | rep3 | counts |
+|---|---|---|---|---|
+| PUB-01 | pass | pass | pass | yes |
+| PUB-02 | pass | pass | pass | yes |
+| PUB-03 | pass | pass | pass | yes |
+| PUB-04 | pass | pass | pass | yes |
+| PUB-05 | pass | pass | pass | yes |
+| PUB-06 | pass | pass | pass | yes |
+| PUB-07 | pass | pass | pass | yes |
+| PUB-08 | pass | pass | pass | yes |
+| PUB-09 | pass | FAIL: conversation | pass | no |
+| PUB-10 | pass | pass | pass | yes |
+
+**Official: 29/30 runs; 9/10 customers at 3/3. PUB-09 fails rep 2.**
+
+### PUB-09, rep 2: a platform retry, proved from the ledger
+* **Call `22a4d604`: the first attempt was correct.** Ledger rows 1–5:
+  * dob verified;
+  * phone verified;
+  * get_account;
+  * `transfer_to_agent` restructuring → ok;
+  * `close_call` transferred/restructuring → ok.
+* **The platform retried the run anyway** (iteration `attempts=3`) on the same practice session. Call `650cc7d4`:
+  * Ledger rows 6–9: verify_identity three times, then close_call. Every one was answered by the bank
+    `ok:false, "the call is already closed"`.
+  * The agent treated the refused answers as unreadable, asked again twice, then closed as identity not verified.
+* **The judge saw only the retry** ("transfer_to_agent was never called"). The run stays **FAIL**.
+* **Cause:** the same mechanism as candidate 7's PUB-12 rep 2 (platform retry on a persisted session). The
+  transfer path does not touch the changed code (read-back and negotiation non-answers).
+* **Why the first attempt was retried** is not visible in the records: the iteration keeps only the last call.
+* **Also in rep 2:** PUB-06 was retried once (attempt 1) and passed on the retry.
+
+### Comparison with candidate 7 (brief A, default, 3 reps)
+* Candidate 7: 30/30 runs, 10/10 customers.
+* Candidate 8: 29/30 runs, 9/10 customers.
+* The one difference is the platform retry above, not a behaviour change. Nothing in the candidate-8 runs shows a
+  regression attributable to the change.
+
+## Targeted check: a completed plan, non-answers at the read-back, then an explicit yes
+* **Case:** `eval/targeted/confirm-delay.json`, PUB-01 with a changed persona script.
+* **Run:** simulation `05f640a2`, agent `0a63e696`. **pass**, judge and ledger.
+* **The persona did what the check needs** (transcript):
+  1. **Plan:** the customer agrees to "the full amount today". The agent reads back "420 dollars on Wednesday
+     14 October. Do you confirm?".
+  2. **First non-answer:** "It's quite cloudy outside today, isn't it?" (extracted unclear, not cut). The agent asks
+     "Do you confirm?".
+  3. **Second non-answer:** "Well, I was just thinking that ─" (extracted cut). The agent says "Sorry, please go on."
+  4. **Explicit yes:** "Yes, I confirm." Only now `create_promise` p1 420 2026-10-14 is called, exactly once.
+  5. **Close:** text-message sentence, then `close_call` promise.
+* **Shown:** the plan was kept, and nothing was written before the explicit yes.
+* **Not shown:** the 12-turn stall close was not reached (two non-answers only). Its evidence stays local.
+
+## Decision (unchanged)
+**Candidate 8 stays selected; candidate 7 (`3d62e44`) is the rollback.** On the platform, candidate 8 has:
+* B default 9/9;
+* PUB-13 talkative pass;
+* A default 29/30, the one failure a proven platform retry;
+* the targeted read-back check passed.
+
+## Decision against the agreed criteria (first validation)
 | Criterion | Evidence | Met |
 |---|---|---|
 | The plan is kept | Local tests and replays; not triggered on the platform | locally |

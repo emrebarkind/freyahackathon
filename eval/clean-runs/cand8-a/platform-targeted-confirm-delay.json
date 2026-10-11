@@ -1,0 +1,60 @@
+{
+ "agent_id": "0a63e696-de73-4f10-ac0a-c63c3afa29ce",
+ "simulation_id": "05f640a2-47d2-41c8-8711-1e05586a4b1e",
+ "iteration_id": "75ef2e3c-7e3b-4f20-a35f-26f6911066fe",
+ "seconds": 76,
+ "passed": 1,
+ "total": 1,
+ "runs": 1,
+ "final": [
+  {
+   "id": "PUB-01",
+   "family": "Happy path",
+   "passes": 1,
+   "runs": 1,
+   "pass": true
+  }
+ ],
+ "rows": [
+  {
+   "id": "PUB-01",
+   "level": "easy",
+   "family": "Happy path",
+   "pass": true,
+   "failed": [],
+   "call_id": "ccdfe696-892e-443e-9ddd-6971a9153c76",
+   "tools": [
+    "verify_identity",
+    "verify_identity",
+    "get_account",
+    "create_promise",
+    "close_call"
+   ],
+   "customer_id": "c_34f625a1-225",
+   "slowest_turn_s": 9.4,
+   "ended": "assistant-ended-call"
+  }
+ ],
+ "all_rows": [
+  [
+   {
+    "id": "PUB-01",
+    "level": "easy",
+    "family": "Happy path",
+    "pass": true,
+    "failed": [],
+    "call_id": "ccdfe696-892e-443e-9ddd-6971a9153c76",
+    "tools": [
+     "verify_identity",
+     "verify_identity",
+     "get_account",
+     "create_promise",
+     "close_call"
+    ],
+    "customer_id": "c_34f625a1-225",
+    "slowest_turn_s": 9.4,
+    "ended": "assistant-ended-call"
+   }
+  ]
+ ]
+}

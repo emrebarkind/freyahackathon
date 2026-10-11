@@ -1,0 +1,5 @@
+PASS PUB-01 easy   Happy path     | verify > verify > get_account > promise > close_call
+
+slowest agent turn per call: median 9 s, worst 9 s. Failed calls where the customer hung up: 0.
+
+1 / 1 passed (bank records and conversation checks). Last simulation 05f640a2-47d2-41c8-8711-1e05586a4b1e, status completed, 76 s.
