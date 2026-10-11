@@ -7,9 +7,9 @@
     }
   ],
   "repo": "https://github.com/emrebarkind/freyahackathon",
-  "commit": "074a588",
+  "commit": "14f1664",
   "run_command": "python3 builder/build.py {case_folder} https://freyahackathon.emrebarkind.workers.dev",
-  "workflow": "submission/final.workflow.json",
-  "trace": "traces/final.log",
+  "workflow": "submission/final2.workflow.json",
+  "trace": "traces/final2.session.jsonl",
   "mock_url": "https://freyahackathon.emrebarkind.workers.dev"
 }
