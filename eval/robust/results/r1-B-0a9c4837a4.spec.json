@@ -1,0 +1,398 @@
+{
+ "currency_word": "pounds",
+ "calendar": {
+  "workdays": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "holidays": [
+   "2026-11-19",
+   "2026-12-07",
+   "2026-12-25",
+   "2026-12-28",
+   "2027-01-01"
+  ]
+ },
+ "date_rules": {
+  "next_weekday": "following_week"
+ },
+ "confirm": {
+  "max_asks": 2
+ },
+ "callback": {
+  "days": [
+   "today",
+   "next_business_day"
+  ],
+  "start": "09:30",
+  "end": "18:30",
+  "after_now": true,
+  "business_days_only": true,
+  "windows": {},
+  "max_asks": 2
+ },
+ "identity": {
+  "questions": [
+   {
+    "field": "dob",
+    "kind": "date",
+    "format": "%d/%m/%Y",
+    "ask": "What is your date of birth?"
+   },
+   {
+    "field": "postcode",
+    "kind": "upper",
+    "ask": "What is the postcode we have on file for you?"
+   }
+  ],
+  "max_wrong": 3,
+  "max_wrong_per_question": null,
+  "date_order": "dmy",
+  "hints": {},
+  "purpose_is_decline": true,
+  "question_is_decline": false,
+  "response": {
+   "ok": "ok",
+   "verified": "passed",
+   "all_verified": "identity_confirmed",
+   "left": "wrong_left",
+   "hint": "",
+   "pass_values": [],
+   "reject_values": []
+  }
+ },
+ "products": {
+  "names": {
+   "card": "card ending {card_ending}",
+   "loan": "personal loan",
+   "overdraft": "overdraft"
+  },
+  "amount_field": "arrears",
+  "days_field": "days_overdue",
+  "floor_field": {
+   "card": "min_due",
+   "loan": "repayment",
+   "overdraft": "excess"
+  },
+  "floor_pct": null,
+  "floor_names": {
+   "card": "minimum due",
+   "loan": "repayment",
+   "overdraft": "amount over your agreed limit"
+  },
+  "amount_scale": 1,
+  "promise_scale": 100,
+  "promise_round": null,
+  "floor_round": null,
+  "list_field": "accounts",
+  "id_field": "account_ref",
+  "type_field": "kind"
+ },
+ "bands": [
+  {
+   "name": "early",
+   "min": 1,
+   "max": 10,
+   "deadline": {
+    "kind": "business_days_after",
+    "n": 10
+   },
+   "deadline_by_type": {},
+   "attempts": 1,
+   "ladder": null
+  },
+  {
+   "name": "late",
+   "min": 11,
+   "max": 60,
+   "deadline": {
+    "kind": "business_days_after",
+    "n": 6
+   },
+   "deadline_by_type": {
+    "overdraft": {
+     "kind": "business_days_after",
+     "n": 3
+    }
+   },
+   "attempts": 2,
+   "ladder": null
+  }
+ ],
+ "bands_outside": null,
+ "ladder": [
+  {
+   "amount": "full",
+   "date": "last_business_day_this_week"
+  },
+  {
+   "amount": "floor",
+   "date": "deadline"
+  }
+ ],
+ "rules": {
+  "refuse_deadline_is_refusal": true,
+  "deadline_adjust": "previous_business_day",
+  "first_ask": "today",
+  "too_much_floor": "attempt_1",
+  "ladder_repeat_last": false,
+  "week_end_today": "next_week",
+  "opening_is_attempt": false
+ },
+ "after_promise": {
+  "ask_anything_else": true
+ },
+ "notes": {
+  "enabled": true
+ },
+ "multi": {
+  "clamp_single_date": true,
+  "continue_after_paid": true,
+  "continue_after_dispute": true
+ },
+ "human": {
+  "ask_first": true
+ },
+ "max_not_talk": 2,
+ "events": {
+  "promise": {
+   "outcome": "promise",
+   "reason": ""
+  },
+  "paid": {
+   "outcome": "paid",
+   "reason": "",
+   "note": "paid"
+  },
+  "transfer_restructuring": {
+   "outcome": "transferred",
+   "reason": "arrangements",
+   "queue": "arrangements"
+  },
+  "transfer_human": {
+   "outcome": "transferred",
+   "reason": "human",
+   "queue": "general"
+  },
+  "transfer_support": {
+   "outcome": "transferred",
+   "reason": "wellbeing",
+   "queue": "wellbeing"
+  },
+  "refused": {
+   "outcome": "no_promise",
+   "reason": "refused",
+   "note": "refused"
+  },
+  "hardship": {
+   "outcome": "no_promise",
+   "reason": "hardship",
+   "note": "hardship"
+  },
+  "dispute": {
+   "outcome": "no_promise",
+   "reason": "dispute",
+   "note": "dispute"
+  },
+  "service_error": {
+   "outcome": "no_promise",
+   "reason": "service_error",
+   "note": ""
+  },
+  "id_failed": {
+   "outcome": "not_verified",
+   "reason": "failed"
+  },
+  "id_declined": {
+   "outcome": "not_verified",
+   "reason": "declined"
+  },
+  "callback": {
+   "outcome": "not_reached",
+   "reason": "callback"
+  },
+  "no_callback": {
+   "outcome": "not_reached",
+   "reason": "no_callback"
+  },
+  "wrong_number": {
+   "outcome": "not_reached",
+   "reason": "wrong_number"
+  },
+  "deceased": {
+   "outcome": "not_reached",
+   "reason": "deceased"
+  },
+  "unclear": {
+   "outcome": "not_reached",
+   "reason": "unclear"
+  }
+ },
+ "tool_bodies": {
+  "verify_identity": {
+   "field": "q_field",
+   "answer": "q_answer"
+  },
+  "get_account": {},
+  "create_promise": {
+   "account_ref": "p_product",
+   "amount_pence": "p_amount",
+   "pay_date": "p_date"
+  },
+  "add_note": {
+   "account_ref": "n_product",
+   "code": "n_reason"
+  },
+  "schedule_callback": {
+   "day": "cb_date",
+   "at": "cb_time"
+  },
+  "transfer_to_agent": {
+   "queue": "t_queue"
+  },
+  "close_call": {
+   "result": "c_outcome",
+   "reason": "c_reason"
+  }
+ },
+ "responses": {
+  "verify_identity": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "get_account": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "create_promise": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "add_note": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "schedule_callback": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "transfer_to_agent": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  },
+  "close_call": {
+   "field": "ok",
+   "values": [
+    true
+   ]
+  }
+ },
+ "intents": {
+  "hardship": "Illness, bereavement or job loss.",
+  "restructure": "A request for a payment plan.",
+  "already_paid": "\"Already paid\" on an account.",
+  "dispute": "\"Not my debt\" on an account.",
+  "human": "A request for a person."
+ },
+ "call_variables": [],
+ "lines": {
+  "opening": "Hello, this is Kestrel Mutual's digital assistant, and we record this call.",
+  "confirm_ask": "Am I speaking with {title} {last_name}?",
+  "robot": "Yes, I am Kestrel Mutual's digital assistant.",
+  "scam": "This is a genuine call from Kestrel Mutual, and you can always call us back on the number on our website or in the app.",
+  "purpose_before_verify": "I can explain once I have confirmed I am speaking with the right person.",
+  "no_info": "I'm sorry, I can't share that information.",
+  "not_talk_once": "I understand, and I will keep this short.",
+  "tp_ask": "When would be a good time to reach {title} {last_name}?",
+  "tp_ask_time": "What time would suit, between 9:30 in the morning and 6:30 in the evening?",
+  "tp_outside_window": "I'm sorry, I can only call back today or on the next business day, between 9:30 in the morning and 6:30 in the evening. Is there another time that would work?",
+  "tp_no_info": "I'm sorry, I can only discuss this with {title} {last_name}.",
+  "tp_booked": "Thank you, we will call back on {date} at {time}.",
+  "wrong_number": "I'm sorry for the trouble. I will make sure we don't call this number again.",
+  "condolence": "I am sorry for your loss.",
+  "id_intro": "Before we go on, I need to ask you two security questions.",
+  "id_why": "I need to be sure I am speaking with the right person before I can say why I'm calling.",
+  "id_explain": "These questions protect your privacy, and I can't go on without them.",
+  "id_declined": "I understand. I can't go on without confirming who you are.",
+  "id_repeat": "Sorry, could you say that again?",
+  "id_continue": "Yes, please go on.",
+  "id_wrong": "I'm sorry, that doesn't match our records.",
+  "id_failed": "I'm sorry, I can't confirm your identity on this call. Please use the Kestrel Mutual app or visit a branch.",
+  "disclose_intro": "Thank you. I'm calling about overdue payments on your accounts with Kestrel Mutual.",
+  "product_line": "Your {name} is {amount} overdue, by {days} days.",
+  "ask_today": "Can you pay the full overdue amount today?",
+  "ask_today_multi": "Can you pay all the overdue accounts in full today?",
+  "next_product": "Now let's look at your {name}.",
+  "offer": "Could you pay {amount} on {date}?",
+  "offer_floor_date": "I understand. Could you pay {amount} on {date}?",
+  "offer_floor": "I understand. Could you pay {amount}?",
+  "below_floor": "I'm sorry, the lowest I can accept is {amount}. Could you pay that?",
+  "below_floor_again": "I understand.",
+  "date_past": "I'm sorry, that date has already passed. Which date from today on would work?",
+  "not_business_day": "That isn't a business day, so the payment would be on {date}. Does that work for you?",
+  "after_deadline": "I'm sorry, the latest date I can accept is {date}. Could you pay by then?",
+  "vague_ask": "Which exact day would you pay?",
+  "propose_deadline": "Could you pay {amount} on {date}?",
+  "ask_date_for_amount": "On which date could you pay {amount}?",
+  "repeat_offer": "Just to repeat, could you pay {amount} on {date}?",
+  "readback_intro": "Let me read back what we agreed.",
+  "readback_item": "For your {name}, {amount} on {date}.",
+  "clamped_note": "For your {name}, the latest date I can accept is {date}, so I have used that date.",
+  "confirm_q": "Do you confirm these payments?",
+  "recorded": "Thank you, your promise is recorded.",
+  "sms_line": "",
+  "record_failed": "I'm sorry, that promise could not be saved because of a system problem, so it is not recorded.",
+  "paid_line": "Thank you. Payments can take one business day to show.",
+  "dispute_line": "I understand, and I won't ask you to pay that today. Our team will look into it.",
+  "hardship": "I'm very sorry to hear that. I can connect you to our wellbeing team, who can help. Would you like that?",
+  "hardship_declined": "I understand. I won't go on about these payments today.",
+  "hardship_short": "Would you like that?",
+  "restructure_line": "I'll connect you to our arrangements team, who can talk about a payment plan.",
+  "human_ask_help": "Is there anything I can help you with myself?",
+  "transfer": "Please hold while I put you through.",
+  "offer_short": "Would that work for you?",
+  "offer_short_date": "That would be on {date}.",
+  "anything_else": "Is there anything else I can help you with?",
+  "promise_change": "I'm sorry, I can't change a saved promise on this call.",
+  "go_on": "Sorry, please go on.",
+  "goodbye": "Thank you for your time. Goodbye.",
+  "callback_failed": "I'm sorry, I couldn't book the callback.",
+  "transfer_failed": "I'm sorry, I couldn't put you through.",
+  "confirm_again": "Sorry, I didn't catch that. Do you confirm, yes or no?",
+  "system_error": "I'm sorry, our system isn't responding right now.",
+  "below_floor_final": "I'm sorry, I can't accept less than {amount}."
+ },
+ "assumptions": [
+  "Holidays: P9 lists 2026-11-19, 2026-12-25, 2026-12-28 and 2027-01-01. M2.3 adds 2026-12-07. M1.2 added 2026-12-24, but M2.1 (the later memo) withdraws it, so 2026-12-24 stays a business day.",
+  "M1.1 is in force from 2026-10-01, and M2.2 keeps it. So late-band overdrafts (11 to 60 days overdue) have a deadline of the 3rd business day after today. Late cards and loans keep the 6th business day, and every early-band account keeps the 10th business day. The overdraft floor and attempt counts do not change.",
+  "Memo dates are not handled per call. The holiday list follows the latest memos (Memo 2, in force from 2026-11-01), because a deadline that reaches 2026-12-24 can only come from a call made after that date.",
+  "Currency is pounds (the API gives amounts in pounds). create_promise takes pence, so promise_scale is 100. The brief gives no rounding rule, so promise_round is null.",
+  "verify_identity: dob is sent as DD/MM/YYYY (%d/%m/%Y, so date_order is dmy). Postcode is sent in capitals with no spaces. No length is set because UK postcode length varies.",
+  "verify_identity response fields: passed = this answer matched, identity_confirmed = both answers passed, wrong_left = wrong answers left. The API has no hint field, so hints is empty. An unreadable answer comes back ok=false and is not counted as wrong.",
+  "Callbacks are for today or the next business day, 09:30 to 18:30 inclusive, and later than now. M2.3 says a holiday is not a business day for callbacks, so business_days_only is true.",
+  "Ladder: attempt 1 is the full arrears on the last business day of this week. If today is that day, it uses next week's (week_end_today = next_week). If that day falls after the account's deadline, the deadline is used. Attempt 2, late band only, is the floor on the deadline. The early band has 1 attempt and the late band has 2. The opening 'pay everything today' question is not an attempt, and today is not asked about again (P15).",
+  "Floor: card = min_due, loan = repayment, overdraft = excess. Any amount from the floor to the full arrears is accepted. Below the floor, the floor is offered once (P14).",
+  "P12: if one date is named for all accounts, an account whose deadline is earlier is recorded on its own deadline, and the read-back says so (clamp_single_date).",
+  "Notes go on every account that ends without a promise (refused, hardship, dispute, paid), except on a transfer (P19) or a promise that could not be saved (P23). service_error has no note code.",
+  "The brief is silent on these, so defaults are used: 'next <weekday>' means that weekday in the following calendar week; 2 'don't want to talk' ends the call; one more turn is given after a recorded promise; asking what the call is about instead of answering counts as declining; 'too much' moves to the floor as attempt 1.",
+  "The brief does not say whether a saved promise can be changed, so the agent says it cannot be changed on this call. No SMS sentence is required after a recorded promise.",
+  "The brief says nothing on what happens to the remaining arrears after a floor payment, so offer_floor_date does not mention it.",
+  "P3 requires saying that the call is recorded. The opening says 'we record this call'.",
+  "Success for every tool is ok = true, per the API."
+ ]
+}

@@ -1,0 +1,34 @@
+[    0.0s] START 2026-10-11T05:23:41+0000
+[    0.0s] NOTE extraction mode B
+[   78.5s] MODEL CALL #1 model=claude-opus-5-5 seconds=78.5 cost_usd=0.331 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  112.7s] MODEL CALL #2 model=claude-opus-5-5 seconds=34.2 cost_usd=0.262 purpose: audit the high-risk fields of the reading against the source documents
+[  112.7s] NOTE audit: I checked every listed field against the policy, both memos and the tool API file. All of them match, so the spec needs no changes.
+[  112.7s] 
+[  112.7s] calendar: OK -- P9 "Monday to Friday, except … 2026-11-19, 2026-12-25, 2026-12-28, 2027-01-01"; M2.3 "Add 2026-12-07 to the holiday list of P9"; M2.1 "Item M1.2 is withdrawn … 2026-12-24 is a normal business day" -- The workdays are 0–4. The holidays are the four from P9 plus 2026-12-07, and 2026-12-24 is correctly left out. M1.2 was only in force in October, and no October deadline (10 business days at most) reaches 24 December. M2 takes effect on 2026-11-01, and no October deadline reaches 7 December either, so the static list is safe.
+[  112.7s] 
+[  112.7s] date_rules: OK -- The materials say nothing about "next Friday". The default is used and recorded in assumptions.
+[  112.7s] 
+[  112.7s] confirm: OK -- P3 "Ask once more if unclear; if still unclear, close as `not_reached` / `unclear`" -- That is 2 asks.
+[  112.7s] 
+[  112.7s] callback: OK -- P4 "today or the next business day, from 09:30 to 18:30, both included, and later than `now`… ask once for another; if that is also outside, close as … `no_callback`"; M2.3 "not a business day for promises or for callbacks" -- The days, the 09:30–18:30 window, after_now, max_asks 2 and business_days_only true all follow from these.
+[  112.7s] 
+[  112.7s] identity.questions: OK -- P6 "date of birth, then the postcode on file"; API "dob: DD/MM/YYYY with leading zeros… postcode: capital letters and digits, no spaces" -- The fields are dob (date, %d/%m/%Y) then postcode (upper, no spaces). No length is given, which is right because the API sets none.
+[  112.7s] 
+[  112.7s] identity.max_wrong: OK -- P7 / API "Three wrong answers in total end the check" -- max_wrong is 3 and is counted in total, not per question.
+[  112.7s] 
+[  112.7s] identity.hints: OK -- The verify response has no hint field, so it is {}.
+[  112.7s] 
+[  112.7s] identity: OK -- The response fields match the API: ok, passed, identity_confirmed, wrong_left. "An unreadable value is rejected with ok=false and is not counted" is covered by the ok field. date_order is dmy because the DD/MM/YYYY format decides it. P7 "refuses to answer after one explanation → declined" fits purpose_is_decline.
+[  112.7s] 
+[  112.7s] products.floor_field: OK -- P14 "`min_due` for a card, `repayment` for a loan and `excess` for an overdraft"; M1.1 "The overdraft floor … do[es] not change."
+[  112.7s] 
+[  112.7s] products.amount_field: OK -- API "arrears: overdue amount in pounds"; days_field is days_overdue.
+[  112.7s] 
+[  112.7s] products.floor_pct: OK -- null, because the floor comes from fields, not a percentage.
+[  112.7s] 
+[  112.7s] products: OK -- list_field "accounts", id_field "account_ref" and type_field "kind" match the API. promise_scale 100 follows from "amount_pence … pounds x 100". promise_round is null because no rounding rule is given. The names follow P8 "card ending 2210", "personal loan", "overdraft".
+[  112.7s] 
+[  112.7s] bands: OK -- P10 "1 to 10 | early | the 10th business day after today | 1" and "11 to 60 | late | the 6th business day after today | 2"; M1.1 (kept in force by M2.2) "Overdrafts in the late band now have … the 3rd business day after today" -- Late-band o
+[  112.7s] NOTE audit changed: nothing
+[  112.7s] NOTE validation round 1: 0 problem(s)
+[  112.7s] END 2026-10-11T05:25:34+0000 total_seconds=112.7 model_calls=2 model_cost_usd=0.59

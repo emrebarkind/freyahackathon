@@ -1,0 +1,80 @@
+r2-B-b9d845bb82.spec.json 9 / 22
+    C5 floor 
+      expect 123.5 
+      got    124.0
+    C6 floor 
+      expect 24.7 
+      got    10.0
+    C7 floor 
+      expect 25.05 
+      got    11.0
+    C8 floor 
+      expect 15.4 
+      got    2.0
+    C13 offers 
+      expect [[61.75, "2026-11-26"], [20.0, "2026-11-26"]] 
+      got    [[123.45, "2026-11-26"], [61.73, "2026-11-26"], [13.0, "2026-11-26"]]
+    C14 offers 
+      expect [[87.3, "2026-11-26"], [43.65, "2026-11-26"]] 
+      got    [[87.3, "2026-11-26"], [43.65, "2026-11-26"], [9.0, "2026-11-26"]]
+    C15 offers 
+      expect [[36.0, "2026-12-22"], [20.0, "2026-12-22"]] 
+      got    [[36.0, "2026-12-22"], [18.0, "2026-12-22"], [4.0, "2026-12-22"]]
+    C16 offers 
+      expect [[333.33, "2026-12-21"], [166.7, "2026-12-30"]] 
+      got    [[333.33, "2026-12-21"], [166.66, "2026-12-30"]]
+    C17 attempts 
+      expect 1 
+      got    3
+    C18 attempts 
+      expect 1 
+      got    3
+    C20 conversation 
+      expect {"outcome": "no_promise", "reason": "service_error", "promises": [], "notes": [], "transfers": []} 
+      got    "ERROR KeyError: '/schedule_callback'"
+    C21 conversation 
+      expect {"outcome": "promise", "promises": [["p_r2_17", 10005, "2026-11-26"]], "notes": [], "transfers": []} 
+      got    "ERROR KeyError: '/schedule_callback'"
+    C22 conversation 
+      expect {"outcome": "no_promise", "reason": "refused", "promises": [], "notes": [["p_r2_18", "refused"]], "transfers": []} 
+      got    "ERROR KeyError: '/schedule_callback'"
+r2-B-f5e53203f3.spec.json 9 / 22
+    C5 floor 
+      expect 123.5 
+      got    124.0
+    C6 floor 
+      expect 24.7 
+      got    10.0
+    C7 floor 
+      expect 25.05 
+      got    11.0
+    C8 floor 
+      expect 15.4 
+      got    2.0
+    C13 offers 
+      expect [[61.75, "2026-11-26"], [20.0, "2026-11-26"]] 
+      got    [[123.45, "2026-11-26"], [61.73, "2026-11-26"], [13.0, "2026-11-26"]]
+    C14 offers 
+      expect [[87.3, "2026-11-26"], [43.65, "2026-11-26"]] 
+      got    [[87.3, "2026-11-26"], [43.65, "2026-11-26"], [9.0, "2026-11-26"]]
+    C15 offers 
+      expect [[36.0, "2026-12-22"], [20.0, "2026-12-22"]] 
+      got    [[36.0, "2026-12-22"], [18.0, "2026-12-22"], [4.0, "2026-12-22"]]
+    C16 offers 
+      expect [[333.33, "2026-12-21"], [166.7, "2026-12-30"]] 
+      got    [[333.33, "2026-12-21"], [166.66, "2026-12-30"]]
+    C17 attempts 
+      expect 1 
+      got    3
+    C18 attempts 
+      expect 1 
+      got    3
+    C20 conversation 
+      expect {"outcome": "no_promise", "reason": "service_error", "promises": [], "notes": [], "transfers": []} 
+      got    "ERROR KeyError: '/schedule_callback'"
+    C21 conversation 
+      expect {"outcome": "promise", "promises": [["p_r2_17", 10005, "2026-11-26"]], "notes": [], "transfers": []} 
+      got    "ERROR KeyError: '/schedule_callback'"
+    C22 conversation 
+      expect {"outcome": "no_promise", "reason": "refused", "promises": [], "notes": [["p_r2_18", "refused"]], "transfers": []} 
+      got    "ERROR KeyError: '/schedule_callback'"

@@ -1,0 +1,20 @@
+r3-B-3a2c263509.spec.json 17 / 20
+    C5 floor 
+      expect 312.75 
+      got    50.0
+    C14 conversation 
+      expect {"outcome": "promised", "reason": "", "promises": [["VB-1101", 48600, "2026-12-04"], ["VB-3350", 30000, "2026-12-07"]], "notes": [], "transfers": []} 
+      got    {"outcome": "promised", "reason": "", "promises": [["VB-1101", 7200.0, "2026-12-09"], ["VB-3350", 30000.0, "2026-12-07"]], "notes": [], "transfers": []}
+    C18 conversation 
+      expect {"outcome": "promised", "reason": "", "promises": [["VB-2204", 63150, "2026-11-06"]], "notes": [["VB-1150", "disputed"], ["VB-3307", "declined"]], "transfers": []} 
+      got    {"outcome": null, "reason": "", "promises": [], "notes": [], "transfers": []}
+r3-B-a3d97d4d37.spec.json 17 / 20
+    C5 floor 
+      expect 312.75 
+      got    50.0
+    C14 conversation 
+      expect {"outcome": "promised", "reason": "", "promises": [["VB-1101", 48600, "2026-12-04"], ["VB-3350", 30000, "2026-12-07"]], "notes": [], "transfers": []} 
+      got    {"outcome": "promised", "reason": "", "promises": [["VB-1101", 7200.0, "2026-12-09"], ["VB-3350", 30000.0, "2026-12-07"]], "notes": [], "transfers": []}
+    C18 conversation 
+      expect {"outcome": "promised", "reason": "", "promises": [["VB-2204", 63150, "2026-11-06"]], "notes": [["VB-1150", "disputed"], ["VB-3307", "declined"]], "transfers": []} 
+      got    {"outcome": null, "reason": "", "promises": [], "notes": [], "transfers": []}
