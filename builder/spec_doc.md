@@ -60,6 +60,8 @@ use the default shown and record it in `assumptions`.
                                                    // a number, or {"<product type>": percentage} when it differs by type
    "floor_min": null,                              // only if the brief sets a minimum floor ("never below 20"): a number or
                                                    // {"<product type>": number}; a debt below it has the whole debt as floor
+   "floor_full_below": null,                       // only if the brief makes the whole debt the floor when the debt is below
+                                                   // an amount ("under 100 the full amount is due"): a number or {"<type>": n}
    "floor_names": {"<product type>": "<what the brief calls the floor, e.g. minimum payment>"},
    "amount_scale": 1,                              // 100 only if get_account gives amounts in cents/pence (minor units)
    "promise_scale": null,                          // only if create_promise takes another unit than get_account gives:
@@ -286,7 +288,7 @@ on or after it.
 `policy`: the evidence for every critical policy, keyed by dotted path. Critical paths: rules.skipped_repeat_counts,
 opening_is_attempt, opening_blocks_repeat, too_much_skips_full, too_much_floor, ladder_repeat_last,
 refuse_deadline_is_refusal, promise_retries, hardship_transfer, deadline_adjust, first_ask, week_end_today;
-products.floor_pct, floor_min, floor_round, step_round, promise_scale, promise_round; event_changes. A path you
+products.floor_pct, floor_min, floor_full_below, floor_round, step_round, promise_scale, promise_round; event_changes. A path you
 leave unset still has a value (the engine default: skipped_repeat_counts true, opening_is_attempt false,
 opening_blocks_repeat false, too_much_skips_full false, too_much_floor "attempt_1", ladder_repeat_last false,
 refuse_deadline_is_refusal true, promise_retries 1, hardship_transfer "ask_first", deadline_adjust

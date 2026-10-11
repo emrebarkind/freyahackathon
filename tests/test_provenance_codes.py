@@ -231,3 +231,19 @@ def test_a_band_the_engine_cannot_compute_fails_the_self_test_and_the_verdict():
         assert False, "must exit INCOMPLETE"
     except SystemExit as e:
         assert e.code == 3 and "spec problem left" in tr.last
+
+
+def test_floor_full_below_only_when_the_brief_says_so():
+    from builder.runtime import cal
+    from builder import compile as comp
+    s = comp.apply_defaults(copy.deepcopy(E.A), O)
+    engine.S = s
+    cal.P = dict(workdays=s["calendar"]["workdays"], holidays=s["calendar"]["holidays"])
+    s["products"]["floor_field"] = {}
+    s["products"]["floor_pct"], s["products"]["floor_round"] = 25, "up_unit"
+    typ = list(s["products"]["names"])[0]
+    fl = lambda full: engine.product_facts({"now": "2026-10-14T11:00"}, {"product_id": "p", "type": typ, "past_due": full,
+                                                                          "days_late": s["bands"][0]["min"]})["floor"]
+    assert (fl(72.4), fl(333.33)) == (19.0, 84.0)
+    s["products"]["floor_full_below"] = 100                 # f1: "if the overdue amount is below 100, the whole amount"
+    assert (fl(72.4), fl(333.33), fl(100.0)) == (72.4, 84.0, 25.0)

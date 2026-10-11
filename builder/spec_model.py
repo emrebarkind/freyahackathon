@@ -98,6 +98,7 @@ class Products(Loose):
     floor_field: Dict[str, str] = {}
     floor_pct: Optional[Union[int, float, Dict[str, Union[int, float]]]] = None
     floor_min: Optional[Union[int, float, Dict[str, Union[int, float]]]] = None
+    floor_full_below: Optional[Union[int, float, Dict[str, Union[int, float]]]] = None
     floor_round: Optional[str] = Field(default=None, pattern=r"^(cents|up_unit|nearest_unit|(up|nearest|down):[0-9]*\.?[0-9]+)$")
     step_round: Optional[str] = Field(default=None, pattern=r"^(cents|up_unit|nearest_unit|(up|nearest|down):[0-9]*\.?[0-9]+)$")
 

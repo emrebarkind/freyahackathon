@@ -34,6 +34,7 @@ CRITICAL = {
     "rules.week_end_today": ("literal", "dates"),
     "products.floor_pct": (None, "amounts"),
     "products.floor_min": (None, "amounts"),
+    "products.floor_full_below": (None, "amounts"),
     "products.floor_round": ("cents", "amounts"),
     "products.step_round": ("cents", "amounts"),
     "products.promise_scale": (1, "amounts"),

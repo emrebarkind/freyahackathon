@@ -287,6 +287,10 @@ def product_facts(V, raw):
     fmin = by_type(fmin, typ) if isinstance(fmin, dict) else fmin
     if fmin is not None:
         floor = max(floor, float(fmin))           # "never below X" (and the full amount when that is below X)
+    fbelow = S["products"].get("floor_full_below")
+    fbelow = by_type(fbelow, typ) if isinstance(fbelow, dict) else fbelow
+    if fbelow is not None and full < float(fbelow):
+        floor = full                              # "below X the whole amount is due": only when the brief says so
     dl = int(num(raw.get(S["products"].get("days_field", "days_late"))) or 0)
     b = band_for(dl)
     if b is None:                                 # no band and no rule for it: no offer is made for this product
