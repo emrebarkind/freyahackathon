@@ -1843,16 +1843,17 @@ def stage_confirm(V, s, k, t, dtxt, a, scope):
     if common_intents(V, s, k, L("confirm_q"), True):
         return
     if k in ("unclear", "none", "question") and not dtxt and a is None:
-        n = s.get("confirm_unclear", 0) + 1         # no answer yet (small talk, a fragment): ask again, more plainly
+        # No answer yet (small talk, a fragment). Silence is not a refusal: the plan the customer agreed is kept (never
+        # reopened for the earlier offers), and every third time the plan itself is read again instead of a bare
+        # "do you confirm?".
+        n = s.get("confirm_unclear", 0) + 1
         s["confirm_unclear"] = n
-        if n <= 4:
-            s["reask"] = True
-            if k == "question":                     # "what was the date again?": read it back once more
-                say(V, *(readback_parts(s) + [L("confirm_q")]))
-            else:
-                say(V, L("confirm_q") if n == 1 else (L("confirm_again") or "Sorry, I did not catch that. Do you confirm, yes or no?"))
-            return talk(V, "confirm", s)
-        k = "no"
+        s["reask"] = True
+        if k == "question" or n % 3 == 0:
+            say(V, *(readback_parts(s) + [L("confirm_q")]))
+        else:
+            say(V, L("confirm_q") if n == 1 else (L("confirm_again") or "Sorry, I did not catch that. Do you confirm, yes or no?"))
+        return talk(V, "confirm", s)
     if k in ("no", "refuses"):
         for p in agreed:
             p["status"] = "open"
@@ -2194,6 +2195,9 @@ def handle_result(V, s, aw):
         return
 
 
+GO_ON_MAX = 4          # content-free "please go on" lines in one call; after that a cut-off message gets the question again
+
+
 def run_turn(V, s, stage):
     """A customer turn arrived from talk_<stage>."""
     k, t, dtxt, a, scope = take_input(V, stage)
@@ -2205,13 +2209,16 @@ def run_turn(V, s, stage):
         V["_cut"] = "yes"                              # text backup: the message ends on an unfinished phrase
     if V.get("_cut") == "yes" and stage in ("open", "tp", "id", "nego", "confirm", "hardship") and not dtxt and a is None \
             and k in ("unclear", "none", "too_much", "cannot") \
-            and s.get("cut_waits", 0) < 2 and k not in ("wrong_number", "deceased", "dispute", "already_paid", "hardship", "restructure"):
+            and s.get("cut_waits", 0) < 2 and s.get("go_on_total", 0) < GO_ON_MAX \
+            and k not in ("wrong_number", "deceased", "dispute", "already_paid", "hardship", "restructure"):
         s["cut_waits"] = s.get("cut_waits", 0) + 1     # the customer stopped mid-sentence: let them finish
+        s["go_on_total"] = s.get("go_on_total", 0) + 1   # bounded over the whole call: then the question itself is asked again
         s["reask"] = True
         say(V, L("go_on") or "Sorry, please go on.")
         return talk(V, stage, s)
     if V.get("_cut") == "yes" and stage in ("open", "tp") and k in ("wrong_number", "deceased") and not s.get("end_cut_waited"):
         s["end_cut_waited"] = True                     # 'No, you're not...' cut off: hear the rest before ending the call
+        s["go_on_total"] = s.get("go_on_total", 0) + 1
         s["reask"] = True
         say(V, L("go_on") or "Sorry, please go on.")
         return talk(V, stage, s)
@@ -2219,6 +2226,7 @@ def run_turn(V, s, stage):
             and k not in ("yes", "agrees", "confirm") and not s.get("cut_value_waited"):
         s["cut_value_waited"] = True                   # "I can pay six hundred and..." : let them finish the number
         s["held"] = [dtxt, a, scope, k]                # keep what was said in case the rest does not repeat it
+        s["go_on_total"] = s.get("go_on_total", 0) + 1
         s["reask"] = True
         say(V, L("go_on") or "Sorry, please go on.")
         return talk(V, stage, s)
@@ -2231,7 +2239,7 @@ def run_turn(V, s, stage):
     if V.get("_cut") != "yes":
         s["cut_value_waited"] = False
     s["cut_waits"] = 0
-    if s.get("same", 0) >= (2 if stage == "nego" else 4) and stage in ("nego", "confirm") \
+    if s.get("same", 0) >= 2 and stage == "nego" \
             and k in ("unclear", "none", "question", "asks_amount", "proposes", "details", "robot", "scam") and not dtxt and a is None:
         k, scope = "no", "none"     # the same line three times and still nothing new: stop looping, count a non-answer
     prev = V.get("say", "")
