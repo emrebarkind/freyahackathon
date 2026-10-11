@@ -1,5 +1,48 @@
 # Submission candidates
 
+## Candidate 6 (Phase 2, recommended): builder at `593635d` (tag `phase2-candidate`; rollback: candidate 5 `ef271b3`, then candidate 4 `22f774a`)
+
+Behaviour changes since candidate 5:
+* Week deadlines roll by one week, and `day_of_next_month` is no longer capped at the 28th.
+* An internal error closes with the service_error event, not refused.
+* `multi.outcome_priority`.
+* `rules.notes_before_transfer`.
+* Note codes and `floor_round` can be set per product type.
+* The self-test has per-product and lost-response faults.
+* Built-in behaviour is documented, so a brief that contradicts it gets flagged.
+
+Evidence at this exact commit:
+* 187 tests pass. The self-test passes on every stored spec. Rescoring every package on the current engine shows no
+  regression: p1 30/30, p2 30/30, r2 22/22, q1 16/16, h1 34/34, f1 20/20, and the pair variants as listed below.
+* Clean checkout, official command, A-prime: COMPLETE, 194.6 s, 2 model calls,
+  $0.82, agent `81304f68-decf-4c37-8ba4-31453544169d`. Platform (`eval/clean-runs/final-aprime/`):
+  * PUB-01: create_promise 420 ok
+  * PUB-05: transfer support ok, then close transferred/support ok, no question asked
+  * PUB-08: close no_promise/dispute ok
+  * All accepted by the bank. The platform was slow (median turn 22 s); no customer hung up.
+* Held-out h2 (separate evaluator, blind second reading 24/24):
+  * **First attempt at `0769168`: failed; spec malformed, nothing deployed.** 398.2 s, 4
+    calls, $1.91. The per-type note codes and the per-type floor rounding had no place in the format.
+  * Retest at `593635d` (h2 is no longer held out): INCOMPLETE, 295.2 s, $1.37, key 21/24.
+    * C24: the product order by type is not carried (flagged).
+    * C21, C22: "after a dispute, the opening ask counts as refused for the remaining products" is not carried and
+      was NOT flagged.
+* Pairs (eval/pairs, first results in `results-first/`):
+  * equivalent wording 20/20;
+  * skip, opening, rollover, units and code contrasts 20/20 each;
+  * c_transfer first 20/21: the notes before the transfer were missing (fixed, retest COMPLETE);
+  * c_transfer_ask 17/21: a scorer limitation; the agent is correct in simulation (declined → hardship note and code).
+
+Inputs and outputs (A-prime, sha256):
+```
+7150a3c3beaf81d127748f5ce0595f617520321fc2413cd8065e7ec364f0abc5  inputs/brief.md
+9a8410b12e5c82b6c6a30e9ed7030574d6f919cafdb1e035cef7bd876b0badb8  inputs/openapi.json
+612a4a5ca376bf4a1e6301fdbb28a641f936d3311f4abf827c796eedcbf9ac13  final-aprime.log
+40a1a7bf0da60bca6693055e6cd048334fba285fa50423af113d0c8f5757f109  final-aprime.spec.json
+803f74752dc2180f161d3d9c10c68b089014e4b4c5e293939422c12cc51fb496  final-aprime.trace.log
+dd34fb86058dd1c8125e3eecd71c6e136407d96cfaa02cdb8e289d1088528785  final-aprime.workflow.json
+```
+
 ## Candidate 5 (Phase 1): builder at `ef271b3` (tag `phase1-candidate`; rollback: candidate 4, tag `candidate-4-builder` = `22f774a`)
 
 Changes since candidate 4:

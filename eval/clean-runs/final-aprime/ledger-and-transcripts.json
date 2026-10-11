@@ -1,0 +1,102 @@
+{
+ "PUB-01": {
+  "writes": [
+   [
+    "create_promise",
+    {
+     "date": "2026-10-14",
+     "amount": 420,
+     "product_id": "p1"
+    },
+    200,
+    {
+     "ok": true,
+     "promise_id": "pr1"
+    }
+   ],
+   [
+    "close_call",
+    {
+     "outcome": "promise"
+    },
+    200,
+    {
+     "ok": true
+    }
+   ]
+  ],
+  "last_turns": [
+   [
+    "user",
+    "No, that is all."
+   ],
+   [
+    "assistant",
+    "Thank you for your time. Goodbye."
+   ]
+  ],
+  "ended": "assistant-ended-call"
+ },
+ "PUB-05": {
+  "writes": [
+   [
+    "transfer_to_agent",
+    {
+     "queue": "support"
+    },
+    200,
+    {
+     "ok": true
+    }
+   ],
+   [
+    "close_call",
+    {
+     "reason": "support",
+     "outcome": "transferred"
+    },
+    200,
+    {
+     "ok": true
+    }
+   ]
+  ],
+  "last_turns": [
+   [
+    "user",
+    "I lost my job last month and cannot pay anything. Can I get a discount?"
+   ],
+   [
+    "assistant",
+    "I'm very sorry to hear that. I will connect you with our customer support team now. Thank you for your time. Goodbye."
+   ]
+  ],
+  "ended": "assistant-ended-call"
+ },
+ "PUB-08": {
+  "writes": [
+   [
+    "close_call",
+    {
+     "reason": "dispute",
+     "outcome": "no_promise"
+    },
+    200,
+    {
+     "ok": true
+    }
+   ]
+  ],
+  "last_turns": [
+   [
+    "user",
+    "I already paid it in the app this morning."
+   ],
+   [
+    "assistant",
+    "Thank you. Payments can take one business day to appear. Thank you for your time. Goodbye."
+   ]
+  ],
+  "ended": "assistant-ended-call"
+ }
+}

@@ -1,0 +1,124 @@
+{
+ "ok": 21,
+ "total": 24,
+ "accuracy": 0.875,
+ "rules": 10,
+ "missed_rules": [
+  "CODES",
+  "ORDER"
+ ],
+ "failed": [
+  {
+   "id": "C21",
+   "rule": "CODES",
+   "type": "conversation",
+   "expect": {
+    "outcome": "promise_taken",
+    "reason": "",
+    "promises": [
+     [
+      "FL-L-61205",
+      52000,
+      "2026-11-19"
+     ]
+    ],
+    "notes": [
+     [
+      "FL-C-61204",
+      "NC-DSP"
+     ]
+    ],
+    "transfers": []
+   },
+   "got": {
+    "outcome": "promise_taken",
+    "reason": "",
+    "promises": [
+     [
+      "FL-L-61205",
+      52000.0,
+      "2026-11-17"
+     ]
+    ],
+    "notes": [
+     [
+      "FL-C-61204",
+      "NC-DSP"
+     ]
+    ],
+    "transfers": []
+   }
+  },
+  {
+   "id": "C22",
+   "rule": "CODES",
+   "type": "conversation",
+   "expect": {
+    "outcome": "promise_taken",
+    "reason": "",
+    "promises": [
+     [
+      "FL-C-62311",
+      18000,
+      "2026-11-20"
+     ]
+    ],
+    "notes": [
+     [
+      "FL-O-62310",
+      "NX-QRY"
+     ]
+    ],
+    "transfers": []
+   },
+   "got": {
+    "outcome": "promise_taken",
+    "reason": "",
+    "promises": [
+     [
+      "FL-C-62311",
+      18000.0,
+      "2026-11-18"
+     ]
+    ],
+    "notes": [
+     [
+      "FL-O-62310",
+      "NX-QRY"
+     ]
+    ],
+    "transfers": []
+   }
+  },
+  {
+   "id": "C24",
+   "rule": "ORDER",
+   "type": "conversation",
+   "expect": {
+    "outcome": "promise_taken",
+    "reason": "",
+    "promises": [
+     [
+      "FL-O-64521",
+      23300,
+      "2026-11-26"
+     ]
+    ],
+    "notes": [
+     [
+      "FL-L-64520",
+      "NL-REF"
+     ]
+    ],
+    "transfers": []
+   },
+   "got": {
+    "outcome": null,
+    "reason": "",
+    "promises": [],
+    "notes": [],
+    "transfers": []
+   }
+  }
+ ]
+}

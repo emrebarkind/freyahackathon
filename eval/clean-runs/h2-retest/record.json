@@ -1,0 +1,26 @@
+{
+ "builder_commit": "593635d891ac5502d415cf87ef36c16d90819a40",
+ "exit_status": 3,
+ "inputs": {
+  "inputs/brief.md": "96d70b0ddc690cdfb467e73b94c96a2857d96c5e1076371b8c7021162210044b",
+  "inputs/openapi.json": "1a6b623220416e938d056334f1e7619cddaabb8b5cb3fc5eefa6fac01cc2ee2a"
+ },
+ "outputs": {
+  "h2-retest.log": "77ddae33cbdecf2e0ba664fc440a1685f8c64d0a23cd4075a83e13048724fb89",
+  "h2-retest.spec.json": "bf3d8aefef08407f95b47bae5b62a964e8f9467b9edd545e7bb049e85866ab22",
+  "h2-retest.trace.log": "046076f9956ddfd5eb9c10ca1e4cd5a8dd6a1b82d9c8d52352e3dbef70833c33",
+  "h2-retest.workflow.json": "f7fb403c307a564c6b70cc161fb1ea474a61052df061a2f9034b5794d56a8c7b"
+ },
+ "seconds": 295.2,
+ "model_calls": 3,
+ "cost_usd": 1.37,
+ "result": "INCOMPLETE",
+ "reasons": [
+  "not carried: Where the memo gives a start date, the earlier text still applies to calls before that date. (Memo items 1, 2 and 4 apply from 30 October 2026: before that date band A's deadline is the 7th business day after today, 2026-11-13 is a closure day and 2026-11-30 is not, and the overdraft floor is 25% of the arrears. The format has no date-dependent bands, holidays or floors.)",
+  "not carried: If not, take the products one at a time in the order overdraft, card, loan. If a customer has two products of the same type, the one with the larger arrears goes first.",
+  "not carried: \"It's too much\" counts as a refusal of the step on the table.",
+  "not carried: Otherwise `no_promise` with the reason of the first product (in handling order) whose note is not a paid note: `refused` or `dispute`."
+ ],
+ "workflow_id": "94fc70f7-5766-4015-8262-bc13545c44d6",
+ "agent_id": "a0c99946-4b46-407d-bac5-178da82466c4"
+}

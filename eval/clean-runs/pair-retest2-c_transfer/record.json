@@ -1,0 +1,21 @@
+{
+ "builder_commit": "593635d891ac5502d415cf87ef36c16d90819a40",
+ "exit_status": 0,
+ "inputs": {
+  "inputs/brief.md": "34c0c4b95cdbbf233244dc99fd19e127aae7f7e9187d8ba9f700fee8781f2c7c",
+  "inputs/openapi.json": "d2bc41699b3ee8ae67b002df0a086c3d8038b1da41a23d59679c9cfb96d28866"
+ },
+ "outputs": {
+  "pair-retest2-c_transfer.log": "dc46c4cadef0924edd840ef8e0b80c065ed4f59cdedf38ebb6cf593d47eb3c5a",
+  "pair-retest2-c_transfer.spec.json": "3ce9c530068cc3c48c6969021d5b0d49283ee3e26cbd8d33af5109b1760022bd",
+  "pair-retest2-c_transfer.trace.log": "d251665079a1a2043eddf8b751589e5bea778331b24e62fad46d53681e5b39b5",
+  "pair-retest2-c_transfer.workflow.json": "f731532ba5d5a85a860c8893ca183c9a73f0723dc8f5b6e29adb8a2f6a43de4a"
+ },
+ "seconds": 225.2,
+ "model_calls": 2,
+ "cost_usd": 0.92,
+ "result": "COMPLETE",
+ "reasons": [],
+ "workflow_id": "b2ba1e84-f250-415d-a303-b957b2d6a9cc",
+ "agent_id": "6de0861b-e98a-4afb-81d5-5429d855e1c9"
+}
