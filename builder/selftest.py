@@ -327,6 +327,9 @@ def run_all(spec, openapi):
 
         def notes_for(event, pids=("p1",)):
             n = event_at(spec, event).get("note")
+            if isinstance(n, dict):                    # one code per product type: p1 is types[0], p2 types[1], ...
+                return [(p, engine.by_type(n, types[int(p[1:]) - 1] if int(p[1:]) - 1 < len(types) else types[0]))
+                        for p in pids] if notes_on else []
             return [(p, n) for p in pids] if notes_on and n else []
         spoken = [dict(k="answer", t=spoken_form(q, ident[q["field"]])) for q in spec["identity"]["questions"]]
         P_ = spec["products"]
@@ -353,7 +356,10 @@ def run_all(spec, openapi):
             ("already paid", [C] + answers + [dict(k="already_paid")], single, expected(spec, "paid", notes=notes_for("paid"))),
             ("dispute", [C] + answers + [dict(k="dispute")], single, expected(spec, "dispute", notes=notes_for("dispute"))),
             ("hardship, accepts support" if T else "hardship (no transfer in this brief)", [C] + answers + [dict(k="hardship"), dict(k="yes")], single,
-             expected(spec, "transfer_support", transfers=[T]) if T else expected(spec, "hardship", notes=notes_for("hardship"))),
+             expected(spec, "transfer_support", transfers=[T],
+                      notes=notes_for("hardship") if (spec.get("rules") or {}).get("notes_before_transfer")
+                      and (spec.get("rules") or {}).get("hardship_transfer") == "direct" else [])
+             if T else expected(spec, "hardship", notes=notes_for("hardship"))),
             ("restructuring request", [C] + answers + [dict(k="restructure")], single,
              expected(spec, "transfer_restructuring", transfers=[R] if R else [], notes=[] if R else notes_for("transfer_restructuring"))),
             ("flat refusals", [C] + answers + [dict(k="no")] * 6, single, expected(spec, "refused", notes=notes_for("refused"))),

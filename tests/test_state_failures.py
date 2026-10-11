@@ -112,3 +112,27 @@ def test_notes_before_a_direct_transfer_only_when_the_brief_says_so():
         assert led["notes"] == [("p1", n), ("p2", n)] and led["calls"][-2:] == ["transfer_to_agent", "close_call"]
     finally:
         S = saved
+
+
+def test_note_codes_and_floor_rounding_per_product_type():
+    from builder import spec_model, extract
+    from builder.runtime import engine
+    global S
+    saved = S
+    try:
+        S = copy.deepcopy(saved)
+        S["events"]["refused"]["note"] = {"credit_card": "NC-REF", "personal_loan": "NL-REF"}
+        assert not [e for e in spec_model.check(S) if "note" in e]
+        led, _ = run([{"k": "no"}] * 8)
+        assert sorted(led["notes"]) == [("p1", "NC-REF"), ("p2", "NL-REF")]
+        S["products"]["floor_field"] = {}
+        S["products"]["floor_pct"] = 15
+        S["products"]["floor_round"] = {"credit_card": "up:5", "personal_loan": "up:10"}
+        assert not [e for e in spec_model.check(S) if "floor_round" in e]
+        engine.S = S
+        f = lambda typ, amt: engine.product_facts({"now": "2026-10-14T11:00"}, {"product_id": "x", "type": typ, "past_due": amt, "days_late": 5})["floor"]
+        assert (f("credit_card", 437.8), f("personal_loan", 612.35)) == (70.0, 100.0)
+        S["products"]["floor_round"] = {"credit_card": "up_five"}
+        assert [e for e in spec_model.check(S) if "floor_round" in e]
+    finally:
+        S = saved

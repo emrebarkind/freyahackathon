@@ -99,7 +99,15 @@ class Products(Loose):
     floor_pct: Optional[Union[int, float, Dict[str, Union[int, float]]]] = None
     floor_min: Optional[Union[int, float, Dict[str, Union[int, float]]]] = None
     floor_full_below: Optional[Union[int, float, Dict[str, Union[int, float]]]] = None
-    floor_round: Optional[str] = Field(default=None, pattern=r"^(cents|up_unit|nearest_unit|(up|nearest|down):[0-9]*\.?[0-9]+)$")
+    floor_round: Optional[Union[str, Dict[str, str]]] = None             # one rule, or one per product type
+
+    @field_validator("floor_round")
+    @classmethod
+    def _floor_round(cls, v):
+        for x in (v.values() if isinstance(v, dict) else [v] if v is not None else []):
+            if not re.fullmatch(r"(cents|up_unit|nearest_unit|(up|nearest|down):[0-9]*\.?[0-9]+)", str(x)):
+                raise ValueError(f"floor_round {x!r}: use up_unit, nearest_unit or up/nearest/down:<step>")
+        return v
     step_round: Optional[str] = Field(default=None, pattern=r"^(cents|up_unit|nearest_unit|(up|nearest|down):[0-9]*\.?[0-9]+)$")
 
     @field_validator("floor_pct")
@@ -153,7 +161,7 @@ class Event(Loose):
     outcome: str = Field(min_length=1)       # close_call needs an outcome
     reason: Optional[str] = ""
     queue: Optional[str] = None
-    note: Optional[str] = None
+    note: Optional[Union[str, Dict[str, str]]] = None      # one code, or one per product type
 
 
 class Spec(Loose):

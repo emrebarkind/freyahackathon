@@ -70,6 +70,7 @@ use the default shown and record it in `assumptions`.
                                                    // takes: "up", "down" or "nearest"; never invent one
    "floor_round": null,                            // with floor_pct only: "up_unit", "nearest_unit", or a step: "up:0.05",
                                                    // "nearest:0.05", "down:0.05" (rounded once, on the exact percentage)
+                                                   // floor_round may be one rule per product type: {"<type>": "up:5", ...}
    "step_round": null                              // only if the brief rounds the amounts of percentage ladder steps (pct:N), same values
    // If the account records have no product type, use the key "*" in names / floor_field / floor_names.
    // Optional, normally read from the tool API file: "list_field" (the array of products in the get_account
@@ -154,6 +155,8 @@ use the default shown and record it in `assumptions`.
  "events": {                                       // how each situation ends in the bank's records. Use the brief's exact codes.
    "promise":                {"outcome": "...", "reason": ""},
    "paid":                   {"outcome": "...", "reason": "", "note": "<add_note reason value>"},
+                             // a note may be one code per product type when the brief has such codes:
+                             // "note": {"<product type>": "<code>", ...} (also inside event_changes "set")
    "transfer_restructuring": {"outcome": "...", "reason": "...", "queue": "<transfer queue value>"},
    "transfer_human":         {"outcome": "...", "reason": "...", "queue": "..."},
    "transfer_support":       {"outcome": "...", "reason": "...", "queue": "..."},

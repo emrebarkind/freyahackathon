@@ -1,0 +1,23 @@
+{
+ "builder_commit": "0769168a46b4986e695fa431e1585487bf09a8c8",
+ "exit_status": 3,
+ "inputs": {
+  "inputs/brief.md": "34c0c4b95cdbbf233244dc99fd19e127aae7f7e9187d8ba9f700fee8781f2c7c",
+  "inputs/openapi.json": "d2bc41699b3ee8ae67b002df0a086c3d8038b1da41a23d59679c9cfb96d28866"
+ },
+ "outputs": {
+  "pair-retest-c_transfer.log": "e660803d8ab3a0c2d7a18f7e56b4a2fe2087fb3b44520d3846ab2f4c3ff74674",
+  "pair-retest-c_transfer.spec.json": "c1c3ae376ef2ebc0f7b7f6a2940479e888f7a6286333d071d5d5fb1058e2b634",
+  "pair-retest-c_transfer.trace.log": "531a18a4859f0e09f61ebed7ed30d36846b6ba177d6e4a7b9a45081805b7967e",
+  "pair-retest-c_transfer.workflow.json": "011adb9f8ff33d90aec447208c8aadc9cd4c0e486478b2e6059f91d1756c3442"
+ },
+ "seconds": 260.5,
+ "model_calls": 3,
+ "cost_usd": 1.29,
+ "result": "INCOMPLETE",
+ "reasons": [
+  "local scenario fails: hardship, accepts support"
+ ],
+ "workflow_id": "dfc93b55-a397-4d92-a1c1-fe39a7f14e42",
+ "agent_id": "d33a230b-373b-4ce0-8787-a79647c7d1f6"
+}

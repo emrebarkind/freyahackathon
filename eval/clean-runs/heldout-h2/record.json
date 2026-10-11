@@ -1,0 +1,20 @@
+{
+ "builder_commit": "0769168a46b4986e695fa431e1585487bf09a8c8",
+ "exit_status": 1,
+ "inputs": {
+  "inputs/brief.md": "96d70b0ddc690cdfb467e73b94c96a2857d96c5e1076371b8c7021162210044b",
+  "inputs/openapi.json": "1a6b623220416e938d056334f1e7619cddaabb8b5cb3fc5eefa6fac01cc2ee2a"
+ },
+ "outputs": {
+  "heldout-h2.log": "f7f9d0d11fb11644fd2e730e97ef61eda19d4a1c05b0a2720f62ef98bd9e558f",
+  "heldout-h2.spec.json": "7160eba064e315c7ec5ac6e6ed9d2e9aaa4d5308dc4190e4c3ec89ea39c2a26f",
+  "heldout-h2.trace.log": "f56ac70d4029aabd1dcee6f02e7d2bc7922b1e150fca2b2997e471b70fff2f90"
+ },
+ "seconds": 398.2,
+ "model_calls": 4,
+ "cost_usd": 1.91,
+ "result": null,
+ "reasons": [],
+ "workflow_id": null,
+ "agent_id": null
+}

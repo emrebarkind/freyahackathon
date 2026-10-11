@@ -280,7 +280,8 @@ def product_facts(V, raw):
     pct = S["products"].get("floor_pct")
     pct = by_type(pct, typ) if isinstance(pct, dict) else pct          # one percentage, or one per product type
     if floor is None and pct is not None:
-        floor = round_rule(full * float(pct) / 100.0, S["products"].get("floor_round"))
+        fr = S["products"].get("floor_round")
+        floor = round_rule(full * float(pct) / 100.0, by_type(fr, typ) if isinstance(fr, dict) else fr)
     if floor is None:
         floor = full
     fmin = S["products"].get("floor_min")
@@ -485,6 +486,8 @@ def finish(V, s, pre=""):
             if (stt in ("refused", "hardship", "dispute", "paid", "service_error") or stt.startswith("transfer_")) and not p.get("noted"):
                 p["noted"] = True
                 note_reason = ev(stt).get("note")
+                if isinstance(note_reason, dict):      # the brief keeps one code per product type
+                    note_reason = by_type(note_reason, p.get("type", ""))
                 if not note_reason:            # the brief keeps no note for this outcome
                     continue
                 return call(V, s, "api_note", n_product=p["id"], n_reason=note_reason)

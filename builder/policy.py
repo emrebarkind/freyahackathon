@@ -183,6 +183,10 @@ def check_codes(spec, openapi, docs_text, enum_of_slot):
         return [str(x) for x in t] if isinstance(t, list) else None
 
     def one(field, value, outcome, where, dated):
+        if isinstance(value, dict):                    # one code per product type
+            for typ, v in value.items():
+                one(field, v, outcome, f"{where}.{typ}", dated)
+            return
         if value in (None, ""):
             return
         en = enum_of_slot(field)

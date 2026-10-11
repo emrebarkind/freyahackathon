@@ -127,6 +127,10 @@ def validate(spec, openapi, docs_text=""):
     inv = {tool: {v: k for k, v in m.items()} for tool, m in tb.items()}
 
     def check_enum(tool, slot, value, where):
+        if isinstance(value, dict):                   # one code per product type
+            for typ, v in value.items():
+                check_enum(tool, slot, v, f"{where}.{typ}")
+            return
         param = inv.get(tool, {}).get(slot)
         en = enum_of(openapi, tool, param) if param else None
         if en and value not in ("", None) and value not in en:
