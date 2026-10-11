@@ -247,3 +247,20 @@ def test_floor_full_below_only_when_the_brief_says_so():
     assert (fl(72.4), fl(333.33)) == (19.0, 84.0)
     s["products"]["floor_full_below"] = 100                 # f1: "if the overdue amount is below 100, the whole amount"
     assert (fl(72.4), fl(333.33), fl(100.0)) == (72.4, 84.0, 25.0)
+
+
+# ---------------------------------------------------------------- Phase 2 step 5 (implicit policy audit)
+
+def test_week_deadlines_roll_by_a_week_and_next_month_days_are_not_capped_at_28():
+    from builder.runtime import cal
+    from builder import compile as comp
+    s = comp.apply_defaults(copy.deepcopy(E.A), O)
+    s["calendar"]["holidays"] = []
+    engine.S = s
+    cal.P = dict(workdays=s["calendar"]["workdays"], holidays=[])
+    typ = list(s["products"]["names"])[0]
+    raw = {"product_id": "p1", "type": typ, "past_due": 300.0, "days_late": s["bands"][0]["min"],
+           s["products"]["floor_field"][typ]: 30.0}
+    s["bands"][0]["deadline"] = {"kind": "end_of_week", "roll_if_not_after_today": True}
+    assert engine.product_facts({"now": "2026-10-16T11:00"}, raw)["deadline"] == "2026-10-23"   # Friday: next Friday
+    assert cal.deadline(datetime.date(2026, 10, 31), {"kind": "day_of_next_month", "n": 30}) == datetime.date(2026, 11, 30)

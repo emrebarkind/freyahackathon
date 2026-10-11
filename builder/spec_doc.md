@@ -273,6 +273,17 @@ Built-in behaviour (always carried out; never list these under unsupported_rules
 - identity: the first "why do you ask" is answered once; a second refusal closes as id_declined;
 - "I don't want to talk" `max_not_talk` times: before identity is verified the call closes with the id_declined
   event, after it every open product ends refused (the refused event); the first time gets one `not_talk_once` line;
+- several products: the call closes with the promise event if any promise was recorded (a product whose write failed
+  gets its own service_error note); otherwise with paid if every product was paid; otherwise with the ending of the
+  first product in account order (a brief that ranks endings, e.g. "dispute over refused", is not carried: list it);
+- hardship: once the customer has declined the support offer there is no further persuasion; open products end with
+  the hardship event;
+- a transfer (restructuring, human, support) ends the call: a promise agreed but not yet read back is not recorded;
+- a product whose days late fall in no band gets no offer and ends with `bands_outside` (omitted: service_error);
+- the same impossible date asked three times uses up the current step; three unreadable identity answers fail the
+  check; an internal error closes with the service_error event;
+- a call on a non-business day: the opening ask still names today; deadlines and steps move as `deadline_adjust`
+  says (no rule exists for a brief that sets weekend-call policy: list it);
 - `callback.days: []`: someone else answering is told nothing and the call closes with the no_callback event, no
   time is asked; a tool the API does not offer is never called.
 

@@ -306,7 +306,9 @@ def product_facts(V, raw):
     deadline = band_deadline(today, rule)
     seen = cal_deadline(today, rule) if rule.get("roll_before_adjust") else deadline   # the brief rolls the raw date
     if (rule.get("roll_if_not_after_today") and seen <= today) or (rule.get("roll_if_before_today") and seen < today):
-        deadline = band_deadline(end_of_month(today) + datetime.timedelta(days=1), rule, today)
+        nxt = today + datetime.timedelta(days=7 - today.weekday()) if rule.get("kind") in ("end_of_week", "end_of_next_week") \
+            else end_of_month(today) + datetime.timedelta(days=1)          # the next period: week or month
+        deadline = band_deadline(nxt, rule, today)
     return dict(id=str(raw.get("product_id")), type=typ, name=name, full=full, floor=floor, days_late=dl,
                 band=b.get("name", ""), deadline=iso(deadline), attempts=int(b.get("attempts", 1)), ladder=b.get("ladder") or None,
                 used=0, made=0, too_much=False, floor_offered=False, vague_asked=False, offer=None,
@@ -2257,8 +2259,9 @@ def main(V):
                 return finish(V, s, L("no_info"))
             except Exception:
                 pass
-        V["c_outcome"] = S.get("events", dict()).get("refused", dict()).get("outcome", "")
-        V["c_reason"] = S.get("events", dict()).get("refused", dict()).get("reason", "")
+        e_ = S.get("events", dict()).get("service_error") or S.get("events", dict()).get("refused", dict())
+        V["c_outcome"] = e_.get("outcome", "")          # a technical failure is a service error, not a refusal
+        V["c_reason"] = e_.get("reason", "") or ""
         say(V, L("goodbye"))
         V["_state"] = json.dumps(dict(stage="closing"))
-        go(V, "api_close")
+        go(V, "api_close" if V["c_reason"] else "api_close_nr")

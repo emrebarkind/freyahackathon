@@ -113,7 +113,7 @@ def deadline(today, rule):
         return last_business_day_of_week(today, 1)
     if kind == "day_of_next_month":     # the n-th calendar day of next month
         first = end_of_month(today) + datetime.timedelta(days=1)
-        return first.replace(day=min(max(n, 1), 28))
+        return first.replace(day=min(max(n, 1), end_of_month(first).day))
     if kind == "day_of_month":          # the n-th calendar day of this month (the month's last day if shorter)
         return today.replace(day=min(max(n, 1), end_of_month(today).day))
     if kind == "business_days_after_or_end_of_month":   # whichever comes first
