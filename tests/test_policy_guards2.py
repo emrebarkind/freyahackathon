@@ -232,7 +232,8 @@ def test_policy_values_name_a_sentence_that_is_really_in_the_materials():
             "sources": {"rules.skipped_repeat_counts": "If an attempt would repeat an earlier proposal exactly, skip it: "
                                                        "it is not a proposal"}}
     bad, missing = extract.provenance(spec, docs)
-    assert bad == [] and missing == []                       # false values are values too: ladder_repeat_last is unset
+    assert bad == [] and "rules.skipped_repeat_counts" not in missing
+    assert "rules.first_ask" in missing                      # a default without evidence is reported too (uncertain)
     spec["rules"]["promise_retries"] = 0
     spec["sources"]["rules.promise_retries"] = "A failed promise is never retried."      # not in the materials
     bad, missing = extract.provenance(spec, docs)

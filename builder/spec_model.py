@@ -98,8 +98,8 @@ class Products(Loose):
     floor_field: Dict[str, str] = {}
     floor_pct: Optional[Union[int, float, Dict[str, Union[int, float]]]] = None
     floor_min: Optional[Union[int, float, Dict[str, Union[int, float]]]] = None
-    floor_round: Optional[str] = Field(default=None, pattern=r"^(up_unit|nearest_unit|(up|nearest|down):[0-9]*\.?[0-9]+)$")
-    step_round: Optional[str] = Field(default=None, pattern=r"^(up_unit|nearest_unit|(up|nearest|down):[0-9]*\.?[0-9]+)$")
+    floor_round: Optional[str] = Field(default=None, pattern=r"^(cents|up_unit|nearest_unit|(up|nearest|down):[0-9]*\.?[0-9]+)$")
+    step_round: Optional[str] = Field(default=None, pattern=r"^(cents|up_unit|nearest_unit|(up|nearest|down):[0-9]*\.?[0-9]+)$")
 
     @field_validator("floor_pct")
     @classmethod
@@ -290,6 +290,7 @@ def critical(spec):
     """Rules from the materials the built agent does not carry out. Any of these makes the build INCOMPLETE: the
     agent is still deployed and exported (an entry needs one), but the run never reports success."""
     out = ["not carried: " + str(r) for r in spec.get("unsupported_rules") or []]
+    out += ["policy not verified: " + str(r) for r in (spec.get("policy_audit") or {}).get("unresolved") or []]
     P_ = spec.get("products") or {}
     if P_.get("promise_integer") and float(P_.get("promise_scale") or P_.get("amount_scale") or 1) == 1 \
             and P_.get("promise_round") not in ("up", "down", "nearest"):

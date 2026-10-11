@@ -8,6 +8,7 @@ import re
 
 from . import claude
 from . import compile as comp
+from . import policy
 from . import spec_model
 
 DOC = (pathlib.Path(__file__).resolve().parent / "spec_doc.md").read_text()
@@ -85,7 +86,10 @@ def enum_of(openapi, tool, param):
     return tool_props(openapi, tool).get(param, {}).get("enum")
 
 
-def validate(spec, openapi):
+CODE_WARNINGS = []
+
+
+def validate(spec, openapi, docs_text=""):
     errs = list(spec_model.check(spec))       # types, ranges, formats, bands, window (Pydantic)
     for k in ["calendar", "identity", "products", "bands", "ladder", "events", "tool_bodies", "lines", "callback", "confirm"]:
         if k not in spec:
@@ -185,6 +189,16 @@ def validate(spec, openapi):
                                         ("queue", "transfer_to_agent", "t_queue"), ("note", "add_note", "n_reason")):
                 if f in c["set"] and c["set"][f]:
                     check_enum(enum_tool, param, c["set"][f], f"event_changes.{c['event']}.{f}")
+    if docs_text:
+        slot_of = {f: (tool, slot) for f, tool, slot in policy.CODE_FIELDS}
+
+        def enum_of_slot(field):
+            tool, slot = slot_of[field]
+            param = inv.get(tool, {}).get(slot)
+            return enum_of(openapi, tool, param) if param else None
+        code_errs, code_warns = policy.check_codes(spec, openapi, docs_text, enum_of_slot)
+        errs += code_errs
+        CODE_WARNINGS[:] = code_warns
     amt_key = next((k for k, v in (spec.get("tool_bodies") or {}).get("create_promise", {}).items() if v == "p_amount"), "amount")
     if (tool_props(openapi, "create_promise") or {}).get(amt_key, {}).get("type") == "integer" \
             and not (spec["products"].get("promise_scale") or spec["products"].get("amount_scale")):
@@ -210,10 +224,10 @@ def validate(spec, openapi):
                           ("identity.date_order", ("dmy", "mdy")),
                           ("rules.first_ask", ("today", "deadline")),
                           ("rules.too_much_floor", ("attempt_1", "asked_date")),
-                          ("rules.week_end_today", ("next_week", "today")),
+                          ("rules.week_end_today", ("next_week", "today", "literal")),
                           ("rules.skipped_repeat_counts", (True, False)),
                           ("rules.promise_retries", (0, 1, 2, 3)),
-                          ("rules.hardship_transfer", ("direct",)),
+                          ("rules.hardship_transfer", ("direct", "ask_first")),
                           ("rules.opening_blocks_repeat", (True, False)),
                           ("rules.too_much_skips_full", (True, False)),
                           ("products.promise_round", ("up", "down", "nearest"))):
@@ -322,19 +336,31 @@ For each field: find the sentence(s) in the bank materials or the tool API file 
 dated change beats the rule it changes), quote them, and say whether the spec value carries out exactly what they
 say. Then list every rule in the materials that the spec does not carry at all (a holiday, a band, a code, a
 limit, a format, an exception). A rule that no spec field can carry goes, quoted, into "unsupported_rules" (a list);
-never approximate it with a nearby value.
-For every entry in "sources" (path -> quoted sentence), check that the value at that path is exactly what the quoted
-sentence requires; a value its own quote does not decide, or contradicts, is WRONG. A policy value without a source
-sentence is suspect: find the sentence or say the materials do not decide it.
+never approximate it with a nearby value. Check "code_tables" too: the codes the materials allow for each field after
+their amendments.
+
+Critical policies. Each row is the value the agent WILL use (engine_default true: the spec leaves it unset and the
+engine default applies, which is a decision too) and the analyst's evidence record:
+<policies>
+{policies}
+</policies>
+For each row decide, reading the materials in their order of precedence (a memo or later document over the policy it
+amends; a dated change only from its date):
+  supported     the materials decide this exact value (quote it), or say nothing and the value is the default
+  contradicted  the materials decide a different value: give the new value in "changes", and its record
+                (path "policy.<path>") with the deciding quote
+  quote_does_not_support  the quoted passage is real but does not decide this value (and nothing else does)
+  not_decided   the materials are silent: the default is an assumption
+A default that contradicts the materials is contradicted, exactly like a value the analyst wrote.
 
 <spec>
 {spec}
 </spec>
 
-Write one line per field: FIELD: OK | WRONG -- "quote" -- what is wrong. Then a ```json block holding ONLY the
-changes, as {{"path.to.field": new value, ...}} with dotted paths (list items by index, e.g. "bands.1.max", or a
-whole value such as "calendar.holidays"). Use {{}} when nothing must change. Never change a value the materials
-do not decide."""
+Write one line per field and per policy row: NAME: verdict -- "quote" -- why. Then a ```json block:
+{{"changes": {{"path.to.field": new value, ...}}, "verdicts": {{"<policy path>": "supported|contradicted|quote_does_not_support|not_decided", ...}}}}
+with dotted paths in "changes" (list items by index, e.g. "bands.1.max", or a whole value such as
+"calendar.holidays"). Use {{}} for no change. Never change a value the materials do not decide."""
 
 AUDIT_FIELDS = CORE + ["identity", "products"]
 
@@ -366,14 +392,30 @@ def read_and_audit(base, trace):
     effort = os.environ.get("BUILDER_B_EFFORT", "high")
     out = claude.ask(base, SYSTEM, f"read the brief and tool API into a spec (single reading, effort {effort})", trace, effort=effort)
     spec = claude.json_block(out, keys=SPEC_KEYS)
-    audit = claude.ask(base + "\n\n" + AUDIT.format(fields=", ".join(AUDIT_FIELDS), spec=json.dumps(spec, indent=1)),
-                       SYSTEM, "audit the high-risk fields of the reading against the source documents", trace)
-    trace.note("audit: " + audit.split("```")[0].strip()[:3000])
+    audit = claude.ask(base + "\n\n" + audit_prompt(spec), SYSTEM,
+                       "audit the high-risk fields and the critical policies of the reading against the source documents", trace)
+    trace.note("audit: " + audit.split("```")[0].strip()[:4000])
     try:
-        changes = claude.json_block(audit)
+        answer = claude.json_block(audit)
     except Exception as e:
         trace.note(f"audit answer did not parse ({e}); keeping the reading")
+        spec["policy_audit"] = {"verdicts": {}, "unresolved": ["the audit answer did not parse: no policy was checked"]}
         return spec
+    return apply_audit(spec, answer, trace)
+
+
+def audit_prompt(spec):
+    return AUDIT.format(fields=", ".join(AUDIT_FIELDS), spec=json.dumps(spec, indent=1),
+                        policies=json.dumps(policy.table(spec), indent=1, ensure_ascii=False))
+
+
+def apply_audit(spec, answer, trace):
+    """Apply the audit's changes and keep its verdicts. A contradiction it does not correct, or a non-default value
+    no passage supports, is unresolved: it makes the build INCOMPLETE (spec_model.critical), never silent."""
+    if "changes" in answer or "verdicts" in answer:
+        changes, verdicts = answer.get("changes") or {}, answer.get("verdicts") or {}
+    else:
+        changes, verdicts = answer, {}               # the older answer form: changes only
     fixed = copy.deepcopy(spec)
     for path, value in changes.items():
         try:
@@ -381,6 +423,24 @@ def read_and_audit(base, trace):
         except Exception as e:
             trace.note(f"audit change {path} not applied ({type(e).__name__})")
     trace.note(f"audit changed: {sorted(changes) or 'nothing'}")
+    unresolved = []
+    for p, v in verdicts.items():
+        if p not in policy.CRITICAL:
+            continue
+        if v == "contradicted" and not any(c == p or c.startswith(p + ".") for c in changes):
+            unresolved.append(f"{p}: the audit found the value contradicts the materials and gave no correction")
+        if v == "quote_does_not_support":
+            val, dflt = policy.effective(fixed, p)
+            rec = (fixed.get("policy") or {}).get(p) or {}
+            if dflt:                                  # silent materials: the default is an assumption, said so
+                fixed.setdefault("policy", {})[p] = {"kind": "unspecified", "assumption": "the materials do not "
+                                                     "decide it; the engine default applies: " + json.dumps(val)}
+            elif not any(c.startswith("policy." + p) for c in changes):
+                unresolved.append(f"{p}: {json.dumps(val)} is set but no passage of the materials supports it"
+                                  + (f" (quoted: {str((rec.get('quotes') or [''])[0])[:100]!r})" if rec else ""))
+    if verdicts:
+        trace.note("policy verdicts: " + ", ".join(f"{p}={v}" for p, v in sorted(verdicts.items())))
+    fixed["policy_audit"] = {"verdicts": verdicts, "unresolved": unresolved}
     return fixed
 
 
@@ -460,53 +520,31 @@ def progress(old, new, old_errs, new_errs):
     return len(new_errs) < len(old_errs) and set(new_errs) <= set(old_errs) and not lost and not more_unsupported, lost
 
 
-RULE_DEFAULTS = {"refuse_deadline_is_refusal": True, "deadline_adjust": "previous_business_day", "first_ask": "today",
-                 "too_much_floor": "attempt_1", "ladder_repeat_last": False, "opening_is_attempt": False,
-                 "opening_blocks_repeat": False, "too_much_skips_full": False}
-SOURCE_PATHS = ("products.floor_pct", "products.floor_min", "products.floor_round", "products.step_round",
-                "products.promise_scale", "products.promise_round", "identity.max_wrong")
-
-
-def needs_source(spec):
-    """Policy values that must name the sentence that decides them: every rule set, the amount rules, dated changes."""
-    out = ["rules." + k for k, v in (spec.get("rules") or {}).items()
-           if v not in (None, "", [], {}) and RULE_DEFAULTS.get(k, None) != v]     # a value the doc does not default to
-    out += [p for p in SOURCE_PATHS if get(spec, p) not in (None, "", [], {})]
-    if spec.get("event_changes"):
-        out.append("event_changes")
-    return out
-
-
-def _norm(t):
-    return re.sub(r"\s+", " ", re.sub(r"[`*_\"“”‘’']", "", str(t).lower())).strip()
-
-
 def provenance(spec, docs_text):
-    """(quotes not found in the materials, values without a quote). A quote that is not in the documents is an
-    invented basis: an error. A missing quote is passed to the audit and the trace."""
-    text = _norm(docs_text)
-    bad, missing = [], []
-    for p in needs_source(spec):
-        q = (spec.get("sources") or {}).get(p)
-        if not q:
-            missing.append(p)
-            continue
-        parts = [x for x in re.split(r"\.\.\.|…|\[\.\.\.\]", _norm(q)) if len(x.strip()) >= 12]
-        if parts and not all(x.strip() in text for x in parts):
-            bad.append(f"sources.{p}: the quoted sentence is not in the materials: {str(q)[:120]!r}")
-    return bad, missing
+    """(quote errors, critical paths with no evidence recorded). See builder/policy.py."""
+    errs, report = policy.check(spec, docs_text)
+    return errs, [p for p, v in report.items() if v.startswith("no evidence recorded")]
+
+
+def carry_audit(old, new):
+    """The audit's verdicts belong to the reading, not to one spec version: a repair keeps them."""
+    if old.get("policy_audit") and not new.get("policy_audit"):
+        new["policy_audit"] = copy.deepcopy(old["policy_audit"])
+    return new
 
 
 def validate_loop(spec, base, openapi, trace, budget, docs_text=""):
     for attempt in range(10):                 # bounded by the shared repair budget
         spec_model.normalise(spec)
         prune_hint(spec, openapi)
-        errs = validate(spec, openapi)
+        errs = validate(spec, openapi, docs_text)
         if docs_text:
-            bad, missing = provenance(spec, docs_text)
+            bad, report = policy.check(spec, docs_text)
             errs += bad
-            if missing and attempt == 0:
-                trace.note("policy values without a source sentence: " + ", ".join(missing))
+            if attempt == 0:
+                trace.note("critical policies:" + "".join(f"\n  - {p}: {v}" for p, v in report.items()))
+                for w in CODE_WARNINGS:
+                    trace.note("code warning: " + w)
         trace.note(f"validation round {attempt + 1}: {len(errs)} problem(s)" + ("".join("\n  - " + e for e in errs)))
         if not errs or (budget is not None and not budget.take(trace, f"repair {len(errs)} validation problem(s)")):
             break
@@ -520,7 +558,9 @@ def validate_loop(spec, base, openapi, trace, budget, docs_text=""):
             trace.note(f"repair answer did not parse ({e}); keeping the previous spec")
             continue
         spec_model.normalise(fixed)
-        ok, lost = progress(spec, fixed, errs, validate(fixed, openapi))
+        carry_audit(spec, fixed)
+        new_errs = validate(fixed, openapi, docs_text) + (policy.check(copy.deepcopy(fixed), docs_text)[0] if docs_text else [])
+        ok, lost = progress(spec, fixed, errs, new_errs)
         if ok:
             spec = fixed
         else:                                 # no progress: another round would only spend time

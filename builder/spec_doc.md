@@ -280,8 +280,25 @@ November the code PAID is replaced by CLAIMED_PAID"): a list of {"event": "<even
 "set": {"outcome": "..."}}. The base `events` entry then holds the code BEFORE that date; the change applies to calls
 on or after it.
 
-`sources`: for every value you set under `rules`, for the amount rules (`products.floor_pct`, `floor_min`,
-`floor_round`, `step_round`, `promise_scale`, `promise_round`), for `identity.max_wrong` and for `event_changes`:
-{"<dotted path>": "<the sentence from the materials that decides it, copied word for word>"}, e.g.
-{"rules.skipped_repeat_counts": "If an attempt would repeat an earlier proposal exactly, skip it: it is not a
-proposal"}. The quote is checked against the materials; a value no sentence decides should not be set.
+`policy`: the evidence for every critical policy, keyed by dotted path. Critical paths: rules.skipped_repeat_counts,
+opening_is_attempt, opening_blocks_repeat, too_much_skips_full, too_much_floor, ladder_repeat_last,
+refuse_deadline_is_refusal, promise_retries, hardship_transfer, deadline_adjust, first_ask, week_end_today;
+products.floor_pct, floor_min, floor_round, step_round, promise_scale, promise_round; event_changes. A path you
+leave unset still has a value (the engine default: skipped_repeat_counts true, opening_is_attempt false,
+opening_blocks_repeat false, too_much_skips_full false, too_much_floor "attempt_1", ladder_repeat_last false,
+refuse_deadline_is_refusal true, promise_retries 1, hardship_transfer "ask_first", deadline_adjust
+"previous_business_day", first_ask "today", week_end_today "literal", floor_round / step_round "cents",
+promise_scale 1), so record it too whenever the materials say anything about it. One record per path:
+  {"kind": "explicit", "quotes": ["<the sentence that states it, word for word>"]}
+  {"kind": "derived", "quotes": ["<passage>", "<passage>"], "derivation": "<how they give the value>"}
+  {"kind": "unspecified", "assumption": "<what the agent then does>"}        (the materials are silent; leave the
+                                                                            path unset so the default applies)
+  {"kind": "unsupported", "requirement": "<the rule as written>", "gap": "<what the format cannot express>"}
+Quote the passage that governs on the call date: a memo over the policy it amends, a dated change only from its
+date. Quotes are checked against the materials; a quote that is not there is an error. A missing record is reported
+as uncertain, not as unsupported. (The older form `sources`: {"<path>": "<sentence>"} still reads as explicit.)
+
+`code_tables`: the codes the materials allow, after any undated amendment, for the fields the events use:
+{"outcome": [...], "reason": {"<outcome>": [...]} or [...], "note": [...], "queue": [...]}. Fill a field only if the
+materials give its list or table (e.g. a table of outcomes and their reasons); omit it otherwise. Every code in
+`events` must be in its table; a dated change in `event_changes` may introduce a new code that the materials name.

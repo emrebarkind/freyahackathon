@@ -51,10 +51,16 @@ def finalize(spec, openapi):
     return comp.apply_defaults(spec, openapi)
 
 
+DOCS_TEXT = [""]                              # the materials, for the quote and code checks
+
+
 def local_checks(spec, openapi):
-    from builder import extract, spec_model
+    from builder import extract, policy, spec_model
     results = selftest.run_all(spec, openapi)
-    return dict(structural=spec_model.check(spec), api=extract.validate(spec, openapi), results=results,
+    api = extract.validate(spec, openapi, DOCS_TEXT[0])
+    if DOCS_TEXT[0]:
+        api += policy.check(spec, DOCS_TEXT[0])[0]
+    return dict(structural=spec_model.check(spec), api=api, results=results,
                 failed=[n for n, ok, _ in results if not ok])
 
 
@@ -75,7 +81,7 @@ def repair_loop(spec, chk, openapi, docs, trace, budget):
         problems = ["Structural problems: " + "; ".join(chk["structural"])] if chk["structural"] else []
         problems += [f"- {n}: {d[:1500]}" for n, ok, d in chk["results"] if not ok]
         try:
-            cand = finalize(extract.repair_behaviour(copy.deepcopy(spec), "\n".join(problems), docs, openapi, trace), openapi)
+            cand = finalize(extract.carry_audit(spec, extract.repair_behaviour(copy.deepcopy(spec), "\n".join(problems), docs, openapi, trace)), openapi)
         except Exception as e:
             trace.note(f"repair failed ({type(e).__name__}: {e}); keeping the current spec")
             break
@@ -125,6 +131,7 @@ def main():
     trace.note(f"briefs={briefs} tool_api={tool_api[0]} slot={slot}")
     openapi = json.load(open(tool_api[0]))
     docs = [(pathlib.Path(b).name, pathlib.Path(b).read_text(errors="ignore")) for b in briefs]
+    DOCS_TEXT[0] = "\n".join(text for _, text in docs) + "\n" + json.dumps(openapi)
 
     # One budget for the whole pipeline: every repair round anywhere (validation repairs during extraction,
     # repairs after the local checks) takes one unit, and no repair starts after REPAIR_SECONDS.
@@ -152,8 +159,13 @@ def main():
     report_checks(trace, chk, "local")
     if not a.spec:
         spec, chk = repair_loop(spec, chk, openapi, docs, trace, budget)
+    from builder import policy
     for a_ in spec_model.assumed(spec):          # a default where the brief is silent: visible, never hidden
         trace.note("assumption (engine default, the brief is silent): " + a_)
+    for a_ in policy.assumptions(spec):
+        trace.note("assumption (recorded as unspecified by the materials): " + a_)
+    for u_ in policy.uncertain(policy.check(copy.deepcopy(spec), DOCS_TEXT[0])[1]):
+        trace.note("uncertain (no evidence recorded for a critical policy): " + u_)
     for u in spec_model.unsupported(spec):    # valid policy the engine cannot carry out as written: say so, never change it
         trace.note("UNSUPPORTED by the engine (policy kept as the brief states it): " + u)
     (out_dir / f"{slot}.spec.json").write_text(json.dumps(spec, indent=1, ensure_ascii=False))
