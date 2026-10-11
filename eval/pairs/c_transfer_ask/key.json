@@ -1,0 +1,367 @@
+{
+ "package": "c_transfer_ask",
+ "rules": {
+  "T2DL": "Tier 2 (21-60 days): deadline is the 15th of this month, or of next month if the 15th is before today (today = 15th keeps today); the business-day forward move is applied after the rollover.",
+  "T1DL": "Tier 1 (1-20 days): deadline is the 6th business day after today, today not counted, holidays skipped.",
+  "FLOOR": "Floor: card min_due_eur; loan monthly_instalment_eur; overdraft a quarter of overdue rounded up to whole euro, or the full overdue if under EUR 100.",
+  "LADDER": "Opening full-today ask is proposal 1 and counts; limit 2 (tier 1) / 3 (tier 2) proposals; ladder: full on deadline, half (rounded up, at least floor) on deadline, floor on deadline.",
+  "SKIP": "A step identical (amount and date) to an earlier proposal, including the opening ask, is skipped and does not count towards the limit.",
+  "BDAY": "Business days are Mon-Fri minus the holiday list.",
+  "MEMO": "From 2026-11-04 (calls on or after) the close reason hardship becomes financial_difficulty; earlier calls keep hardship; all other codes (incl. add_note hardship) unchanged.",
+  "CENTS": "create_promise amount is integer euro cents.",
+  "HARDSHIP": "Hardship: one sentence of sympathy, note hardship on each remaining product, offer a transfer to queue support; accepted -> transfer support, close transferred/support; declined -> close no_promise/hardship (memo applies). close checks use the declined path."
+ },
+ "checks": [
+  {
+   "id": "C1",
+   "rule": "T2DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-10-14T10:00",
+    "product": {
+     "product_id": "CV-C-50317",
+     "kind": "card",
+     "card_last4": "8806",
+     "overdue_eur": 612.5,
+     "days_past_due": 34,
+     "min_due_eur": 45.0
+    }
+   },
+   "expect": "2026-10-15",
+   "source": "| Tier 2 | 21 to 60 | the 15th of the month (see D.3) | 3 proposals | / D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day. (So when today is the 15th, the deadline is today.)"
+  },
+  {
+   "id": "C2",
+   "rule": "T2DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-10-15T10:00",
+    "product": {
+     "product_id": "CV-C-50317",
+     "kind": "card",
+     "card_last4": "8806",
+     "overdue_eur": 612.5,
+     "days_past_due": 34,
+     "min_due_eur": 45.0
+    }
+   },
+   "expect": "2026-10-15",
+   "source": "| Tier 2 | 21 to 60 | the 15th of the month (see D.3) | 3 proposals | / D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day. (So when today is the 15th, the deadline is today.)"
+  },
+  {
+   "id": "C3",
+   "rule": "T2DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-10-16T10:00",
+    "product": {
+     "product_id": "CV-C-50317",
+     "kind": "card",
+     "card_last4": "8806",
+     "overdue_eur": 612.5,
+     "days_past_due": 34,
+     "min_due_eur": 45.0
+    }
+   },
+   "expect": "2026-11-16",
+   "source": "| Tier 2 | 21 to 60 | the 15th of the month (see D.3) | 3 proposals | / D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day. (So when today is the 15th, the deadline is today.) / D.4 Business days are Monday to Friday, except these bank holidays: 2026-10-26, 2026-12-24, 2026-12-25, 2026-12-28, 2027-01-01, 2027-03-17."
+  },
+  {
+   "id": "C4",
+   "rule": "T2DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-11-16T10:00",
+    "product": {
+     "product_id": "CV-O-71150",
+     "kind": "overdraft",
+     "overdue_eur": 333.33,
+     "days_past_due": 41
+    }
+   },
+   "expect": "2026-12-15",
+   "source": "| Tier 2 | 21 to 60 | the 15th of the month (see D.3) | 3 proposals | / D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day. (So when today is the 15th, the deadline is today.) / D.4 Business days are Monday to Friday, except these bank holidays: 2026-10-26, 2026-12-24, 2026-12-25, 2026-12-28, 2027-01-01, 2027-03-17."
+  },
+  {
+   "id": "C5",
+   "rule": "T1DL",
+   "type": "deadline",
+   "input": {
+    "now": "2026-10-19T10:00",
+    "product": {
+     "product_id": "CV-L-22094",
+     "kind": "loan",
+     "overdue_eur": 410.0,
+     "days_past_due": 12,
+     "monthly_instalment_eur": 205.0
+    }
+   },
+   "expect": "2026-10-28",
+   "source": "| Tier 1 | 1 to 20 | the 6th business day after today (today itself is never counted) | 2 proposals | / D.4 Business days are Monday to Friday, except these bank holidays: 2026-10-26, 2026-12-24, 2026-12-25, 2026-12-28, 2027-01-01, 2027-03-17."
+  },
+  {
+   "id": "C6",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-11-16T10:00",
+    "product": {
+     "product_id": "CV-O-71150",
+     "kind": "overdraft",
+     "overdue_eur": 333.33,
+     "days_past_due": 41
+    }
+   },
+   "expect": 84.0,
+   "source": "- overdraft: one quarter of `overdue_eur`, rounded up to the next whole euro (a whole-euro result stays as it is). If `overdue_eur` is below 100, the floor is the whole overdue amount."
+  },
+  {
+   "id": "C7",
+   "rule": "FLOOR",
+   "type": "floor",
+   "input": {
+    "now": "2026-10-15T10:00",
+    "product": {
+     "product_id": "CV-O-40981",
+     "kind": "overdraft",
+     "overdue_eur": 72.4,
+     "days_past_due": 35
+    }
+   },
+   "expect": 72.4,
+   "source": "- overdraft: one quarter of `overdue_eur`, rounded up to the next whole euro (a whole-euro result stays as it is). If `overdue_eur` is below 100, the floor is the whole overdue amount."
+  },
+  {
+   "id": "C8",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-10-14T10:00",
+    "product": {
+     "product_id": "CV-C-50317",
+     "kind": "card",
+     "card_last4": "8806",
+     "overdue_eur": 612.5,
+     "days_past_due": 34,
+     "min_due_eur": 45.0
+    }
+   },
+   "expect": [
+    [
+     612.5,
+     "2026-10-15"
+    ],
+    [
+     307.0,
+     "2026-10-15"
+    ]
+   ],
+   "source": "This opening question is proposal 1 and counts towards the product's persuasion limit. / 1. the full overdue amount on the deadline; 2. half the overdue amount, rounded up to the next whole euro (a whole-euro result stays), on the deadline; if that is below the floor, the floor instead; 3. the floor on the deadline. / F.4 Stop proposing when the product's persuasion limit is reached or the ladder has no steps left, whichever comes first. / | Tier 2 | 21 to 60 | the 15th of the month (see D.3) | 3 proposals | / D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day. (So when today is the 15th, the deadline is today.)"
+  },
+  {
+   "id": "C9",
+   "rule": "SKIP",
+   "type": "offers",
+   "input": {
+    "now": "2026-10-15T10:00",
+    "product": {
+     "product_id": "CV-C-50317",
+     "kind": "card",
+     "card_last4": "8806",
+     "overdue_eur": 612.5,
+     "days_past_due": 34,
+     "min_due_eur": 45.0
+    }
+   },
+   "expect": [
+    [
+     307.0,
+     "2026-10-15"
+    ],
+    [
+     45.0,
+     "2026-10-15"
+    ]
+   ],
+   "source": "F.3 Never make the same proposal twice in a call. A step whose amount and date are both identical to a proposal already made for that product (the opening question included) is skipped. A skipped step is not a proposal and does not count towards the limit; go straight to the next step. / This opening question is proposal 1 and counts towards the product's persuasion limit. / 1. the full overdue amount on the deadline; 2. half the overdue amount, rounded up to the next whole euro (a whole-euro result stays), on the deadline; if that is below the floor, the floor instead; 3. the floor on the deadline. / F.4 Stop proposing when the product's persuasion limit is reached or the ladder has no steps left, whichever comes first. / | Tier 2 | 21 to 60 | the 15th of the month (see D.3) | 3 proposals | / D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day. (So when today is the 15th, the deadline is today.)"
+  },
+  {
+   "id": "C10",
+   "rule": "SKIP",
+   "type": "attempts",
+   "input": {
+    "now": "2026-10-15T10:00",
+    "product": {
+     "product_id": "CV-C-50317",
+     "kind": "card",
+     "card_last4": "8806",
+     "overdue_eur": 612.5,
+     "days_past_due": 34,
+     "min_due_eur": 45.0
+    }
+   },
+   "expect": 2,
+   "source": "F.3 Never make the same proposal twice in a call. A step whose amount and date are both identical to a proposal already made for that product (the opening question included) is skipped. A skipped step is not a proposal and does not count towards the limit; go straight to the next step. / This opening question is proposal 1 and counts towards the product's persuasion limit. / 1. the full overdue amount on the deadline; 2. half the overdue amount, rounded up to the next whole euro (a whole-euro result stays), on the deadline; if that is below the floor, the floor instead; 3. the floor on the deadline. / F.4 Stop proposing when the product's persuasion limit is reached or the ladder has no steps left, whichever comes first. / | Tier 2 | 21 to 60 | the 15th of the month (see D.3) | 3 proposals | / D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day. (So when today is the 15th, the deadline is today.)"
+  },
+  {
+   "id": "C11",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-10-19T10:00",
+    "product": {
+     "product_id": "CV-L-22094",
+     "kind": "loan",
+     "overdue_eur": 410.0,
+     "days_past_due": 12,
+     "monthly_instalment_eur": 205.0
+    }
+   },
+   "expect": [
+    [
+     410.0,
+     "2026-10-28"
+    ]
+   ],
+   "source": "This opening question is proposal 1 and counts towards the product's persuasion limit. / 1. the full overdue amount on the deadline; 2. half the overdue amount, rounded up to the next whole euro (a whole-euro result stays), on the deadline; if that is below the floor, the floor instead; 3. the floor on the deadline. / F.4 Stop proposing when the product's persuasion limit is reached or the ladder has no steps left, whichever comes first. / | Tier 1 | 1 to 20 | the 6th business day after today (today itself is never counted) | 2 proposals | / D.4 Business days are Monday to Friday, except these bank holidays: 2026-10-26, 2026-12-24, 2026-12-25, 2026-12-28, 2027-01-01, 2027-03-17."
+  },
+  {
+   "id": "C12",
+   "rule": "SKIP",
+   "type": "offers",
+   "input": {
+    "now": "2026-10-15T10:00",
+    "product": {
+     "product_id": "CV-O-40981",
+     "kind": "overdraft",
+     "overdue_eur": 72.4,
+     "days_past_due": 35
+    }
+   },
+   "expect": [],
+   "source": "F.3 Never make the same proposal twice in a call. A step whose amount and date are both identical to a proposal already made for that product (the opening question included) is skipped. A skipped step is not a proposal and does not count towards the limit; go straight to the next step. / - overdraft: one quarter of `overdue_eur`, rounded up to the next whole euro (a whole-euro result stays as it is). If `overdue_eur` is below 100, the floor is the whole overdue amount. / | Tier 2 | 21 to 60 | the 15th of the month (see D.3) | 3 proposals | / D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day. (So when today is the 15th, the deadline is today.)"
+  },
+  {
+   "id": "C13",
+   "rule": "LADDER",
+   "type": "offers",
+   "input": {
+    "now": "2026-11-16T10:00",
+    "product": {
+     "product_id": "CV-O-71150",
+     "kind": "overdraft",
+     "overdue_eur": 333.33,
+     "days_past_due": 41
+    }
+   },
+   "expect": [
+    [
+     333.33,
+     "2026-12-15"
+    ],
+    [
+     167.0,
+     "2026-12-15"
+    ]
+   ],
+   "source": "This opening question is proposal 1 and counts towards the product's persuasion limit. / 1. the full overdue amount on the deadline; 2. half the overdue amount, rounded up to the next whole euro (a whole-euro result stays), on the deadline; if that is below the floor, the floor instead; 3. the floor on the deadline. / F.4 Stop proposing when the product's persuasion limit is reached or the ladder has no steps left, whichever comes first. / - overdraft: one quarter of `overdue_eur`, rounded up to the next whole euro (a whole-euro result stays as it is). If `overdue_eur` is below 100, the floor is the whole overdue amount. / | Tier 2 | 21 to 60 | the 15th of the month (see D.3) | 3 proposals | / D.3 Tier 2 deadline. Take the 15th of the current month. If that day is before today, take the 15th of the following month instead. Only then, if the date you have is not a business day, move it forward to the next business day. (So when today is the 15th, the deadline is today.) / D.4 Business days are Monday to Friday, except these bank holidays: 2026-10-26, 2026-12-24, 2026-12-25, 2026-12-28, 2027-01-01, 2027-03-17."
+  },
+  {
+   "id": "C14",
+   "rule": "BDAY",
+   "type": "business_day",
+   "input": {
+    "date": "2026-10-26"
+   },
+   "expect": false,
+   "source": "D.4 Business days are Monday to Friday, except these bank holidays: 2026-10-26, 2026-12-24, 2026-12-25, 2026-12-28, 2027-01-01, 2027-03-17."
+  },
+  {
+   "id": "C15",
+   "rule": "MEMO",
+   "type": "close",
+   "input": {
+    "situation": "hardship",
+    "now": "2026-11-03T15:00"
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "hardship"
+   },
+   "source": "G.3 Financial hardship (job loss, illness, bereavement): one sentence of sympathy, make no proposals, note `hardship` on each remaining product, then offer to transfer the customer to our support team. Transfer only if the customer accepts: `transfer_to_agent` queue `support`, close `transferred` / `support`. If the customer declines, close `no_promise` / `hardship`. / 1. For calls made on or after 4 November 2026, the `close_call` reason `hardship` is replaced by `financial_difficulty` (outcome stays `no_promise`). Calls before that date keep `hardship`."
+  },
+  {
+   "id": "C16",
+   "rule": "MEMO",
+   "type": "close",
+   "input": {
+    "situation": "hardship",
+    "now": "2026-11-04T09:00"
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "financial_difficulty"
+   },
+   "source": "G.3 Financial hardship (job loss, illness, bereavement): one sentence of sympathy, make no proposals, note `hardship` on each remaining product, then offer to transfer the customer to our support team. Transfer only if the customer accepts: `transfer_to_agent` queue `support`, close `transferred` / `support`. If the customer declines, close `no_promise` / `hardship`. / 1. For calls made on or after 4 November 2026, the `close_call` reason `hardship` is replaced by `financial_difficulty` (outcome stays `no_promise`). Calls before that date keep `hardship`."
+  },
+  {
+   "id": "C17",
+   "rule": "MEMO",
+   "type": "close",
+   "input": {
+    "situation": "hardship",
+    "now": "2026-11-05T11:30"
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "financial_difficulty"
+   },
+   "source": "G.3 Financial hardship (job loss, illness, bereavement): one sentence of sympathy, make no proposals, note `hardship` on each remaining product, then offer to transfer the customer to our support team. Transfer only if the customer accepts: `transfer_to_agent` queue `support`, close `transferred` / `support`. If the customer declines, close `no_promise` / `hardship`. / 1. For calls made on or after 4 November 2026, the `close_call` reason `hardship` is replaced by `financial_difficulty` (outcome stays `no_promise`). Calls before that date keep `hardship`."
+  },
+  {
+   "id": "C18",
+   "rule": "MEMO",
+   "type": "close",
+   "input": {
+    "situation": "dispute",
+    "now": "2026-11-05T11:30"
+   },
+   "expect": {
+    "outcome": "no_promise",
+    "reason": "dispute"
+   },
+   "source": "| `no_promise` | `dispute` | every product disputed (G.2) | / 2. Nothing else changes: every other outcome, close reason and `add_note` reason stays as listed in section H."
+  },
+  {
+   "id": "C19",
+   "rule": "MEMO",
+   "type": "note",
+   "input": {
+    "situation": "hardship",
+    "now": "2026-11-05T11:30"
+   },
+   "expect": "hardship",
+   "source": "G.3 Financial hardship (job loss, illness, bereavement): one sentence of sympathy, make no proposals, note `hardship` on each remaining product, then offer to transfer the customer to our support team. Transfer only if the customer accepts: `transfer_to_agent` queue `support`, close `transferred` / `support`. If the customer declines, close `no_promise` / `hardship`. / 2. Nothing else changes: every other outcome, close reason and `add_note` reason stays as listed in section H."
+  },
+  {
+   "id": "C20",
+   "rule": "CENTS",
+   "type": "promise_amount",
+   "input": {
+    "amount": 129.95
+   },
+   "expect": 12995,
+   "source": "E.3 `create_promise` takes the amount in euro cents, as a whole number (EUR 45.10 is 4510)."
+  },
+  {
+   "id": "C21",
+   "rule": "HARDSHIP",
+   "type": "transfer",
+   "input": {
+    "situation": "hardship"
+   },
+   "expect": "support",
+   "source": "G.3 Financial hardship (job loss, illness, bereavement): one sentence of sympathy, make no proposals, note `hardship` on each remaining product, then offer to transfer the customer to our support team. Transfer only if the customer accepts: `transfer_to_agent` queue `support`, close `transferred` / `support`. If the customer declines, close `no_promise` / `hardship`. / | `transferred` | `restructuring`, `human`, `support` | G.4, G.5, G.3 (transfer accepted) |"
+  }
+ ]
+}
