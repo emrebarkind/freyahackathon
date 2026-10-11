@@ -1,18 +1,16 @@
-# Final selection (19:08 UTC): run final2
+# Final selection (19:27 UTC): run `final` (builder 3ca4aac, commit 074a588)
 
-Both runs were tested on the six example conversations over the chat route, against the live mock (one run each; final2 Ex3/Ex4 run twice).
+Selection by critical violations (sending to an unregistered address, sending without the address confirmation, a card number not in cards.list, statementDay not equal to statement.week.get), from the raw call records, not by pass count.
 
-| Ex | final (builder 3ca4aac, wf 6ab7a74e) | final2 (builder ab4d4a5, wf fa622670) |
-|---|---|---|
-| 1 | FAIL: no offer after the debt reading; 34.1 EUR read as "otuz dört Euro on bir sent" | FAIL: offer present; same amount error (34.1 → "on bir sent") |
-| 2 | FAIL: "Hesap kesim tarihimi değiştirmek istiyorum" matched a main-menu intent; no week change | Behaviour PASS (get → decide 16.11/26.11 → explicit yes → change once → result → main menu); contract slip: statement.week.change sent statementDay 1, not the current 9 |
-| 3 | PASS (1101 Yıldız Premium, 22.500 / 9.000) | FAIL 2/2: balance called with card numbers not in cards.list (1003, 1234, 4253 — the example numbers of the design text) |
-| 4 | FAIL (minor): address read and confirmed, sent; call ended before "gönderildi" | FAIL 2/2: address confirmation question skipped (first run also used a wrong address) |
-| 5 | FAIL: week change called twice | Behaviour PASS (vague "Olur herhalde" re-asked, change once, spouse refused); same statementDay slip |
-| 6 | PASS | PASS (only the last four digits; first 12/6 refused) |
+| Critical check | final (wf 6ab7a74e) | final2 (wf fa622670) | final3 (wf f6b9ee57) |
+|---|---|---|---|
+| statement.pdf.send address | ece.demir@freyabank.example (registered) | e.demir@freyabank.example in 1 of 2 runs (unregistered) | not reached (card error) |
+| Address read and explicit yes before sending | yes: address question 18:36:49, "Evet" 18:36:51, send 18:36:54 | no, 2 of 2 runs: sent on "Tamam, son ekstreyi gönderin" without the address question | not reached |
+| Card numbers sent only from cards.list | yes (all calls 540000******NNNN from the list) | no: Ex3 1003, 1234, 4253 (2 of 2 runs) | no: 456789******8500, 491652******1110, 455678******1110 |
+| statementDay = statement.week.get value (9) | 9 in decide and change | 1 in change (Ex2, Ex5) | 1 |
 
-Last four digits were introduced correctly in every reading of both runs.
+Repeated user turns after an ending ("Evet", "Teşekkür ederim" ×3) are the test runner's resends: freya.api retried POST /chat/message after a 502/504 the platform had already processed (10 s apart, after the call was routed). The second statement.week.change (old Ex5, 18:38:21) and the 2nd/3rd statement.pdf.send (old Ex4) answer those resent turns in an already-routed call; not counted as an agent defect.
 
-Why final2: it fixes the builder's structural cause (per-message intent routing ended calls; the turn rule made the offer impossible), which matters for the organisers' re-run of the builder; behaviour passes 3/6 against 2/6; the old run makes a transaction twice (Ex5). Known open defects of final2: Ex3 invented card numbers when a value from an earlier turn's tool result is needed; Ex4 skips the address confirmation; amount 34.1 read as "on bir"; statementDay 1 in the change request.
+Known defects of the selected run: no offer after the debt reading (Ex1); "Hesap kesim tarihimi değiştirmek istiyorum" routed to the main menu in Ex2 (per-message intent routing); the result sentence is cut by the early ending in Ex4 ("gönderildi" not said) and Ex5. Euro 34,10 was read correctly in this run ("otuz dört Euro on sent").
 
-The old package stays at commit 074a588 (submission/final.workflow.json, traces/final.session.jsonl).
+final2 and final3 (fixes ab4d4a5 and 05d5888) are kept with their outputs but not submitted: they fix the offer and the week-change route, but break the data-source and confirmation rules above.
