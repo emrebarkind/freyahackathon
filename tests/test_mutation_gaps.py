@@ -143,7 +143,7 @@ def test_a_verify_http_failure_is_retried_once_then_closes(spec, monkeypatch):
 
 def test_a_refused_offer_is_remembered(spec, monkeypatch):
     monkeypatch.setattr(engine, "advance", lambda V, s, pre="": None)
-    p = {"offer": [300.0, "2026-11-27"], "refused_offers": [], "used": 2, "attempts": 2, "status": "open"}
+    p = {"offer": [300.0, "2026-11-27"], "refused_offers": [], "used": 2, "made": 2, "attempts": 2, "status": "open"}
     engine.refusal(V0, {"products": [p]}, p)
     assert p["refused_offers"] == [[300.0, "2026-11-27"]] and p["status"] == "refused" and p["offer"] is None
 

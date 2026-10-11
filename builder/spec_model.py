@@ -239,7 +239,13 @@ def unsupported(spec):
         if P_.get("promise_integer") and float(P_.get("promise_scale") or P_.get("amount_scale") or 1) == 1 \
                 and P_.get("promise_round") not in ("up", "down", "nearest"):
             out.append("create_promise takes whole units and the brief gives no rounding rule (products.promise_round): "
-                       "an amount with a fraction is sent as is and the bank may refuse it")
+                       "a promise with a fraction of a unit is not sent; that product ends as not recorded (service_error)")
+        steps = list(spec.get("ladder") or []) + [x for b in bs for x in (b.get("ladder") or [])]
+        if any(str(x.get("date")) == "last_business_day_this_week" for x in steps) and \
+                not (spec.get("rules") or {}).get("week_end_today"):
+            out.append("a ladder step uses the last business day of this week and the brief does not say what happens "
+                       "when today is that day: read literally (today; a step equal to an earlier proposal is skipped), "
+                       "not moved to next week")
         if not (spec.get("callback") or {}).get("days", ["x"]):
             out.append("no callback day is allowed: every callback request closes as no_callback")
     except Exception as e:
