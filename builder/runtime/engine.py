@@ -1862,7 +1862,8 @@ def after_promise(V, s):
         s["rec_try"] = 0
         return record_next(V, s)
     s["rec_try"] = s.get("rec_try", 0) + 1
-    if s["rec_try"] < 2:
+    retries = S.get("rules", dict()).get("promise_retries")
+    if s["rec_try"] < 1 + (1 if retries is None else int(retries)):   # the brief's retries (unstated: one, reported)
         return call(V, s, "api_promise", p_product=p["id"], p_amount=promise_amount(p), p_date=p["agreed"][1])
     p["status"] = "service_error"
     q.pop(0)

@@ -106,6 +106,8 @@ use the default shown and record it in `assumptions`.
                                                    // "deadline" (full amount by the deadline); a plain yes agrees to that
            "too_much_floor": "attempt_1",
            "ladder_repeat_last": false,            // true only if the brief says the last step is repeated for further attempts
+           "promise_retries": null,               // only if the brief says how often a failed create_promise is retried
+                                                   // (0 = never); unstated: once
            "skipped_repeat_counts": null,         // only if the brief says whether a ladder step skipped because it would
                                                    // repeat an earlier proposal still uses one of the band's proposals: true/false
            "week_end_today": null,                 // only if the brief says what a "last business day of this week" step

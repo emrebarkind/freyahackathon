@@ -279,6 +279,8 @@ def assumed(spec):
         if len(steps) > 1 and (spec.get("rules") or {}).get("skipped_repeat_counts") is None:
             out.append("the brief does not say whether a ladder step skipped as a repeat of an earlier proposal uses one "
                        "of the band's proposals: it does")
+        if (spec.get("rules") or {}).get("promise_retries") is None:
+            out.append("the brief does not say whether a failed create_promise is retried: once")
     except Exception as e:
         out.append(f"could not list the defaults: {type(e).__name__}")
     return out

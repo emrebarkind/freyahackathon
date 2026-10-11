@@ -155,3 +155,17 @@ def test_a_rule_not_carried_makes_the_build_incomplete():
     spec["unsupported_rules"] = []
     build.finish(t, spec, {"failed": []})                           # complete: no exit
     assert "RESULT: COMPLETE" in open(ROOT / "traces" / "test-verdict.trace.log").read()
+
+
+def test_promise_retries_come_from_the_brief():
+    score = eval_score()
+    spec = copy.deepcopy(E.B)
+    prods = [{"product_id": "p1", "type": "credit_card", "past_due": 300.0, "days_late": 5, "min_payment": 90.0}]
+    script = [{"k": "yes"}, {"k": "yes"}]
+    for retries, recorded in ((None, True), (1, True), (0, False)):
+        spec["rules"]["promise_retries"] = retries
+        s = score.setup(spec, O)
+        score.OPENAPI[0] = O
+        got = score.conversation(s, {"now": "2026-10-14T11:00", "products": prods, "script": script,
+                                     "faults": {"create_promise": 1}}, O)
+        assert bool(got["promises"]) == recorded, (retries, got)

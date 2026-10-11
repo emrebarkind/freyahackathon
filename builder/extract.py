@@ -203,6 +203,7 @@ def validate(spec, openapi):
                           ("rules.too_much_floor", ("attempt_1", "asked_date")),
                           ("rules.week_end_today", ("next_week", "today")),
                           ("rules.skipped_repeat_counts", (True, False)),
+                          ("rules.promise_retries", (0, 1, 2, 3)),
                           ("products.promise_round", ("up", "down", "nearest"))):
         v = get(spec, path)
         if v is not None and v not in allowed:
