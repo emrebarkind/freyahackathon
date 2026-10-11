@@ -1,0 +1,5 @@
+# Cloudflare Workers Builds runs `npx wrangler deploy` at the repository root: the bank mock lives in mock/.
+name = "freyahackathon"
+main = "mock/src/index.js"
+compatibility_date = "2024-09-23"
+workers_dev = true
