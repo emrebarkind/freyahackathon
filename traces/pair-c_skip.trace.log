@@ -1,0 +1,110 @@
+[    0.0s] START 2026-10-11T07:47:37+0000
+[    0.0s] NOTE briefs=['eval/pairs/c_skip/brief.md'] tool_api=eval/pairs/c_skip/openapi.json slot=pair-c_skip
+[    0.0s] STEP 1. spec extraction
+[    0.9s] NOTE extraction mode B
+[  114.3s] MODEL CALL #1 model=claude-opus-5-5 seconds=113.4 cost_usd=0.442 purpose: read the brief and tool API into a spec (single reading, effort high)
+[  180.2s] MODEL CALL #2 model=claude-opus-5-5 seconds=65.8 cost_usd=0.400 purpose: audit the high-risk fields and the critical policies of the reading against the source documents
+[  180.2s] NOTE audit: **Audit of the Corrib Valley Bank spec against the brief and tool API**
+[  180.2s] 
+[  180.2s] The spec matches the materials on every field and every policy row I checked. I found nothing to change and nothing to add to `unsupported_rules`.
+[  180.2s] 
+[  180.2s] **Fields**
+[  180.2s] 
+[  180.2s] - **calendar**: supported. "Business days are Monday to Friday, except these bank holidays: 2026-10-26, 2026-12-24, 2026-12-25, 2026-12-28, 2027-01-01, 2027-03-17". The workdays are 0 to 4 and all six holidays are listed.
+[  180.2s] - **date_rules**: supported (default). The brief says nothing about "next Friday", so `following_week` is the default and it is listed in assumptions.
+[  180.2s] - **confirm**: supported. "If after two attempts you still cannot tell who is speaking: `not_reached` / `unclear`." So `max_asks` is 2.
+[  180.2s] - **callback**: supported. "A callback may be booked for today or the next business day, between 09:30 and 18:00 inclusive, and must be later than `now`... If no acceptable time is agreed after two tries". The spec has days today and next_business_day, 09:30 to 18:00, `after_now` true and `max_asks` 2. `business_days_only` is false because "today" is not limited to business days.
+[  180.2s] - **identity.questions**: supported. "Ask the last four digits of the phone number on file first, then the date of birth... Dates of birth are sent as `YYYY-MM-DD`". The order is phone_last4 (4 digits) then date_of_birth (%Y-%m-%d), and both field names are in the API enum.
+[  180.2s] - **identity.max_wrong**: supported. "The second wrong answer, counted across both questions, ends verification". This deployment-specific rule beats the API summary ("Three wrong answers in total"), so the value is 2.
+[  180.2s] - **identity.hints**: supported. The API hint enum is ["day_month_swapped"] and the spec has a line for it.
+[  180.2s] - **identity (other keys)**: supported.
+[  180.2s]   - `date_order` is dmy: "a spoken all-numeric date is read day, month, year".
+[  180.2s]   - The response field names match the verify schema.
+[  180.2s]   - Unreadable answers come back as ok=false, not as a `verified` value, so `reject_values` stays empty.
+[  180.2s]   - "told once why we ask; a second refusal closes `not_verified` / `declined`" is built in.
+[  180.2s] - **products.amount_field / floor_field**: supported.
+[  180.2s]   - The amount comes from `overdue_eur`: "the overdue amount".
+[  180.2s]   - The floors are "credit card: `min_due_eur`; personal loan: `monthly_instalment_eur`". The overdraft floor is a percentage, so it has no floor field.
+[  180.2s]   - The days field is `days_past_due` and the type field is `kind`.
+[  180.2s]   - The names match "credit card ending 1234", "personal loan", "overdraft".
+[  180.2s] - **products.floor_pct**: supported. "overdraft: one quarter of `overdue_eur`, rounded up to the next whole euro". The value is {overdraft: 25}.
+[  180.2s] - **products (other keys)**: supported.
+[  180.2s]   - `amount_scale` is 1 because the API gives euro.
+[  180.2s]   - `promise_scale` is 100 (E.3).
+[  180.2s]   - `floor_round` and `step_round` are up_unit.
+[  180.2s]   - `floor_full_below` is {overdraft: 100}.
+[  180.2s] - **bands**: supported.
+[  180.2s]   - Tier 1: "1 to 20 | the 6th business day after today (today itself is never counted) | 2 proposals" gives `business_days_after` n=6 and 2 attempts.
+[  180.2s]   - Tier 2: "21 to 60 | the 15th of the month | 3 proposals". D.3 says "If that day is before today, take the 15th of the following month instead. Only then... move it forward". That gives `day_of_month` 15 with `roll_if_before_today` and `roll_before_adjust`, and 3 attempts.
+[  180.2s]   - Attempts are copied as the brief's totals, which include the opening, consistent with `opening_is_attempt` true.
+[  180.2s] - **ladder**: supported. F.1 makes the opening "proposal 1", so step 1 is full today. F.2 then gives "1. the full overdue amount on the deadline; 2. half... rounded up...; if that is below the floor, the floor instead; 3. the floor on the deadline". That maps to full/deadline, pct:50/deadline and floor/deadline. The "never below the floor" part is built in.
+[  180.2s] - **notes**: supported. "write an `add_note` with reason `refused`", plus the paid, dispute, hardship and service_error notes. `enabled` is true.
+[  180.2s] - **events**: supported. Every outcome and reason
+[  180.2s] NOTE audit changed: nothing
+[  180.2s] NOTE policy verdicts: event_changes=supported, products.floor_full_below=supported, products.floor_min=not_decided, products.floor_pct=supported, products.floor_round=supported, products.promise_round=not_decided, products.promise_scale=supported, products.step_round=supported, rules.deadline_adjust=supported, rules.first_ask=supported, rules.hardship_transfer=supported, rules.ladder_repeat_last=supported, rules.opening_blocks_repeat=supported, rules.opening_is_attempt=supported, rules.promise_retries=supported, rules.refuse_deadline_is_refusal=supported, rules.skipped_repeat_counts=supported, rules.too_much_floor=supported, rules.too_much_skips_full=not_decided, rules.week_end_today=not_decided
+[  180.2s] NOTE critical policies:
+[  180.2s]   - rules.opening_is_attempt: explicit: true
+[  180.2s]   - rules.opening_blocks_repeat: explicit: true
+[  180.2s]   - rules.skipped_repeat_counts: explicit: true
+[  180.2s]   - rules.too_much_skips_full: unspecified: false
+[  180.2s]   - rules.too_much_floor: derived: "attempt_1"
+[  180.2s]   - rules.ladder_repeat_last: derived: false
+[  180.2s]   - rules.refuse_deadline_is_refusal: derived: true
+[  180.2s]   - rules.promise_retries: derived: 1
+[  180.2s]   - rules.hardship_transfer: derived: "direct"
+[  180.2s]   - rules.deadline_adjust: explicit: "next_business_day"
+[  180.2s]   - rules.first_ask: explicit: "today"
+[  180.2s]   - rules.week_end_today: unspecified: "literal" (engine default)
+[  180.2s]   - products.floor_pct: explicit: {"overdraft": 25}
+[  180.2s]   - products.floor_min: unspecified: null (engine default)
+[  180.2s]   - products.floor_full_below: explicit: {"overdraft": 100}
+[  180.2s]   - products.floor_round: explicit: "up_unit"
+[  180.2s]   - products.step_round: explicit: "up_unit"
+[  180.2s]   - products.promise_scale: explicit: 100
+[  180.2s]   - products.promise_round: unspecified: null (engine default)
+[  180.2s]   - event_changes: explicit: [{"event": "hardship", "from": "2026-11-04", "set": {"reason": "financial_difficulty"}}, {"event": "transfer_support", "from": "2026-11-04", "set": {"reason": "financial_difficulty"}}]
+[  180.2s] NOTE validation round 1: 0 problem(s)
+[  180.2s] NOTE assumption: max_wrong = 2: brief C.2 ('The second wrong answer, counted across both questions, ends verification') wins over the API summary's three wrong answers, because it is more specific to this deployment.
+[  180.2s] NOTE assumption: Opening: the brief prescribes 'This call is recorded.'; under the line rules this is said as 'We record this call.' The bank name is kept because the brief prescribes it.
+[  180.2s] NOTE assumption: ask_today drops the literal 'EUR' from the brief's wording because {amount} is already spoken with the currency.
+[  180.2s] NOTE assumption: date_rules.next_weekday: the brief is silent; default 'following_week' is used.
+[  180.2s] NOTE assumption: max_not_talk: the brief is silent; default 2 is used.
+[  180.2s] NOTE assumption: max_unclear: the brief is silent; omitted.
+[  180.2s] NOTE assumption: callback.business_days_only false: the brief allows 'today or the next business day' and does not require today to be a business day.
+[  180.2s] NOTE assumption: Tier 2 deadline: 15th of this month, rolled to next month's 15th only if it is before today (so today the 15th stays), then moved forward to the next business day (roll_before_adjust true).
+[  180.2s] NOTE assumption: deadline_adjust = next_business_day (D.3 moves dates forward; D.4 offers the next business day for a non-business date). Tier 1 deadlines are always business days already.
+[  180.2s] NOTE assumption: Ladder with opening_is_attempt: step 1 = full today (the opening), step 2 = full on the deadline, step 3 = 50% rounded up to the whole euro (never below the floor), step 4 = floor on the deadline. Tier 1 (2 proposals) ends after step 2; Tier 2 (3 proposals) after step 3. The floor step is reached only through 'too much' or a below-floor offer.
+[  180.2s] NOTE assumption: When Tier 2's deadline is today, step 2 (full on the deadline) equals the opening, so it is skipped but still counted (F.3).
+[  180.2s] NOTE assumption: Overdraft floor: 25% of overdue_eur rounded up to the whole euro; whole overdue amount if overdue_eur < 100. The overdraft has no floor_field.
+[  180.2s] NOTE assumption: Hardship: the brief prescribes sympathy only, with no transfer. hardship_transfer is set to 'direct' so no offer question is asked; transfer_support has no queue and mirrors the hardship close code (no support transfer exists in the brief).
+[  180.2s] NOTE assumption: Memo OPS-26-31 (dated) changes the hardship close reason to financial_difficulty from 2026-11-04; recorded in event_changes. The add_note reason 'hardship' is unchanged.
+[  180.2s] NOTE assumption: too_much_floor: the floor offer after 'too much' uses an attempt, because it is a proposal.
+[  180.2s] NOTE assumption: promise_change: the brief is silent; the agent says the promise cannot be changed on this call.
+[  180.2s] NOTE assumption: No SMS or confirmation sentence after a promise is required; sms_line is empty.
+[  180.2s] NOTE assumption: Floor names (minimum payment, monthly instalment, minimum amount) are spoken labels chosen for the floor the brief defines.
+[  180.2s] NOTE assumption: Queue table is taken from the transfer_to_agent API enum; the brief uses only restructuring and general.
+[  180.2s] STEP 2. local checks: structure, tool API, engine self-test on synthetic customers
+[  181.0s] TEST PASS local happy path, pays in full today
+[  181.0s] TEST PASS local someone else answers, books a callback
+[  181.0s] TEST PASS local wrong number
+[  181.0s] TEST PASS local identity fails
+[  181.0s] TEST PASS local identity answered the way people speak
+[  181.0s] TEST PASS local already paid
+[  181.0s] TEST PASS local dispute
+[  181.0s] TEST PASS local hardship (no transfer in this brief)
+[  181.0s] TEST PASS local restructuring request
+[  181.0s] TEST PASS local flat refusals
+[  181.0s] TEST PASS local the bank fails to record the promise twice
+[  181.0s] TEST PASS local the callback booking fails once, then works
+[  181.0s] TEST PASS local several products, all paid today
+[  181.0s] TEST PASS local every band and product type gives a deadline and a floor
+[  181.0s] NOTE local checks: structural 0, tool API 0, self-test 14/14
+[  181.0s] NOTE assumption (recorded as unspecified by the materials): rules.too_much_skips_full: Saying the amount is too much leads to the floor offer once; later full-amount steps are not skipped automatically.
+[  181.0s] NOTE assumption (recorded as unspecified by the materials): rules.week_end_today: No ladder step uses the end of the week; read literally.
+[  181.0s] NOTE assumption (recorded as unspecified by the materials): products.floor_min: No minimum floor beyond the overdraft rule for amounts below 100.
+[  181.0s] NOTE assumption (recorded as unspecified by the materials): products.promise_round: Euro amounts with cents times 100 are already whole cents; no rounding is stated.
+[  181.0s] NOTE repair budget used: 0/3
+[  181.0s] STEP 3. compile workflow
+[  181.0s] NOTE workflow: 25 nodes, 16 engine-run calls, 199500 bytes
+[  181.0s] NOTE RESULT: COMPLETE -- every rule carried, every local scenario passes
+[  181.0s] END 2026-10-11T07:50:38+0000 total_seconds=181.0 model_calls=2 model_cost_usd=0.84
