@@ -64,7 +64,8 @@ Rules for the design:
 - "variables": the call variables the agent receives (name exactly as the materials give it).
 - "tools": one entry per service of the integration document the agent needs. Copy the method and the path exactly
   (path parameters in braces, e.g. /customers/{customerNumber}/cards). "fields": every path, query and body field, with
-  its exact name and type; "fill" is "var:<call variable name>" when a call variable gives the value, "const:<value>" for
+  its exact name and type; a body field inside a nested object is named with dots for its full path (e.g. a body
+  {"data": {"customerNo": ...}, "call": {"lang": ...}} gives the fields "data.customerNo" and "call.lang"); "fill" is "var:<call variable name>" when a call variable gives the value, "const:<value>" for
   a fixed value the documents require, or "agent" when the agent fills it from the conversation or an earlier tool
   result (then "description" says exactly where the value comes from and its format). "source": the document and section.
 - "endings": the ways a call ends (name in snake_case, e.g. completed, transferred_to_agent; "when": the condition).
@@ -106,15 +107,13 @@ def compile_agent(d, base):
             elif f["fill"].startswith("const:"):
                 spec["default"] = f["fill"][6:]
             if f["in"] == "body":
-                body[f["name"]] = spec
-                if f["fill"] == "agent":
-                    required.append(f["name"])
+                put_nested(body, f["name"].split("."), spec, f["fill"] == "agent")
             elif f["in"] == "query":
                 query[f["name"]] = spec
             elif f["in"] == "path" and f["fill"] == "agent":
                 props[f["name"]] = spec          # the agent gives it; the url placeholder takes it
         if body:
-            props["body"] = {"type": "object", "properties": body, **({"required": required} if required else {})}
+            props["body"] = {"type": "object", "properties": body["properties"], **({"required": body["required"]} if body.get("required") else {})}
         if query:
             props["query"] = {"type": "object", "properties": query}
         tools.append({"type": "function", "config": {"timeoutMs": 12000, "maxRetries": 1},
@@ -139,6 +138,18 @@ def compile_agent(d, base):
                                  "parameters": {"type": "object", "properties": {"message_mode": {"type": "string", "default": "none"}}}}}}
     return {"initial_node": "assist", "system_prompt": d["system_prompt"],
             "test_variables": {v["name"]: v["example"] for v in d["variables"]}, "global_nodes": {}, "nodes": nodes}
+
+
+def put_nested(node, parts, spec, required):
+    """body["properties"]... built from a dotted field name; an agent-filled field is required at every level."""
+    node.setdefault("properties", {})
+    if len(parts) == 1:
+        node["properties"][parts[0]] = spec
+    else:
+        child = node["properties"].setdefault(parts[0], {"type": "object", "properties": {}})
+        put_nested(child, parts[1:], spec, required)
+    if required and parts[0] not in node.setdefault("required", []):
+        node["required"].append(parts[0])
 
 
 def _snake(s):
