@@ -90,9 +90,17 @@ def answer(spec, c):
     def ev(sit):
         if sit != "hardship" or not (events.get("transfer_support") or {}).get("queue"):
             return engine.ev(sit)
-        # the engine offers the brief's hardship transfer through the transfer_support event; when that event has a
-        # queue, a hardship call ends there (transfer, its close codes, no other note)
-        return engine.ev("transfer_support")
+        # hardship with a support queue: a `transfer` check asks for that queue; a `close`/`note` check describes the
+        # call's end. With a direct transfer (no question) that end is the transfer, with the brief's notes only if
+        # it notes first; when the agent offers the transfer, the key's close/note is the declined path (hardship).
+        direct = (spec.get("rules") or {}).get("hardship_transfer") == "direct"
+        if t == "transfer":
+            return engine.ev("transfer_support")
+        if direct:
+            e = dict(engine.ev("transfer_support"))
+            e["note"] = engine.ev("hardship").get("note") if (spec.get("rules") or {}).get("notes_before_transfer") else None
+            return e
+        return engine.ev("hardship")
     if t == "deadline":
         _, p = facts(spec, i["now"], i["product"])
         return p["deadline"] if p["status"] == "open" else None
